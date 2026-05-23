@@ -271,14 +271,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await SupabaseService.instance.signOut();
               if (context.mounted) {
                 Navigator.pop(context);
-                setState(() {}); // Refresh UI
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Signed out successfully'),
-                    backgroundColor: AppColors.accent,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
+                Navigator.of(this.context).pushAndRemoveUntil(
+                  SlidePageRoute(page: const AuthScreen()),
+                  (route) => false,
                 );
               }
             },
