@@ -1,0 +1,130 @@
+{
+  "score_predictor": {
+    "weights": [
+      0.00034101659215325485,
+      0.9966901628795153,
+      0.0005043189080037314,
+      -0.0021230406865542784,
+      9.164351239898672e-05,
+      -0.002987142578188051,
+      0.011445474401398828
+    ],
+    "feature_names": [
+      "bias",
+      "overall_accuracy",
+      "questions_norm",
+      "streak_norm",
+      "avg_time_norm",
+      "weak_ratio",
+      "min_subject"
+    ],
+    "r_squared": 0.948532613286025
+  },
+  "difficulty_recommender": {
+    "thresholds": [
+      {
+        "level": "Easy",
+        "mean": 0.40011332218508366,
+        "count": 3891
+      },
+      {
+        "level": "Medium",
+        "mean": 0.5927620744331497,
+        "count": 5157
+      },
+      {
+        "level": "Hard",
+        "mean": 0.7461895293969706,
+        "count": 952
+      }
+    ],
+    "boundaries": [
+      0.5,
+      0.7
+    ]
+  },
+  "weak_area_detector": {
+    "0": {
+      "subject_id": "criminal_jurisprudence",
+      "mean_acc": 0.4633635835203447,
+      "difficulty": 0.42,
+      "weak_threshold": -0.2609563624406971,
+      "passing_min": 0.5
+    },
+    "1": {
+      "subject_id": "law_enforcement",
+      "mean_acc": 0.5191968240213041,
+      "difficulty": 0.58,
+      "weak_threshold": -0.2282014730339748,
+      "passing_min": 0.5
+    },
+    "2": {
+      "subject_id": "criminalistics",
+      "mean_acc": 0.4804467719725266,
+      "difficulty": 0.48,
+      "weak_threshold": -0.2522026431718062,
+      "passing_min": 0.5
+    },
+    "3": {
+      "subject_id": "crime_detection",
+      "mean_acc": 0.4497042977388713,
+      "difficulty": 0.52,
+      "weak_threshold": -0.2445439545485473,
+      "passing_min": 0.5
+    },
+    "4": {
+      "subject_id": "corrections",
+      "mean_acc": 0.510333727461615,
+      "difficulty": 0.55,
+      "weak_threshold": -0.23590177624802328,
+      "passing_min": 0.5
+    },
+    "5": {
+      "subject_id": "criminology",
+      "mean_acc": 0.5827178146877322,
+      "difficulty": 0.62,
+      "weak_threshold": -0.23299319727891155,
+      "passing_min": 0.5
+    }
+  },
+  "priority_ranker": {
+    "weakness_weight": 0.4,
+    "difficulty_weight": 0.25,
+    "gap_from_passing": 0.35
+  },
+  "subject_difficulty": {
+    "criminal_jurisprudence": 0.42,
+    "criminalistics": 0.48,
+    "crime_detection": 0.52,
+    "corrections": 0.55,
+    "law_enforcement": 0.58,
+    "criminology": 0.62
+  },
+  "subjects": [
+    "criminal_jurisprudence",
+    "law_enforcement",
+    "criminalistics",
+    "crime_detection",
+    "corrections",
+    "criminology"
+  ],
+  "normalization": {
+    "max_questions": 400,
+    "max_streak": 30,
+    "max_time": 50
+  },
+  "prc_data": {
+    "source": "PRC Board News - February 2026 CLE Results",
+    "passing_rate": 0.66,
+    "total_examinees": 45936,
+    "total_passed": 30320,
+    "passing_score": 75,
+    "min_subject_score": 50
+  },
+  "validation": {
+    "score_mae": 2.3686518636917007,
+    "score_r_squared": 0.948532613286025,
+    "pass_prediction_accuracy": 95.8
+  },
+  "generated_passing_rate": 0.0
+}
