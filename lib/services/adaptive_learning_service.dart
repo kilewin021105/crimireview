@@ -27,6 +27,12 @@ class AdaptiveLearningService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   UserProgress get userProgress => _userProgress;
 
+  Future<void> resetProgress() async {
+    _userProgress = UserProgress();
+    _isInitialized = false;
+    await _initProgress();
+  }
+
   // Get adaptive questions based on user's performance
   List<Question> getAdaptiveQuestions({
     required String subjectId,

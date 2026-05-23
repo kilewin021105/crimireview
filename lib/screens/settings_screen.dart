@@ -9,6 +9,7 @@ import '../services/theme_service.dart';
 import '../services/feedback_service.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
+import '../services/adaptive_learning_service.dart';
 import '../utils/page_transitions.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'profile_screen.dart';
@@ -269,7 +270,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: () async {
               await SupabaseService.instance.signOut();
+              await StorageService().clearAllData();
               if (context.mounted) {
+                Provider.of<AdaptiveLearningService>(context, listen: false).resetProgress();
                 Navigator.pop(context);
                 Navigator.of(this.context).pushAndRemoveUntil(
                   SlidePageRoute(page: const AuthScreen()),
