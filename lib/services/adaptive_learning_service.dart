@@ -465,11 +465,4 @@ class AdaptiveLearningService extends ChangeNotifier {
     
     return accuracies;
   }
-
-  // Reset progress
-  Future<void> resetProgress() async {
-    _userProgress = UserProgress();
-    await _storageService.clearProgress();
-    notifyListeners();
-  }
 }
