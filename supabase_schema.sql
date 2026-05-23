@@ -1,11 +1,15 @@
--- CrimiReview Supabase Schema
--- Run this in your Supabase SQL Editor (Database > SQL Editor)
+-- ============================================
+-- CrimiReview Supabase Schema (COMPLETE)
+-- ============================================
+-- Run this in Supabase SQL Editor (Database > SQL Editor)
+-- This will set up all tables, policies, triggers, and storage
 
 -- ============================================
 -- 1. USER PROFILES TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.user_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
   display_name TEXT,
   avatar_url TEXT,
   total_points INTEGER DEFAULT 0,
@@ -13,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   total_correct INTEGER DEFAULT 0,
   current_streak INTEGER DEFAULT 0,
   best_streak INTEGER DEFAULT 0,
+  rank TEXT DEFAULT 'Rookie',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -21,30 +26,17 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Policies for user_profiles
+DROP POLICY IF EXISTS "Users can view all profiles" ON public.user_profiles;
 CREATE POLICY "Users can view all profiles" ON public.user_profiles
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
 CREATE POLICY "Users can update own profile" ON public.user_profiles
   FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.user_profiles;
 CREATE POLICY "Users can insert own profile" ON public.user_profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
-
--- Auto-create profile on signup
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.user_profiles (id, display_name)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)));
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Drop trigger if exists and recreate
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ============================================
 -- 2. QUIZ RESULTS TABLE
@@ -65,13 +57,15 @@ CREATE TABLE IF NOT EXISTS public.quiz_results (
 ALTER TABLE public.quiz_results ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can view own quiz results" ON public.quiz_results;
 CREATE POLICY "Users can view own quiz results" ON public.quiz_results
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own quiz results" ON public.quiz_results;
 CREATE POLICY "Users can insert own quiz results" ON public.quiz_results
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Index for faster queries
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_quiz_results_user_id ON public.quiz_results(user_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_results_subject ON public.quiz_results(subject_id);
 
@@ -99,12 +93,15 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
 ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can view own progress" ON public.user_progress;
 CREATE POLICY "Users can view own progress" ON public.user_progress
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own progress" ON public.user_progress;
 CREATE POLICY "Users can insert own progress" ON public.user_progress
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own progress" ON public.user_progress;
 CREATE POLICY "Users can update own progress" ON public.user_progress
   FOR UPDATE USING (auth.uid() = user_id);
 
@@ -129,13 +126,16 @@ CREATE TABLE IF NOT EXISTS public.daily_challenge_scores (
 ALTER TABLE public.daily_challenge_scores ENABLE ROW LEVEL SECURITY;
 
 -- Policies
-CREATE POLICY "Users can view own daily scores" ON public.daily_challenge_scores
-  FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can view all challenge scores" ON public.daily_challenge_scores;
+CREATE POLICY "Users can view all challenge scores" ON public.daily_challenge_scores
+  FOR SELECT USING (true);
 
-CREATE POLICY "Users can insert own daily scores" ON public.daily_challenge_scores
+DROP POLICY IF EXISTS "Users can insert own challenge scores" ON public.daily_challenge_scores;
+CREATE POLICY "Users can insert own challenge scores" ON public.daily_challenge_scores
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can update own daily scores" ON public.daily_challenge_scores
+DROP POLICY IF EXISTS "Users can update own challenge scores" ON public.daily_challenge_scores;
+CREATE POLICY "Users can update own challenge scores" ON public.daily_challenge_scores
   FOR UPDATE USING (auth.uid() = user_id);
 
 -- Index
@@ -156,9 +156,11 @@ CREATE TABLE IF NOT EXISTS public.user_achievements (
 ALTER TABLE public.user_achievements ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can view own achievements" ON public.user_achievements;
 CREATE POLICY "Users can view own achievements" ON public.user_achievements
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own achievements" ON public.user_achievements;
 CREATE POLICY "Users can insert own achievements" ON public.user_achievements
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -166,17 +168,59 @@ CREATE POLICY "Users can insert own achievements" ON public.user_achievements
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON public.user_achievements(user_id);
 
 -- ============================================
--- 6. STORAGE BUCKET FOR AVATARS
+-- 6. AUTO-CREATE PROFILE ON SIGNUP
 -- ============================================
--- Run this in SQL Editor or create manually in Storage section
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.user_profiles (id, email, display_name)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1))
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================
+-- 7. AUTO-UPDATE RANK ON POINTS CHANGE
+-- ============================================
+CREATE OR REPLACE FUNCTION public.update_user_rank()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.rank := CASE
+    WHEN NEW.total_points >= 10000 THEN 'Legend'
+    WHEN NEW.total_points >= 5000 THEN 'Master'
+    WHEN NEW.total_points >= 2500 THEN 'Expert'
+    WHEN NEW.total_points >= 1000 THEN 'Scholar'
+    WHEN NEW.total_points >= 500 THEN 'Student'
+    WHEN NEW.total_points >= 100 THEN 'Beginner'
+    ELSE 'Rookie'
+  END;
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_rank_trigger ON public.user_profiles;
+CREATE TRIGGER update_rank_trigger
+  BEFORE UPDATE OF total_points ON public.user_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.update_user_rank();
+
+-- ============================================
+-- 8. STORAGE BUCKET FOR AVATARS
+-- ============================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('avatars', 'avatars', true)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET public = true;
 
 -- Storage policies for avatars
--- Note: Run these one by one if you get errors about existing policies
-
 DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
 CREATE POLICY "Avatar images are publicly accessible"
 ON storage.objects FOR SELECT
@@ -207,17 +251,17 @@ USING (
 );
 
 -- ============================================
--- DONE! Your schema is ready.
+-- DONE! Schema is ready.
 -- ============================================
 
--- IMPORTANT: Also do these manual steps in Supabase Dashboard:
+-- IMPORTANT MANUAL STEPS IN SUPABASE DASHBOARD:
 -- 
--- 1. Go to Authentication > Providers > Email
---    - Disable "Confirm email" if you want instant login
+-- 1. Authentication > Providers > Email
+--    - Disable "Confirm email" for instant login (optional)
 --
--- 2. Go to Storage > Create new bucket
+-- 2. If storage bucket fails to create via SQL:
+--    - Go to Storage > New Bucket
 --    - Name: avatars
---    - Public: ON (checked)
---    - If bucket exists, make sure it's public
+--    - Public: ON
 --
--- 3. Test by signing up a user in your app!
+-- 3. Test signup in your app!
