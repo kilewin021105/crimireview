@@ -222,20 +222,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   void _onCodeChanged(int index, String value) {
     if (value.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
+    } else if (value.isEmpty && index > 0) {
+      _focusNodes[index - 1].requestFocus();
     }
     
     // Auto-verify when all digits entered
     if (_getCode().length == 6) {
       _verifyCode();
-    }
-  }
-
-  void _onKeyPressed(int index, RawKeyEvent event) {
-    if (event is RawKeyDownEvent && 
-        event.logicalKey == LogicalKeyboardKey.backspace &&
-        _controllers[index].text.isEmpty &&
-        index > 0) {
-      _focusNodes[index - 1].requestFocus();
     }
   }
 
@@ -344,49 +337,46 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                             left: index == 0 ? 0 : 6,
                             right: index == 5 ? 0 : 6,
                           ),
-                          child: RawKeyboardListener(
-                            focusNode: FocusNode(),
-                            onKey: (event) => _onKeyPressed(index, event),
-                            child: TextField(
-                              controller: _controllers[index],
-                              focusNode: _focusNodes[index],
-                              textAlign: TextAlign.center,
-                              keyboardType: TextInputType.number,
-                              maxLength: 1,
-                              style: GoogleFonts.poppins(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                              ),
-                              decoration: InputDecoration(
-                                counterText: '',
-                                filled: true,
-                                fillColor: isDark ? AppColors.darkCard : Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: AppColors.accent,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              onChanged: (value) => _onCodeChanged(index, value),
+                          child: TextField(
+                            controller: _controllers[index],
+                            focusNode: _focusNodes[index],
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            maxLength: 1,
+                            cursorColor: AppColors.accent,
+                            style: GoogleFonts.poppins(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.accent,
                             ),
+                            decoration: InputDecoration(
+                              counterText: '',
+                              filled: true,
+                              fillColor: isDark ? AppColors.darkCard : Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: AppColors.accent,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            onChanged: (value) => _onCodeChanged(index, value),
                           ),
                         );
                       }),

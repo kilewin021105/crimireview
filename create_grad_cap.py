@@ -6,9 +6,9 @@ def create_graduation_cap(size=512):
     img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # Colors
-    cap_color = (26, 26, 46)  # Dark navy #1A1A2E
-    gold_color = (139, 92, 246)  # Purple accent #8B5CF6
+    # Colors - Purple theme for visibility
+    cap_color = (139, 92, 246)  # Purple accent #8B5CF6
+    gold_color = (255, 255, 255)  # White button
     tassel_color = (167, 139, 250)  # Light purple #A78BFA
     
     center_x = size // 2
