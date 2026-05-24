@@ -400,8 +400,36 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildRankingsList(bool isDark) {
-
-    final rankings = _leaderboardData.skip(3).toList();
+    if (_leaderboardData.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : AppColors.lightCard,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.people_outline_rounded,
+                size: 48,
+                color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No other players yet',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -413,15 +441,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         child: ListView.separated(
           padding: const EdgeInsets.all(16),
-          itemCount: rankings.length,
+          itemCount: _leaderboardData.length,
           separatorBuilder: (_, __) => Divider(
             color: isDark ? Colors.white10 : Colors.grey.shade200,
             height: 1,
           ),
           itemBuilder: (context, index) {
-            final entry = rankings[index];
-            final rank = index + 4;
-            return _buildRankingItem(entry, rank, isDark);
+            final entry = _leaderboardData[index];
+            return _buildRankingItem(entry, index + 1, isDark);
           },
         ),
       ),
