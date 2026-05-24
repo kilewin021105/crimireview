@@ -80,28 +80,24 @@ class _SplashScreenState extends State<SplashScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 140,
+              height: 140,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                ),
+                color: isDark ? AppColors.darkCard : Colors.white,
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                    color: const Color(0xFF1a365d).withOpacity(0.2),
                     blurRadius: 24,
                     offset: const Offset(0, 8),
                   ),
                 ],
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.school_rounded,
-                  size: 56,
-                  color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Image.asset(
+                  'assets/icon/splash_logo.png',
+                  fit: BoxFit.contain,
                 ),
               ),
             )

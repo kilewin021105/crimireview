@@ -260,28 +260,24 @@ class _AuthScreenState extends State<AuthScreen> {
                   
                   Center(
                     child: Container(
-                      width: 80,
-                      height: 80,
+                      width: 100,
+                      height: 100,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
+                        color: isDark ? AppColors.darkCard : Colors.white,
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                            color: const Color(0xFF1a365d).withOpacity(0.15),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.school_rounded,
-                          size: 40,
-                          color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Image.asset(
+                          'assets/icon/splash_logo.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),

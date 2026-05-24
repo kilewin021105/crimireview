@@ -610,28 +610,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
 
                     Container(
-                      width: 72,
-                      height: 72,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                        ),
-                        borderRadius: BorderRadius.circular(18),
+                        color: isDark ? AppColors.darkCard : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                            color: const Color(0xFF1a365d).withOpacity(0.12),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.school_rounded,
-                          size: 36,
-                          color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Image.asset(
+                          'assets/icon/splash_logo.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
