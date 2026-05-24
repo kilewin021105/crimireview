@@ -14,6 +14,7 @@ import '../utils/page_transitions.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'profile_screen.dart';
 import 'auth_screen.dart';
+import 'change_password_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -113,134 +114,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     }
-  }
-
-  void _showChangePasswordDialog(bool isDark) {
-    final currentPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-    bool isLoading = false;
-    String? errorMessage;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(
-            'Change Password',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: newPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password',
-                    labelStyle: TextStyle(color: isDark ? Colors.grey : Colors.grey.shade600),
-                    prefixIcon: Icon(Icons.lock_outline, color: AppColors.accent),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.accent, width: 2),
-                    ),
-                  ),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: confirmPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    labelStyle: TextStyle(color: isDark ? Colors.grey : Colors.grey.shade600),
-                    prefixIcon: Icon(Icons.lock_outline, color: AppColors.accent),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.accent, width: 2),
-                    ),
-                  ),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                ),
-                if (errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    errorMessage!,
-                    style: TextStyle(color: AppColors.error, fontSize: 13),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: isLoading ? null : () async {
-                if (newPasswordController.text.length < 6) {
-                  setDialogState(() => errorMessage = 'Password must be at least 6 characters');
-                  return;
-                }
-                if (newPasswordController.text != confirmPasswordController.text) {
-                  setDialogState(() => errorMessage = 'Passwords do not match');
-                  return;
-                }
-
-                setDialogState(() {
-                  isLoading = true;
-                  errorMessage = null;
-                });
-
-                try {
-                  await SupabaseService.instance.changePassword(newPasswordController.text);
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Password changed successfully!'),
-                        backgroundColor: AppColors.success,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  setDialogState(() {
-                    isLoading = false;
-                    errorMessage = e.toString().replaceAll('Exception: ', '');
-                  });
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Change', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showSignOutDialog(bool isDark) {
@@ -486,7 +359,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               
               if (_isLoggedIn) ...[
                 GestureDetector(
-                  onTap: () => _showChangePasswordDialog(isDark),
+                  onTap: () => Navigator.push(
+                    context,
+                    SlidePageRoute(page: const ChangePasswordScreen(), direction: SlideDirection.up),
+                  ),
                   child: _buildSettingTile(
                     icon: Icons.lock_outline_rounded,
                     title: 'Change Password',
