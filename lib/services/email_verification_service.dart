@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EmailVerificationService {
   static final EmailVerificationService _instance = EmailVerificationService._internal();
@@ -10,10 +10,10 @@ class EmailVerificationService {
 
   static const String _resendApiKey = 're_5FEuM4u3_35u49aUZFiExpYFHpP9YqQ7e';
   static const String _fromEmail = 'CrimiReview <onboarding@resend.dev>';
-  
-  String? _currentCode;
-  String? _currentEmail;
-  DateTime? _codeExpiry;
+  static const int _codeExpiryMinutes = 10;
+  static const int _maxAttempts = 5;
+
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // Generate 6-digit verification code
   String _generateCode() {
@@ -21,13 +21,29 @@ class EmailVerificationService {
     return (100000 + random.nextInt(900000)).toString();
   }
 
-  // Send verification email
+  // Send verification email and store code in Supabase
   Future<bool> sendVerificationEmail(String email) async {
     try {
-      _currentCode = _generateCode();
-      _currentEmail = email;
-      _codeExpiry = DateTime.now().add(const Duration(minutes: 10));
+      final code = _generateCode();
+      final expiresAt = DateTime.now().add(const Duration(minutes: _codeExpiryMinutes));
 
+      // Delete any existing pending verifications for this email
+      await _supabase
+          .from('email_verifications')
+          .delete()
+          .eq('email', email.toLowerCase())
+          .eq('verified', false);
+
+      // Insert new verification record
+      await _supabase.from('email_verifications').insert({
+        'email': email.toLowerCase(),
+        'code': code,
+        'expires_at': expiresAt.toUtc().toIso8601String(),
+        'verified': false,
+        'attempts': 0,
+      });
+
+      // Send email via Resend
       final response = await http.post(
         Uri.parse('https://api.resend.com/emails'),
         headers: {
@@ -38,7 +54,152 @@ class EmailVerificationService {
           'from': _fromEmail,
           'to': [email],
           'subject': 'CrimiReview - Verify Your Email',
-          'html': '''
+          'html': _buildEmailTemplate(code),
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        print('Resend API error: ${response.body}');
+        // Clean up the verification record if email failed
+        await _supabase
+            .from('email_verifications')
+            .delete()
+            .eq('email', email.toLowerCase())
+            .eq('code', code);
+        return false;
+      }
+    } catch (e) {
+      print('Email verification error: $e');
+      return false;
+    }
+  }
+
+  // Verify the code against Supabase
+  Future<Map<String, dynamic>> verifyCode(String email, String code) async {
+    try {
+      // Get the verification record
+      final response = await _supabase
+          .from('email_verifications')
+          .select()
+          .eq('email', email.toLowerCase())
+          .eq('verified', false)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) {
+        return {'success': false, 'error': 'No pending verification found'};
+      }
+
+      // Check if expired
+      final expiresAt = DateTime.parse(response['expires_at']);
+      if (DateTime.now().toUtc().isAfter(expiresAt)) {
+        // Delete expired record
+        await _supabase
+            .from('email_verifications')
+            .delete()
+            .eq('id', response['id']);
+        return {'success': false, 'error': 'Code has expired. Please request a new one.'};
+      }
+
+      // Check attempts
+      final attempts = response['attempts'] as int;
+      if (attempts >= _maxAttempts) {
+        await _supabase
+            .from('email_verifications')
+            .delete()
+            .eq('id', response['id']);
+        return {'success': false, 'error': 'Too many attempts. Please request a new code.'};
+      }
+
+      // Check code
+      if (response['code'] != code) {
+        // Increment attempts
+        await _supabase
+            .from('email_verifications')
+            .update({'attempts': attempts + 1})
+            .eq('id', response['id']);
+        
+        final remaining = _maxAttempts - attempts - 1;
+        return {
+          'success': false, 
+          'error': 'Invalid code. $remaining attempts remaining.'
+        };
+      }
+
+      // Code is valid - mark as verified
+      await _supabase
+          .from('email_verifications')
+          .update({'verified': true})
+          .eq('id', response['id']);
+
+      return {'success': true};
+    } catch (e) {
+      print('Verify code error: $e');
+      return {'success': false, 'error': 'Verification failed. Please try again.'};
+    }
+  }
+
+  // Check if email is verified (has a verified record)
+  Future<bool> isEmailVerified(String email) async {
+    try {
+      final response = await _supabase
+          .from('email_verifications')
+          .select('id')
+          .eq('email', email.toLowerCase())
+          .eq('verified', true)
+          .limit(1)
+          .maybeSingle();
+      
+      return response != null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Get remaining time for current verification
+  Future<Duration?> getRemainingTime(String email) async {
+    try {
+      final response = await _supabase
+          .from('email_verifications')
+          .select('expires_at')
+          .eq('email', email.toLowerCase())
+          .eq('verified', false)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      final expiresAt = DateTime.parse(response['expires_at']);
+      final remaining = expiresAt.difference(DateTime.now().toUtc());
+      return remaining.isNegative ? null : remaining;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Resend code
+  Future<bool> resendCode(String email) async {
+    return await sendVerificationEmail(email);
+  }
+
+  // Clean up verified/expired records for an email
+  Future<void> cleanupVerifications(String email) async {
+    try {
+      await _supabase
+          .from('email_verifications')
+          .delete()
+          .eq('email', email.toLowerCase());
+    } catch (e) {
+      print('Cleanup error: $e');
+    }
+  }
+
+  String _buildEmailTemplate(String code) {
+    return '''
 <!DOCTYPE html>
 <html>
 <head>
@@ -60,9 +221,9 @@ class EmailVerificationService {
             <td style="padding: 0 32px 32px; text-align: center;">
               <p style="margin: 0 0 24px; font-size: 16px; color: #F5F5F5; line-height: 1.5;">Enter this code to verify your email:</p>
               <div style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                <span style="font-size: 36px; font-weight: 700; color: #FFFFFF; letter-spacing: 8px;">$_currentCode</span>
+                <span style="font-size: 36px; font-weight: 700; color: #FFFFFF; letter-spacing: 8px;">$code</span>
               </div>
-              <p style="margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.5;">This code expires in 10 minutes.<br>If you didn't request this, please ignore this email.</p>
+              <p style="margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.5;">This code expires in $_codeExpiryMinutes minutes.<br>If you didn't request this, please ignore this email.</p>
             </td>
           </tr>
           <tr>
@@ -76,94 +237,6 @@ class EmailVerificationService {
   </table>
 </body>
 </html>
-''',
-        }),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // Store pending verification
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('pending_verification_email', email);
-        await prefs.setString('pending_verification_code', _currentCode!);
-        await prefs.setString('pending_verification_expiry', _codeExpiry!.toIso8601String());
-        return true;
-      } else {
-        print('Resend API error: ${response.body}');
-        return false;
-      }
-    } catch (e) {
-      print('Email verification error: $e');
-      return false;
-    }
-  }
-
-  // Verify the code
-  Future<bool> verifyCode(String email, String code) async {
-    // Load from prefs if not in memory
-    if (_currentCode == null || _currentEmail == null) {
-      final prefs = await SharedPreferences.getInstance();
-      _currentEmail = prefs.getString('pending_verification_email');
-      _currentCode = prefs.getString('pending_verification_code');
-      final expiryStr = prefs.getString('pending_verification_expiry');
-      if (expiryStr != null) {
-        _codeExpiry = DateTime.parse(expiryStr);
-      }
-    }
-
-    if (_currentEmail != email) {
-      return false;
-    }
-
-    if (_codeExpiry != null && DateTime.now().isAfter(_codeExpiry!)) {
-      return false;
-    }
-
-    if (_currentCode == code) {
-      // Mark email as verified
-      final prefs = await SharedPreferences.getInstance();
-      final verifiedEmails = prefs.getStringList('verified_emails') ?? [];
-      if (!verifiedEmails.contains(email)) {
-        verifiedEmails.add(email);
-        await prefs.setStringList('verified_emails', verifiedEmails);
-      }
-      
-      // Clear pending verification
-      await prefs.remove('pending_verification_email');
-      await prefs.remove('pending_verification_code');
-      await prefs.remove('pending_verification_expiry');
-      
-      _currentCode = null;
-      _currentEmail = null;
-      _codeExpiry = null;
-      
-      return true;
-    }
-
-    return false;
-  }
-
-  // Check if email is verified
-  Future<bool> isEmailVerified(String email) async {
-    final prefs = await SharedPreferences.getInstance();
-    final verifiedEmails = prefs.getStringList('verified_emails') ?? [];
-    return verifiedEmails.contains(email);
-  }
-
-  // Check if there's a pending verification
-  Future<String?> getPendingVerificationEmail() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('pending_verification_email');
-  }
-
-  // Get remaining time for code expiry
-  Duration? getRemainingTime() {
-    if (_codeExpiry == null) return null;
-    final remaining = _codeExpiry!.difference(DateTime.now());
-    return remaining.isNegative ? null : remaining;
-  }
-
-  // Resend code
-  Future<bool> resendCode(String email) async {
-    return await sendVerificationEmail(email);
+''';
   }
 }

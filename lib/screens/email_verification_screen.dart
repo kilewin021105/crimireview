@@ -147,13 +147,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
     HapticFeedback.mediumImpact();
 
-    final isValid = await _emailService.verifyCode(widget.email, code);
+    final result = await _emailService.verifyCode(widget.email, code);
 
-    if (!isValid) {
+    if (result['success'] != true) {
       if (mounted) {
         setState(() {
           _isVerifying = false;
-          _errorMessage = 'Invalid or expired code. Please try again.';
+          _errorMessage = result['error'] ?? 'Invalid or expired code. Please try again.';
         });
         HapticFeedback.heavyImpact();
         _clearCode();
