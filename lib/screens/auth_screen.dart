@@ -6,6 +6,7 @@ import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/page_transitions.dart';
 import 'home_screen.dart';
+import 'email_verification_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -50,19 +51,19 @@ class _AuthScreenState extends State<AuthScreen> {
           password: _passwordController.text,
         );
       } else {
-        final response = await _supabase.signUp(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          displayName: _nameController.text.trim(),
+        // For signup, go to email verification first
+        setState(() => _isLoading = false);
+        Navigator.push(
+          context,
+          SlidePageRoute(
+            page: EmailVerificationScreen(
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+              displayName: _nameController.text.trim(),
+            ),
+          ),
         );
-        
-        // If no session after signup (email confirmation required), auto sign in
-        if (response.session == null) {
-          await _supabase.signIn(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
-        }
+        return;
       }
       
       if (mounted && _supabase.isLoggedIn) {
