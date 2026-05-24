@@ -8,8 +8,8 @@ class EmailVerificationService {
   static EmailVerificationService get instance => _instance;
   EmailVerificationService._internal();
 
-  static const String _resendApiKey = 're_5FEuM4u3_35u49aUZFiExpYFHpP9YqQ7e';
-  static const String _fromEmail = 'CrimiReview <onboarding@resend.dev>';
+  static const String _resendApiKey = 're_QjKfe684_5jjRg6FXcPQkxRCVZceLBwLp';
+  static const String _fromEmail = 'CrimiReview <noreply@crimireview.app>';
   static const int _codeExpiryMinutes = 10;
   static const int _maxAttempts = 5;
 
