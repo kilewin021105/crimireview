@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
 import '../services/adaptive_learning_service.dart';
 import '../utils/page_transitions.dart';
+import '../utils/responsive.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'profile_screen.dart';
 import 'auth_screen.dart';
@@ -169,19 +170,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeService = Provider.of<ThemeService>(context);
     final isDarkMode = themeService.themeMode == ThemeMode.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+    final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(padding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Settings',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: Responsive.fontSize(context, 28),
                   fontWeight: FontWeight.w700,
                   color: isDark ? Colors.white : const Color(0xFF1A1A2E),
                 ),
@@ -190,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 'Manage your preferences',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: Responsive.fontSize(context, 14),
                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                 ),
               ),

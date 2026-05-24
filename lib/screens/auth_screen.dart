@@ -5,6 +5,7 @@ import '../services/theme_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/page_transitions.dart';
+import '../utils/responsive.dart';
 import 'home_screen.dart';
 import 'email_verification_screen.dart';
 
@@ -245,24 +246,29 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+    final logoSize = isSmall ? 80.0 : 100.0;
+    final iconSize = isSmall ? 44.0 : 56.0;
+    final titleSize = Responsive.fontSize(context, 28);
+    final padding = Responsive.horizontalPadding(context);
     
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(padding),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 48),
+                  SizedBox(height: isSmall ? 32 : 48),
                   
                   Center(
                     child: Container(
-                      width: 100,
-                      height: 100,
+                      width: logoSize,
+                      height: logoSize,
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkCard : Colors.white,
                         borderRadius: BorderRadius.circular(24),
@@ -276,18 +282,18 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                       child: Icon(
                         Icons.school,
-                        size: 56,
+                        size: iconSize,
                         color: AppColors.accent,
                       ),
                     ),
                   ),
                   
-                  const SizedBox(height: 32),
+                  SizedBox(height: isSmall ? 24 : 32),
                   
                   Text(
                     _isLogin ? 'Welcome Back' : 'Create Account',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: titleSize,
                       fontWeight: FontWeight.bold,
                       color: isDark ? Colors.white : AppColors.textDark,
                     ),
@@ -301,13 +307,13 @@ class _AuthScreenState extends State<AuthScreen> {
                       ? 'Sign in to continue' 
                       : 'Start your review journey',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: Responsive.fontSize(context, 15),
                       color: isDark ? Colors.white60 : AppColors.textMuted,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   
-                  const SizedBox(height: 40),
+                  SizedBox(height: isSmall ? 32 : 40),
                   
                   if (!_isLogin) ...[
                     _buildTextField(

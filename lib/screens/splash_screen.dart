@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/theme_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
+import '../utils/responsive.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
 import 'auth_screen.dart';
@@ -72,6 +73,9 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+    final logoSize = isSmall ? 110.0 : 140.0;
+    final iconSize = isSmall ? 60.0 : 80.0;
     
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
@@ -80,8 +84,8 @@ class _SplashScreenState extends State<SplashScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 140,
-              height: 140,
+              width: logoSize,
+              height: logoSize,
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkCard : Colors.white,
                 borderRadius: BorderRadius.circular(28),
@@ -95,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               child: Icon(
                 Icons.school,
-                size: 80,
+                size: iconSize,
                 color: AppColors.accent,
               ),
             )
@@ -108,12 +112,12 @@ class _SplashScreenState extends State<SplashScreen>
                 )
                 .fadeIn(duration: 400.ms),
             
-            const SizedBox(height: 24),
+            SizedBox(height: isSmall ? 20 : 24),
             
             Text(
               'CrimiReview',
               style: GoogleFonts.poppins(
-                fontSize: 28,
+                fontSize: Responsive.fontSize(context, 28),
                 fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white : const Color(0xFF1A1A2E),
               ),

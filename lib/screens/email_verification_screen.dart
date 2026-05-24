@@ -7,6 +7,7 @@ import '../services/email_verification_service.dart';
 import '../services/supabase_service.dart';
 import '../services/storage_service.dart';
 import '../utils/page_transitions.dart';
+import '../utils/responsive.dart';
 import 'home_screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -235,6 +236,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+    final padding = Responsive.horizontalPadding(context);
+    final iconContainerSize = isSmall ? 80.0 : 100.0;
+    final iconSize = isSmall ? 38.0 : 48.0;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : const Color(0xFFF8F9FA),
@@ -267,16 +272,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(padding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 20),
+                    SizedBox(height: isSmall ? 12 : 20),
                     
                     // Email icon
                     Container(
-                      width: 100,
-                      height: 100,
+                      width: iconContainerSize,
+                      height: iconContainerSize,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
@@ -290,7 +295,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       ),
                       child: Icon(
                         Icons.mark_email_read_rounded,
-                        size: 48,
+                        size: iconSize,
                         color: AppColors.accent,
                       ),
                     ),
@@ -326,60 +331,65 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     ),
                     const SizedBox(height: 40),
                     
-                    // Code input
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(6, (index) {
-                        return Container(
-                          width: 48,
-                          height: 56,
-                          margin: EdgeInsets.only(
-                            left: index == 0 ? 0 : 6,
-                            right: index == 5 ? 0 : 6,
-                          ),
-                          child: TextField(
-                            controller: _controllers[index],
-                            focusNode: _focusNodes[index],
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            maxLength: 1,
-                            cursorColor: AppColors.accent,
-                            style: GoogleFonts.poppins(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.accent,
-                            ),
-                            decoration: InputDecoration(
-                              counterText: '',
-                              filled: true,
-                              fillColor: isDark ? AppColors.darkCard : Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    // Code input - responsive
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final maxWidth = constraints.maxWidth;
+                        final boxSize = ((maxWidth - 40) / 6).clamp(40.0, 52.0);
+                        final fontSize = boxSize * 0.45;
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(6, (index) {
+                            return Container(
+                              width: boxSize,
+                              height: boxSize * 1.15,
+                              margin: EdgeInsets.symmetric(horizontal: 4),
+                              child: TextField(
+                                controller: _controllers[index],
+                                focusNode: _focusNodes[index],
+                                textAlign: TextAlign.center,
+                                keyboardType: TextInputType.number,
+                                maxLength: 1,
+                                cursorColor: AppColors.accent,
+                                style: GoogleFonts.poppins(
+                                  fontSize: fontSize,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
                                 ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                  filled: true,
+                                  fillColor: isDark ? AppColors.darkCard : Colors.white,
+                                  contentPadding: EdgeInsets.zero,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: AppColors.accent,
+                                      width: 2,
+                                    ),
+                                  ),
                                 ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                onChanged: (value) => _onCodeChanged(index, value),
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: AppColors.accent,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            onChanged: (value) => _onCodeChanged(index, value),
-                          ),
+                            );
+                          }),
                         );
-                      }),
+                      },
                     ),
                     const SizedBox(height: 24),
                     

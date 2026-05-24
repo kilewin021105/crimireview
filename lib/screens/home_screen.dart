@@ -10,6 +10,7 @@ import '../services/adaptive_ml_service.dart';
 import '../services/connectivity_service.dart';
 import '../models/subject.dart';
 import '../utils/page_transitions.dart';
+import '../utils/responsive.dart';
 import '../widgets/animated_widgets.dart';
 import '../widgets/streak_widget.dart';
 import 'subjects_screen.dart';
@@ -196,25 +197,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final service = Provider.of<AdaptiveLearningService>(context);
     final progress = service.userProgress;
+    final padding = Responsive.horizontalPadding(context);
+    final isSmall = Responsive.isSmallPhone(context);
+    final spacing = isSmall ? 20.0 : 24.0;
     
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(isDark, progress),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing),
             _buildDailyChallenge(isDark),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing),
             _buildQuickStats(isDark, progress),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing),
             _buildStartQuizCard(isDark),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing),
             _buildStudySubjects(isDark),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing),
             _buildMLInsights(isDark, service),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing),
           ],
         ),
       ),
