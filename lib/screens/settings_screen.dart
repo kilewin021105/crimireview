@@ -485,27 +485,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   children: [
 
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkCard : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1a365d).withOpacity(0.12),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Image.asset(
-                          'assets/icon/splash_logo.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
+                    Image.asset(
+                      'assets/icon/graduation_cap.png',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(height: 16),
                     Text(
