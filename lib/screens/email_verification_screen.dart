@@ -58,17 +58,20 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   Future<void> _sendVerificationEmail() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     
-    final success = await _emailService.sendVerificationEmail(widget.email);
+    final result = await _emailService.sendVerificationEmail(widget.email);
     
     if (mounted) {
       setState(() {
         _isLoading = false;
-        if (!success) {
-          _errorMessage = 'Failed to send verification email. Please try again.';
-        } else {
+        if (result['success'] == true) {
           _startCooldown();
+        } else {
+          _errorMessage = result['error'] ?? 'Failed to send verification email. Please try again.';
         }
       });
     }
@@ -94,12 +97,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       _errorMessage = null;
     });
     
-    final success = await _emailService.resendCode(widget.email);
+    final result = await _emailService.resendCode(widget.email);
     
     if (mounted) {
       setState(() {
         _isResending = false;
-        if (success) {
+        if (result['success'] == true) {
           _startCooldown();
           _clearCode();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -117,7 +120,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             ),
           );
         } else {
-          _errorMessage = 'Failed to resend code. Please try again.';
+          _errorMessage = result['error'] ?? 'Failed to resend code. Please try again.';
         }
       });
     }

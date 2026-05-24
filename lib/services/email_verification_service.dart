@@ -22,57 +22,78 @@ class EmailVerificationService {
   }
 
   // Send verification email and store code in Supabase
-  Future<bool> sendVerificationEmail(String email) async {
+  Future<Map<String, dynamic>> sendVerificationEmail(String email) async {
     try {
       final code = _generateCode();
       final expiresAt = DateTime.now().add(const Duration(minutes: _codeExpiryMinutes));
 
       // Delete any existing pending verifications for this email
-      await _supabase
-          .from('email_verifications')
-          .delete()
-          .eq('email', email.toLowerCase())
-          .eq('verified', false);
-
-      // Insert new verification record
-      await _supabase.from('email_verifications').insert({
-        'email': email.toLowerCase(),
-        'code': code,
-        'expires_at': expiresAt.toUtc().toIso8601String(),
-        'verified': false,
-        'attempts': 0,
-      });
-
-      // Send email via Resend
-      final response = await http.post(
-        Uri.parse('https://api.resend.com/emails'),
-        headers: {
-          'Authorization': 'Bearer $_resendApiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'from': _fromEmail,
-          'to': [email],
-          'subject': 'CrimiReview - Verify Your Email',
-          'html': _buildEmailTemplate(code),
-        }),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return true;
-      } else {
-        print('Resend API error: ${response.body}');
-        // Clean up the verification record if email failed
+      try {
         await _supabase
             .from('email_verifications')
             .delete()
             .eq('email', email.toLowerCase())
-            .eq('code', code);
-        return false;
+            .eq('verified', false);
+      } catch (e) {
+        print('Delete old verifications error: $e');
+        // Continue anyway
+      }
+
+      // Insert new verification record
+      try {
+        await _supabase.from('email_verifications').insert({
+          'email': email.toLowerCase(),
+          'code': code,
+          'expires_at': expiresAt.toUtc().toIso8601String(),
+          'verified': false,
+          'attempts': 0,
+        });
+      } catch (e) {
+        print('Supabase insert error: $e');
+        return {'success': false, 'error': 'Failed to create verification. Please try again.'};
+      }
+
+      // Send email via Resend
+      try {
+        final response = await http.post(
+          Uri.parse('https://api.resend.com/emails'),
+          headers: {
+            'Authorization': 'Bearer $_resendApiKey',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'from': _fromEmail,
+            'to': [email],
+            'subject': 'CrimiReview - Verify Your Email',
+            'html': _buildEmailTemplate(code),
+          }),
+        );
+
+        print('Resend response: ${response.statusCode} - ${response.body}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return {'success': true};
+        } else {
+          final errorBody = jsonDecode(response.body);
+          final errorMsg = errorBody['message'] ?? 'Failed to send email';
+          print('Resend API error: $errorMsg');
+          
+          // Clean up the verification record if email failed
+          await _supabase
+              .from('email_verifications')
+              .delete()
+              .eq('email', email.toLowerCase())
+              .eq('code', code);
+          
+          return {'success': false, 'error': errorMsg};
+        }
+      } catch (e) {
+        print('Resend API exception: $e');
+        return {'success': false, 'error': 'Failed to send email. Check your internet connection.'};
       }
     } catch (e) {
       print('Email verification error: $e');
-      return false;
+      return {'success': false, 'error': 'Something went wrong. Please try again.'};
     }
   }
 
@@ -182,7 +203,7 @@ class EmailVerificationService {
   }
 
   // Resend code
-  Future<bool> resendCode(String email) async {
+  Future<Map<String, dynamic>> resendCode(String email) async {
     return await sendVerificationEmail(email);
   }
 
