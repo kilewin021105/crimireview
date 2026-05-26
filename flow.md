@@ -75,19 +75,32 @@ Supabase Authentication
 
 ### Forgot Password
 ```
-Auth Screen ──► Forgot Password Dialog
+Auth Screen ──► Forgot Password Screen
     │
     ▼
-Enter Email
+Step 1: Enter Email
     │
     ▼
-Send Reset Link via Supabase
+Send 6-Digit OTP via Resend API
     │
     ▼
-User Clicks Link in Email
+Step 2: Enter Verification Code
     │
     ▼
-Reset Password
+Verify Code with Backend
+    │
+    ├── Invalid ──► Show Error, Retry
+    │
+    └── Valid ──► Step 3: Enter New Password
+                      │
+                      ▼
+                  Confirm Password
+                      │
+                      ▼
+                  Update via Supabase RPC
+                      │
+                      ▼
+                  Success ──► Back to Login
 ```
 
 ## Main App Flow
