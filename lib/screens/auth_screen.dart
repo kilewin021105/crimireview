@@ -69,24 +69,47 @@ class _AuthScreenState extends State<AuthScreen> {
       
       if (mounted && _supabase.isLoggedIn) {
         final storage = StorageService();
-        if (!_isLogin && _nameController.text.isNotEmpty) {
-          await storage.setUserName(_nameController.text);
+        
+        // Load cloud profile and sync to local storage
+        final cloudProfile = await _supabase.loadCloudProfile();
+        if (cloudProfile != null) {
+          // Sync cloud data to local storage
+          if (cloudProfile['display_name'] != null) {
+            await storage.setUserName(cloudProfile['display_name']);
+          }
+          if (cloudProfile['email'] != null) {
+            await storage.setUserEmail(cloudProfile['email']);
+          }
+          if (cloudProfile['school'] != null) {
+            await storage.setSchool(cloudProfile['school']);
+          }
+          if (cloudProfile['current_streak'] != null) {
+            await storage.setDailyStreak(cloudProfile['current_streak']);
+          }
         }
+        
         await storage.setOnboardingCompleted(true);
         
-        final progress = await storage.loadProgress();
-        int totalQuizzes = 0;
-        int totalCorrect = 0;
-        for (final sp in progress.subjectProgress.values) {
-          totalQuizzes += sp.totalQuizzesTaken;
-          totalCorrect += sp.totalCorrectAnswers;
+        // Merge local and cloud progress (take higher values)
+        final localProgress = await storage.loadProgress();
+        int localQuizzes = 0;
+        int localCorrect = 0;
+        for (final sp in localProgress.subjectProgress.values) {
+          localQuizzes += sp.totalQuizzesTaken;
+          localCorrect += sp.totalCorrectAnswers;
         }
+        
+        final cloudQuizzes = cloudProfile?['total_quizzes'] ?? 0;
+        final cloudCorrect = cloudProfile?['total_correct'] ?? 0;
+        final cloudPoints = cloudProfile?['total_points'] ?? 0;
+        
+        // Sync the higher values to cloud
         await _supabase.syncLocalProgress(
-          totalPoints: totalCorrect * 10,
-          totalQuizzes: totalQuizzes,
-          totalCorrect: totalCorrect,
-          currentStreak: progress.currentStreak,
-          bestStreak: progress.longestStreak,
+          totalPoints: (localCorrect * 10) > cloudPoints ? (localCorrect * 10) : cloudPoints,
+          totalQuizzes: localQuizzes > cloudQuizzes ? localQuizzes : cloudQuizzes,
+          totalCorrect: localCorrect > cloudCorrect ? localCorrect : cloudCorrect,
+          currentStreak: localProgress.currentStreak,
+          bestStreak: localProgress.longestStreak,
         );
         
         setState(() => _isLoading = false);

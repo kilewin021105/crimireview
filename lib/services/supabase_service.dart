@@ -105,11 +105,76 @@ class SupabaseService {
     return response;
   }
 
+  /// Ensure user profile exists in database (call after signup/login)
+  Future<void> ensureProfileExists({String? displayName}) async {
+    if (!isLoggedIn) return;
+    
+    try {
+      final existing = await getUserProfile();
+      if (existing != null) return; // Profile already exists
+      
+      // Create new profile
+      final user = currentUser!;
+      final name = displayName ?? 
+                   user.userMetadata?['display_name'] ?? 
+                   user.email?.split('@')[0] ?? 
+                   'User';
+      
+      await client.from('user_profiles').insert({
+        'id': userId,
+        'email': user.email,
+        'display_name': name,
+        'total_points': 0,
+        'total_quizzes': 0,
+        'total_correct': 0,
+        'current_streak': 0,
+        'best_streak': 0,
+        'rank': 'Rookie',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (e) {
+      // Profile might already exist due to race condition, ignore
+      print('ensureProfileExists error: $e');
+    }
+  }
+
+  /// Load cloud profile data and return it for syncing to local storage
+  Future<Map<String, dynamic>?> loadCloudProfile() async {
+    if (!isLoggedIn) return null;
+    
+    await ensureProfileExists();
+    
+    try {
+      final profile = await getUserProfile();
+      if (profile == null) return null;
+      
+      // Return profile data for local storage sync
+      return {
+        'display_name': profile['display_name'],
+        'email': profile['email'] ?? currentUser?.email,
+        'avatar_url': profile['avatar_url'],
+        'school': profile['school'],
+        'total_points': (profile['total_points'] as num?)?.toInt() ?? 0,
+        'total_quizzes': (profile['total_quizzes'] as num?)?.toInt() ?? 0,
+        'total_correct': (profile['total_correct'] as num?)?.toInt() ?? 0,
+        'current_streak': (profile['current_streak'] as num?)?.toInt() ?? 0,
+        'best_streak': (profile['best_streak'] as num?)?.toInt() ?? 0,
+      };
+    } catch (e) {
+      print('loadCloudProfile error: $e');
+      return null;
+    }
+  }
+
   Future<void> updateProfile({
     String? displayName,
     String? avatarUrl,
+    String? school,
   }) async {
     if (!isLoggedIn) return;
+    
+    await ensureProfileExists();
     
     final updates = <String, dynamic>{
       'updated_at': DateTime.now().toIso8601String(),
@@ -117,6 +182,7 @@ class SupabaseService {
     
     if (displayName != null) updates['display_name'] = displayName;
     if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
+    if (school != null) updates['school'] = school;
     
     await client
         .from('user_profiles')
@@ -151,24 +217,35 @@ class SupabaseService {
   }) async {
     if (!isLoggedIn) return;
     
-    await client.from('quiz_results').insert({
-      'user_id': userId,
-      'subject_id': subjectId,
-      'difficulty': difficulty,
-      'score': score,
-      'total_questions': totalQuestions,
-      'correct_answers': correctAnswers,
-      'time_taken_seconds': timeTakenSeconds,
-    });
+    // Ensure profile exists
+    await ensureProfileExists();
+    
+    try {
+      await client.from('quiz_results').insert({
+        'user_id': userId,
+        'subject_id': subjectId,
+        'difficulty': difficulty,
+        'score': score,
+        'total_questions': totalQuestions,
+        'correct_answers': correctAnswers,
+        'time_taken_seconds': timeTakenSeconds,
+      });
+    } catch (e) {
+      print('Quiz result insert error: $e');
+    }
     
     final profile = await getUserProfile();
     if (profile != null) {
+      final currentQuizzes = (profile['total_quizzes'] as num?)?.toInt() ?? 0;
+      final currentCorrect = (profile['total_correct'] as num?)?.toInt() ?? 0;
+      final currentPoints = (profile['total_points'] as num?)?.toInt() ?? 0;
+      
       await client
           .from('user_profiles')
           .update({
-            'total_quizzes': (profile['total_quizzes'] ?? 0) + 1,
-            'total_correct': (profile['total_correct'] ?? 0) + correctAnswers,
-            'total_points': (profile['total_points'] ?? 0) + score,
+            'total_quizzes': currentQuizzes + 1,
+            'total_correct': currentCorrect + correctAnswers,
+            'total_points': currentPoints + score,
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', userId!);
@@ -336,14 +413,16 @@ class SupabaseService {
   }) async {
     if (!isLoggedIn) return;
     
+    // Ensure profile exists first
+    await ensureProfileExists();
+    
     final profile = await getUserProfile();
     if (profile == null) return;
     
-    final cloudPoints = profile['total_points'] ?? 0;
-    final cloudQuizzes = profile['total_quizzes'] ?? 0;
-    final cloudCorrect = profile['total_correct'] ?? 0;
-    final cloudStreak = profile['current_streak'] ?? 0;
-    final cloudBestStreak = profile['best_streak'] ?? 0;
+    final cloudPoints = (profile['total_points'] as num?)?.toInt() ?? 0;
+    final cloudQuizzes = (profile['total_quizzes'] as num?)?.toInt() ?? 0;
+    final cloudCorrect = (profile['total_correct'] as num?)?.toInt() ?? 0;
+    final cloudBestStreak = (profile['best_streak'] as num?)?.toInt() ?? 0;
     
     await client
         .from('user_profiles')

@@ -174,6 +174,11 @@ class StorageService {
     return streak;
   }
 
+  Future<void> setDailyStreak(int streak) async {
+    final prefs = await _getPrefs();
+    await prefs.setInt(_dailyStreakKey, streak);
+  }
+
   Future<void> updateDailyStreak() async {
     final prefs = await _getPrefs();
     final lastStudyDate = prefs.getString(_lastStudyDateKey);

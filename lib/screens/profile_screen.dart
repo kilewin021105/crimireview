@@ -235,9 +235,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isLoading = true);
     
-    await _storage.setUserName(_nameController.text.trim());
-    await _storage.setSchool(_schoolController.text.trim());
-    await _storage.setUserEmail(_emailController.text.trim());
+    final name = _nameController.text.trim();
+    final school = _schoolController.text.trim();
+    final email = _emailController.text.trim();
+    
+    // Save to local storage
+    await _storage.setUserName(name);
+    await _storage.setSchool(school);
+    await _storage.setUserEmail(email);
+    
+    // Sync to Supabase if logged in
+    if (SupabaseService.instance.isLoggedIn) {
+      await SupabaseService.instance.updateProfile(
+        displayName: name,
+        school: school.isNotEmpty ? school : null,
+      );
+    }
     
     setState(() => _isLoading = false);
     

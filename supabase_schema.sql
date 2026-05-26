@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   email TEXT,
   display_name TEXT,
   avatar_url TEXT,
+  school TEXT,
   total_points INTEGER DEFAULT 0,
   total_quizzes INTEGER DEFAULT 0,
   total_correct INTEGER DEFAULT 0,
@@ -21,6 +22,9 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add school column if table already exists
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS school TEXT;
 
 -- Enable RLS
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;

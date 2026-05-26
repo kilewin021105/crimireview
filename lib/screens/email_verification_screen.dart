@@ -182,6 +182,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       }
 
       if (mounted && _supabase.isLoggedIn) {
+        // Ensure profile exists in database for leaderboard
+        await _supabase.ensureProfileExists(displayName: widget.displayName);
+        
         final storage = StorageService();
         if (widget.displayName != null && widget.displayName!.isNotEmpty) {
           await storage.setUserName(widget.displayName!);
