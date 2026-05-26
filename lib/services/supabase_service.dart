@@ -84,6 +84,47 @@ class SupabaseService {
     await client.auth.resetPasswordForEmail(email);
   }
 
+  Future<void> sendPasswordResetOTP(String email) async {
+    if (!_isInitialized) throw Exception('Supabase not initialized');
+    await client.auth.signInWithOtp(
+      email: email,
+      shouldCreateUser: false,
+    );
+  }
+
+  Future<bool> verifyPasswordResetOTP(String email, String token) async {
+    if (!_isInitialized) throw Exception('Supabase not initialized');
+    try {
+      final response = await client.auth.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.email,
+      );
+      return response.session != null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> updatePasswordAfterReset(String newPassword) async {
+    if (!_isInitialized) throw Exception('Supabase not initialized');
+    if (!isLoggedIn) throw Exception('Not logged in');
+    
+    await client.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
+
+  Future<void> resetUserPassword(String email, String newPassword) async {
+    if (!_isInitialized) throw Exception('Supabase not initialized');
+    
+    // Call RPC function to reset password
+    await client.rpc('reset_user_password', params: {
+      'user_email': email.toLowerCase(),
+      'new_password': newPassword,
+    });
+  }
+
   Future<void> changePassword(String newPassword) async {
     if (!_isInitialized) throw Exception('Supabase not initialized');
     if (!isLoggedIn) throw Exception('Not logged in');

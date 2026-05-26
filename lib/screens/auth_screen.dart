@@ -8,6 +8,7 @@ import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import 'home_screen.dart';
 import 'email_verification_screen.dart';
+import 'forgot_password_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -165,106 +166,6 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  void _showForgotPasswordDialog(bool isDark) {
-    final resetEmailController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Reset Password',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Enter your email address and we\'ll send you a link to reset your password.',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: isDark ? Colors.white70 : AppColors.textMuted,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: resetEmailController,
-              keyboardType: TextInputType.emailAddress,
-              style: TextStyle(color: isDark ? Colors.white : AppColors.textDark),
-              decoration: InputDecoration(
-                hintText: 'Email address',
-                hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
-                filled: true,
-                fillColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(color: isDark ? Colors.white60 : AppColors.textMuted),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final email = resetEmailController.text.trim();
-              if (email.isEmpty || !email.contains('@')) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Please enter a valid email'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-                return;
-              }
-              
-              Navigator.pop(context);
-              
-              try {
-                await _supabase.resetPassword(email);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Password reset link sent to $email'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to send reset link. Try again.'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: Text(
-              'Send Link',
-              style: GoogleFonts.poppins(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
   
   @override
   Widget build(BuildContext context) {
@@ -444,7 +345,13 @@ class _AuthScreenState extends State<AuthScreen> {
                   if (_isLogin) ...[
                     const SizedBox(height: 16),
                     GestureDetector(
-                      onTap: () => _showForgotPasswordDialog(isDark),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordScreen(),
+                          ),
+                        );
+                      },
                       child: Text(
                         'Forgot Password?',
                         style: GoogleFonts.poppins(

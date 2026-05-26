@@ -26,6 +26,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
   bool _isLoading = true;
   bool _alreadyCompleted = false;
   
+  // Shuffled options for each question
+  late List<List<String>> _shuffledOptions;
+  late List<int> _shuffledCorrectIndices;
+  
   late AnimationController _timerController;
   late Animation<double> _timerAnimation;
   late ConfettiController _confettiController;
@@ -66,17 +70,26 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
   }
 
   void _loadDailyQuestions() {
-
     final today = DateTime.now();
     final seed = today.year * 10000 + today.month * 100 + today.day;
     final random = Random(seed);
     
-
     final allQuestions = List<Question>.from(QuestionsDatabase.allQuestions);
     allQuestions.shuffle(random);
     
-
     _questions = allQuestions.take(_totalQuestions).toList();
+    
+    // Shuffle options for each question
+    _shuffledOptions = [];
+    _shuffledCorrectIndices = [];
+    
+    for (final question in _questions) {
+      final indices = List.generate(question.options.length, (i) => i);
+      indices.shuffle(random);
+      final shuffled = indices.map((i) => question.options[i]).toList();
+      _shuffledOptions.add(shuffled);
+      _shuffledCorrectIndices.add(indices.indexOf(question.correctAnswerIndex));
+    }
   }
 
   void _startTimer() {
@@ -110,7 +123,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
     
     _timerController.stop();
     
-    final isCorrect = index == _questions[_currentIndex].correctAnswerIndex;
+    // Use shuffled correct index
+    final isCorrect = index == _shuffledCorrectIndices[_currentIndex];
     
     setState(() {
       _selectedAnswer = index;
@@ -216,10 +230,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
                     _buildQuestionCard(question, isDark),
                     const SizedBox(height: 20),
                     ...List.generate(
-                      question.options.length,
+                      _shuffledOptions[_currentIndex].length,
                       (index) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildOptionCard(question, index, isDark),
+                        child: _buildOptionCard(index, isDark),
                       ),
                     ),
                     if (_showExplanation && question.explanation != null)
@@ -827,9 +841,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
     }
   }
 
-  Widget _buildOptionCard(Question question, int index, bool isDark) {
+  Widget _buildOptionCard(int index, bool isDark) {
     final isSelected = _selectedAnswer == index;
-    final isCorrect = index == question.correctAnswerIndex;
+    final isCorrect = index == _shuffledCorrectIndices[_currentIndex];
     final showResult = _selectedAnswer != null;
     
     Color? borderColor;
@@ -894,7 +908,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                question.options[index],
+                _shuffledOptions[_currentIndex][index],
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: isSelected || (showResult && isCorrect) 

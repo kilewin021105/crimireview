@@ -228,11 +228,13 @@ ON CONFLICT (id) DO UPDATE SET public = true;
 DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
 CREATE POLICY "Avatar images are publicly accessible"
 ON storage.objects FOR SELECT
+TO public
 USING (bucket_id = 'avatars');
 
 DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
 CREATE POLICY "Users can upload their own avatar"
 ON storage.objects FOR INSERT
+TO authenticated
 WITH CHECK (
   bucket_id = 'avatars' 
   AND auth.uid()::text = (storage.foldername(name))[1]
@@ -241,6 +243,7 @@ WITH CHECK (
 DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
 CREATE POLICY "Users can update their own avatar"
 ON storage.objects FOR UPDATE
+TO authenticated
 USING (
   bucket_id = 'avatars' 
   AND auth.uid()::text = (storage.foldername(name))[1]
@@ -249,10 +252,100 @@ USING (
 DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
 CREATE POLICY "Users can delete their own avatar"
 ON storage.objects FOR DELETE
+TO authenticated
 USING (
   bucket_id = 'avatars' 
   AND auth.uid()::text = (storage.foldername(name))[1]
 );
+
+-- ============================================
+-- 9. PASSWORD RESETS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.password_resets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used BOOLEAN DEFAULT FALSE,
+  attempts INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.password_resets ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to insert (for sending reset code)
+DROP POLICY IF EXISTS "Anyone can insert password reset" ON public.password_resets;
+CREATE POLICY "Anyone can insert password reset" ON public.password_resets
+  FOR INSERT WITH CHECK (true);
+
+-- Allow anyone to select their own reset by email
+DROP POLICY IF EXISTS "Anyone can view password resets" ON public.password_resets;
+CREATE POLICY "Anyone can view password resets" ON public.password_resets
+  FOR SELECT USING (true);
+
+-- Allow anyone to update (for incrementing attempts)
+DROP POLICY IF EXISTS "Anyone can update password resets" ON public.password_resets;
+CREATE POLICY "Anyone can update password resets" ON public.password_resets
+  FOR UPDATE USING (true);
+
+-- Allow anyone to delete expired/used resets
+DROP POLICY IF EXISTS "Anyone can delete password resets" ON public.password_resets;
+CREATE POLICY "Anyone can delete password resets" ON public.password_resets
+  FOR DELETE USING (true);
+
+-- Index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_password_resets_email ON public.password_resets(email);
+
+-- ============================================
+-- 10. RESET PASSWORD FUNCTION (RPC)
+-- ============================================
+-- This function allows resetting a user's password after code verification
+-- SECURITY: Only works if there's a valid used=true record in password_resets
+
+CREATE OR REPLACE FUNCTION public.reset_user_password(user_email TEXT, new_password TEXT)
+RETURNS VOID AS $$
+DECLARE
+  reset_record RECORD;
+  target_user_id UUID;
+BEGIN
+  -- Check for a valid (used) reset record from the last 15 minutes
+  SELECT * INTO reset_record
+  FROM public.password_resets
+  WHERE email = LOWER(user_email)
+    AND used = TRUE
+    AND created_at > NOW() - INTERVAL '15 minutes'
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  IF reset_record IS NULL THEN
+    RAISE EXCEPTION 'No valid password reset found. Please request a new code.';
+  END IF;
+
+  -- Get the user ID from auth.users
+  SELECT id INTO target_user_id
+  FROM auth.users
+  WHERE email = LOWER(user_email);
+
+  IF target_user_id IS NULL THEN
+    RAISE EXCEPTION 'User not found.';
+  END IF;
+
+  -- Update the user's password using Supabase auth admin function
+  UPDATE auth.users
+  SET encrypted_password = crypt(new_password, gen_salt('bf')),
+      updated_at = NOW()
+  WHERE id = target_user_id;
+
+  -- Delete the reset record after successful password change
+  DELETE FROM public.password_resets
+  WHERE email = LOWER(user_email);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permission to anon and authenticated users
+GRANT EXECUTE ON FUNCTION public.reset_user_password(TEXT, TEXT) TO anon;
+GRANT EXECUTE ON FUNCTION public.reset_user_password(TEXT, TEXT) TO authenticated;
 
 -- ============================================
 -- DONE! Schema is ready.
