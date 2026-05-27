@@ -124,7 +124,7 @@ class StorageService {
     return prefs.getString(_userAvatarKey);
   }
 
-  // Profile Image
+  // Profile Image (local file path)
   Future<void> setProfileImage(String imagePath) async {
     final prefs = await _getPrefs();
     await prefs.setString(_profileImageKey, imagePath);
@@ -133,6 +133,23 @@ class StorageService {
   Future<String?> getProfileImage() async {
     final prefs = await _getPrefs();
     return prefs.getString(_profileImageKey);
+  }
+
+  // Avatar URL (cloud URL from Supabase)
+  static const String _avatarUrlKey = 'avatar_url';
+  
+  Future<void> setAvatarUrl(String? url) async {
+    final prefs = await _getPrefs();
+    if (url != null && url.isNotEmpty) {
+      await prefs.setString(_avatarUrlKey, url);
+    } else {
+      await prefs.remove(_avatarUrlKey);
+    }
+  }
+
+  Future<String?> getAvatarUrl() async {
+    final prefs = await _getPrefs();
+    return prefs.getString(_avatarUrlKey);
   }
 
   // Password

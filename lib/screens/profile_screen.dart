@@ -74,6 +74,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (SupabaseService.instance.isLoggedIn) {
           final avatarUrl = await SupabaseService.instance.uploadAvatar(File(savedPath));
           if (avatarUrl != null && mounted) {
+            // Save avatar URL to local storage
+            await _storage.setAvatarUrl(avatarUrl);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Photo uploaded to cloud'),
@@ -165,6 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           } catch (_) {}
                         }
                         await _storage.setProfileImage('');
+                        await _storage.setAvatarUrl(null);
                         setState(() => _profileImagePath = null);
                         
                         if (SupabaseService.instance.isLoggedIn) {

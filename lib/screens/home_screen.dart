@@ -32,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _currentIndex = 0;
   String _userName = 'Student';
   String? _profileImagePath;
+  String? _avatarUrl;
   int _dailyStreak = 0;
 
   @override
@@ -52,13 +53,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final name = await storage.getUserName();
     final streak = await storage.getDailyStreak();
     final imagePath = await storage.getProfileImage();
+    final avatarUrl = await storage.getAvatarUrl();
     if (mounted) {
       setState(() {
         _userName = name;
         _dailyStreak = streak;
         _profileImagePath = imagePath;
+        _avatarUrl = avatarUrl;
       });
     }
+  }
+
+  Widget _buildAvatarContent() {
+    // Priority: local file > cloud URL > initials
+    if (_profileImagePath != null && _profileImagePath!.isNotEmpty) {
+      final file = File(_profileImagePath!);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          fit: BoxFit.cover,
+          width: 48,
+          height: 48,
+        );
+      }
+    }
+    
+    if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
+      return Image.network(
+        _avatarUrl!,
+        fit: BoxFit.cover,
+        width: 48,
+        height: 48,
+        errorBuilder: (context, error, stackTrace) => _buildInitials(),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildInitials();
+        },
+      );
+    }
+    
+    return _buildInitials();
+  }
+
+  Widget _buildInitials() {
+    return Center(
+      child: Text(
+        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: AppColors.accent,
+        ),
+      ),
+    );
   }
 
   @override
@@ -241,25 +288,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               color: AppColors.accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
-              image: _profileImagePath != null && _profileImagePath!.isNotEmpty
-                  ? DecorationImage(
-                      image: FileImage(File(_profileImagePath!)),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
             ),
-            child: _profileImagePath == null || _profileImagePath!.isEmpty
-                ? Center(
-                    child: Text(
-                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.accent,
-                      ),
-                    ),
-                  )
-                : null,
+            clipBehavior: Clip.antiAlias,
+            child: _buildAvatarContent(),
           ),
         ),
         const SizedBox(width: 14),

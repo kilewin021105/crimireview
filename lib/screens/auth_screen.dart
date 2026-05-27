@@ -87,6 +87,9 @@ class _AuthScreenState extends State<AuthScreen> {
           if (cloudProfile['current_streak'] != null) {
             await storage.setDailyStreak(cloudProfile['current_streak']);
           }
+          if (cloudProfile['avatar_url'] != null) {
+            await storage.setAvatarUrl(cloudProfile['avatar_url']);
+          }
         }
         
         await storage.setOnboardingCompleted(true);
