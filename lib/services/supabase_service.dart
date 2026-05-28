@@ -333,6 +333,32 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  /// Load all progress data from cloud and return it for restoring to local storage
+  Future<Map<String, dynamic>?> loadFullCloudProgress() async {
+    if (!isLoggedIn) return null;
+
+    try {
+      // Get profile data (totals)
+      final profile = await getUserProfile();
+      if (profile == null) return null;
+
+      // Get subject progress
+      final subjectProgress = await getSubjectProgress();
+
+      // Get achievements
+      final achievements = await getUnlockedAchievements();
+
+      return {
+        'profile': profile,
+        'subjectProgress': subjectProgress,
+        'achievements': achievements,
+      };
+    } catch (e) {
+      print('loadFullCloudProgress error: $e');
+      return null;
+    }
+  }
+
   Future<void> saveDailyChallengeScore({
     required int score,
     required int correctAnswers,

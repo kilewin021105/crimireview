@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/user_progress.dart';
 import '../services/theme_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
+import '../widgets/password_strength_indicator.dart';
 import 'home_screen.dart';
 import 'email_verification_screen.dart';
 import 'forgot_password_screen.dart';
@@ -22,6 +24,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
+  String _password = '';
   
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -71,10 +74,12 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted && _supabase.isLoggedIn) {
         final storage = StorageService();
         
-        // Load cloud profile and sync to local storage
-        final cloudProfile = await _supabase.loadCloudProfile();
+        // Load full cloud progress (profile + subject progress + achievements)
+        final cloudData = await _supabase.loadFullCloudProgress();
+        final cloudProfile = cloudData?['profile'];
+        
         if (cloudProfile != null) {
-          // Sync cloud data to local storage
+          // Sync cloud profile data to local storage
           if (cloudProfile['display_name'] != null) {
             await storage.setUserName(cloudProfile['display_name']);
           }
@@ -94,7 +99,7 @@ class _AuthScreenState extends State<AuthScreen> {
         
         await storage.setOnboardingCompleted(true);
         
-        // Merge local and cloud progress (take higher values)
+        // Load local progress for merging
         final localProgress = await storage.loadProgress();
         int localQuizzes = 0;
         int localCorrect = 0;
@@ -102,6 +107,80 @@ class _AuthScreenState extends State<AuthScreen> {
           localQuizzes += sp.totalQuizzesTaken;
           localCorrect += sp.totalCorrectAnswers;
         }
+        
+        // Sync cloud subject progress to local
+        final cloudSubjectProgress = cloudData?['subjectProgress'] as List<Map<String, dynamic>>?;
+        if (cloudSubjectProgress != null && cloudSubjectProgress.isNotEmpty) {
+          for (final cloudSp in cloudSubjectProgress) {
+            final subjectId = cloudSp['subject_id'] as String?;
+            if (subjectId == null) continue;
+            
+            final cloudAnswered = cloudSp['questions_answered'] as int? ?? 0;
+            final cloudCorrectAnswers = cloudSp['correct_answers'] as int? ?? 0;
+            final easyCorrect = cloudSp['easy_correct'] as int? ?? 0;
+            final easyTotal = cloudSp['easy_total'] as int? ?? 0;
+            final mediumCorrect = cloudSp['medium_correct'] as int? ?? 0;
+            final mediumTotal = cloudSp['medium_total'] as int? ?? 0;
+            final hardCorrect = cloudSp['hard_correct'] as int? ?? 0;
+            final hardTotal = cloudSp['hard_total'] as int? ?? 0;
+            
+            // Get or create local subject progress
+            final localSp = localProgress.subjectProgress[subjectId];
+            
+            // Compare cloud vs local and take higher values
+            final mergedAnswered = (localSp?.totalQuestionsAnswered ?? 0) > cloudAnswered 
+                ? (localSp?.totalQuestionsAnswered ?? 0) : cloudAnswered;
+            final mergedCorrect = (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers 
+                ? (localSp?.totalCorrectAnswers ?? 0) : cloudCorrectAnswers;
+            
+            // Determine if difficulty levels are passed (70% threshold)
+            final easyPassed = easyTotal > 0 && (easyCorrect / easyTotal) >= 0.7;
+            final mediumPassed = mediumTotal > 0 && (mediumCorrect / mediumTotal) >= 0.7;
+            final hardPassed = hardTotal > 0 && (hardCorrect / hardTotal) >= 0.7;
+            
+            // Create merged subject progress
+            localProgress.subjectProgress[subjectId] = SubjectProgress(
+              subjectId: subjectId,
+              topicProgress: localSp?.topicProgress ?? {},
+              totalQuizzesTaken: localSp?.totalQuizzesTaken ?? 0,
+              totalQuestionsAnswered: mergedAnswered,
+              totalCorrectAnswers: mergedCorrect,
+              lastStudyDate: cloudSp['last_study_date'] != null 
+                  ? DateTime.tryParse(cloudSp['last_study_date']) 
+                  : localSp?.lastStudyDate,
+              easyPassed: easyPassed || (localSp?.easyPassed ?? false),
+              mediumPassed: mediumPassed || (localSp?.mediumPassed ?? false),
+              hardPassed: hardPassed || (localSp?.hardPassed ?? false),
+              wrongQuestionIds: localSp?.wrongQuestionIds ?? {},
+            );
+          }
+        }
+        
+        // Sync cloud achievements to local
+        final cloudAchievements = cloudData?['achievements'] as List<String>?;
+        if (cloudAchievements != null && cloudAchievements.isNotEmpty) {
+          // Merge cloud achievements with local (union of both)
+          final mergedAchievements = <String>{
+            ...localProgress.unlockedAchievements,
+            ...cloudAchievements,
+          };
+          localProgress.unlockedAchievements = mergedAchievements.toList();
+        }
+        
+        // Update streak from cloud if higher
+        if (cloudProfile != null) {
+          final cloudStreak = cloudProfile['current_streak'] as int? ?? 0;
+          final cloudBestStreak = cloudProfile['best_streak'] as int? ?? 0;
+          if (cloudStreak > localProgress.currentStreak) {
+            localProgress.currentStreak = cloudStreak;
+          }
+          if (cloudBestStreak > localProgress.longestStreak) {
+            localProgress.longestStreak = cloudBestStreak;
+          }
+        }
+        
+        // Save merged progress to local storage
+        await storage.saveProgress(localProgress);
         
         final cloudQuizzes = cloudProfile?['total_quizzes'] ?? 0;
         final cloudCorrect = cloudProfile?['total_correct'] ?? 0;
@@ -274,6 +353,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     icon: Icons.lock_outline,
                     isDark: isDark,
                     obscureText: _obscurePassword,
+                    onChanged: (v) => setState(() => _password = v),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -284,10 +364,25 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     validator: (v) {
                       if (v!.isEmpty) return 'Enter your password';
-                      if (v.length < 6) return 'Min 6 characters';
+                      if (!_isLogin) {
+                        final result = PasswordStrengthChecker.check(v);
+                        if (!result.hasMinLength) return 'At least 8 characters required';
+                        if (!result.hasUppercase) return 'Add an uppercase letter';
+                        if (!result.hasLowercase) return 'Add a lowercase letter';
+                        if (!result.hasNumber) return 'Add a number';
+                      } else {
+                        if (v.length < 6) return 'Min 6 characters';
+                      }
                       return null;
                     },
                   ),
+                  
+                  // Password strength indicator (only for signup)
+                  if (!_isLogin)
+                    PasswordStrengthIndicator(
+                      password: _password,
+                      showRequirements: true,
+                    ),
                   
                   const SizedBox(height: 24),
                   
@@ -414,12 +509,14 @@ class _AuthScreenState extends State<AuthScreen> {
     Widget? suffixIcon,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
+      onChanged: onChanged,
       style: TextStyle(
         color: isDark ? Colors.white : AppColors.textDark,
         fontSize: 16,

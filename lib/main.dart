@@ -10,6 +10,8 @@ import 'services/notification_service.dart';
 import 'services/feedback_service.dart';
 import 'services/adaptive_ml_service.dart';
 import 'services/supabase_service.dart';
+import 'services/connectivity_service.dart';
+import 'services/offline_sync_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -67,6 +69,14 @@ void main() {
       debugPrint('ML init failed: $e');
     }
     
+    // Initialize connectivity monitoring and offline sync
+    try {
+      ConnectivityService.instance.startMonitoring();
+      await OfflineSyncService.instance.init();
+    } catch (e) {
+      debugPrint('Connectivity/Sync init failed: $e');
+    }
+    
     runApp(
       MultiProvider(
         providers: [
@@ -76,6 +86,12 @@ void main() {
           ),
           ChangeNotifierProvider(
             create: (_) => ThemeService(),
+          ),
+          ChangeNotifierProvider.value(
+            value: ConnectivityService.instance,
+          ),
+          ChangeNotifierProvider.value(
+            value: OfflineSyncService.instance,
           ),
         ],
         child: const CrimiReviewApp(),

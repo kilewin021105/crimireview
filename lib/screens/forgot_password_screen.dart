@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/email_verification_service.dart';
 import '../services/supabase_service.dart';
-import '../services/theme_provider.dart';
-import '../utils/colors.dart';
+import '../services/theme_service.dart';
+import '../widgets/password_strength_indicator.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -29,6 +29,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   String? _errorMessage;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String _password = '';
   
   @override
   void dispose() {
@@ -115,8 +116,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
     
-    if (password.isEmpty || password.length < 6) {
-      setState(() => _errorMessage = 'Password must be at least 6 characters');
+    // Validate password strength
+    final result = PasswordStrengthChecker.check(password);
+    if (!result.hasMinLength) {
+      setState(() => _errorMessage = 'Password must be at least 8 characters');
+      return;
+    }
+    if (!result.hasUppercase) {
+      setState(() => _errorMessage = 'Password must contain an uppercase letter');
+      return;
+    }
+    if (!result.hasLowercase) {
+      setState(() => _errorMessage = 'Password must contain a lowercase letter');
+      return;
+    }
+    if (!result.hasNumber) {
+      setState(() => _errorMessage = 'Password must contain a number');
       return;
     }
     
@@ -164,10 +179,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final isDark = Provider.of<ThemeService>(context).isDarkMode;
     
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -503,7 +518,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Your new password must be at least 6 characters long.',
+          'Create a strong password with at least 8 characters.',
           style: GoogleFonts.poppins(
             fontSize: 14,
             color: isDark ? Colors.white60 : AppColors.textMuted,
@@ -514,6 +529,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         TextField(
           controller: _passwordController,
           obscureText: _obscurePassword,
+          onChanged: (v) => setState(() => _password = v),
           style: GoogleFonts.poppins(
             color: isDark ? Colors.white : AppColors.textDark,
           ),
@@ -549,7 +565,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        
+        // Password strength indicator
+        PasswordStrengthIndicator(
+          password: _password,
+          showRequirements: true,
+        ),
+        
+        const SizedBox(height: 20),
         
         TextField(
           controller: _confirmPasswordController,

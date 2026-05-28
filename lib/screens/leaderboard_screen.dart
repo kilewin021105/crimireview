@@ -439,58 +439,172 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       ),
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: ListView.separated(
-          padding: const EdgeInsets.all(16),
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           itemCount: _leaderboardData.length,
-          separatorBuilder: (_, __) => Divider(
-            color: isDark ? Colors.white10 : Colors.grey.shade200,
-            height: 1,
-          ),
           itemBuilder: (context, index) {
             final entry = _leaderboardData[index];
-            return _buildRankingItem(entry, index + 1, isDark);
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: _buildRankingItem(entry, index + 1, isDark),
+            );
           },
         ),
       ),
     );
   }
 
+  Widget _buildRankBadge(int rank, bool isDark, bool isCurrentUser) {
+    // Medal colors for top 3
+    if (rank == 1) {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFD700).withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            '1st',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    } else if (rank == 2) {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFE8E8E8), Color(0xFFA8A8A8)],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFC0C0C0).withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            '2nd',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF4A4A4A),
+            ),
+          ),
+        ),
+      );
+    } else if (rank == 3) {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFCD7F32), Color(0xFFB8620D)],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFCD7F32).withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            '3rd',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Regular rank number for 4th and beyond
+    return SizedBox(
+      width: 36,
+      child: Text(
+        '$rank',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: isCurrentUser 
+              ? AppColors.accent 
+              : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRankingItem(LeaderboardEntry entry, int rank, bool isDark) {
+    final isTop3 = rank <= 3;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
         color: entry.isCurrentUser 
-            ? AppColors.accent.withOpacity(0.08)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+            ? AppColors.accent.withOpacity(0.1)
+            : (isTop3 ? (isDark ? Colors.white.withOpacity(0.03) : Colors.grey.shade50) : Colors.transparent),
+        borderRadius: BorderRadius.circular(14),
+        border: isTop3 ? Border.all(
+          color: rank == 1 
+              ? const Color(0xFFFFD700).withOpacity(0.3)
+              : rank == 2 
+                  ? const Color(0xFFC0C0C0).withOpacity(0.3)
+                  : const Color(0xFFCD7F32).withOpacity(0.3),
+          width: 1,
+        ) : null,
       ),
       child: Row(
         children: [
-
-          SizedBox(
-            width: 36,
-            child: Text(
-              '$rank',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: entry.isCurrentUser 
-                    ? AppColors.accent 
-                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
+          _buildRankBadge(rank, isDark, entry.isCurrentUser),
+          const SizedBox(width: 14),
 
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: entry.isCurrentUser 
                   ? AppColors.accent.withOpacity(0.15)
                   : (isDark ? Colors.white10 : Colors.grey.shade100),
+              border: isTop3 ? Border.all(
+                color: rank == 1 
+                    ? const Color(0xFFFFD700)
+                    : rank == 2 
+                        ? const Color(0xFFC0C0C0)
+                        : const Color(0xFFCD7F32),
+                width: 2,
+              ) : null,
               image: entry.avatarUrl != null ? DecorationImage(
                 image: NetworkImage(entry.avatarUrl!),
                 fit: BoxFit.cover,
@@ -509,7 +623,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
             ) : null,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
 
           Expanded(
             child: Column(
@@ -519,7 +633,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   entry.isCurrentUser ? 'You' : entry.name,
                   style: GoogleFonts.poppins(
                     fontSize: 15,
-                    fontWeight: entry.isCurrentUser ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: entry.isCurrentUser || isTop3 ? FontWeight.w700 : FontWeight.w500,
                     color: entry.isCurrentUser 
                         ? AppColors.accent 
                         : (isDark ? Colors.white : const Color(0xFF1A1A2E)),
@@ -527,7 +641,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: _getRankColor(entry.rank).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -551,7 +665,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               Text(
                 '${entry.score}',
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: entry.isCurrentUser 
                       ? AppColors.accent 

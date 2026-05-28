@@ -85,6 +85,13 @@ class SubjectProgress {
   bool easyPassed;
   bool mediumPassed;
   bool hardPassed;
+  // Per-difficulty stats for cloud sync
+  int easyCorrect;
+  int easyTotal;
+  int mediumCorrect;
+  int mediumTotal;
+  int hardCorrect;
+  int hardTotal;
   // Track wrong answers for review
   Set<String> wrongQuestionIds;
 
@@ -98,6 +105,12 @@ class SubjectProgress {
     this.easyPassed = false,
     this.mediumPassed = false,
     this.hardPassed = false,
+    this.easyCorrect = 0,
+    this.easyTotal = 0,
+    this.mediumCorrect = 0,
+    this.mediumTotal = 0,
+    this.hardCorrect = 0,
+    this.hardTotal = 0,
     Set<String>? wrongQuestionIds,
   }) : topicProgress = topicProgress ?? {},
        wrongQuestionIds = wrongQuestionIds ?? {};
@@ -125,6 +138,12 @@ class SubjectProgress {
         'easyPassed': easyPassed,
         'mediumPassed': mediumPassed,
         'hardPassed': hardPassed,
+        'easyCorrect': easyCorrect,
+        'easyTotal': easyTotal,
+        'mediumCorrect': mediumCorrect,
+        'mediumTotal': mediumTotal,
+        'hardCorrect': hardCorrect,
+        'hardTotal': hardTotal,
         'wrongQuestionIds': wrongQuestionIds.toList(),
       };
 
@@ -142,6 +161,12 @@ class SubjectProgress {
         easyPassed: json['easyPassed'] ?? false,
         mediumPassed: json['mediumPassed'] ?? false,
         hardPassed: json['hardPassed'] ?? false,
+        easyCorrect: json['easyCorrect'] ?? 0,
+        easyTotal: json['easyTotal'] ?? 0,
+        mediumCorrect: json['mediumCorrect'] ?? 0,
+        mediumTotal: json['mediumTotal'] ?? 0,
+        hardCorrect: json['hardCorrect'] ?? 0,
+        hardTotal: json['hardTotal'] ?? 0,
         wrongQuestionIds: (json['wrongQuestionIds'] as List<dynamic>?)
             ?.cast<String>().toSet() ?? {},
       );

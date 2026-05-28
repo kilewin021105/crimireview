@@ -7,6 +7,9 @@ import '../models/question.dart';
 import '../data/questions_database.dart';
 import '../services/storage_service.dart';
 import '../services/theme_service.dart';
+import '../services/supabase_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_sync_service.dart';
 
 class DailyChallengeScreen extends StatefulWidget {
   const DailyChallengeScreen({super.key});
@@ -160,10 +163,13 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
     final totalScore = baseScore + bonusPoints;
     final percentage = (_correctCount / _totalQuestions * 100).round();
     
-
+    // Save to local storage
     final today = DateTime.now().toIso8601String().split('T')[0];
     await _storage.setLastDailyChallengeDate(today);
     await _storage.addDailyChallengeScore(totalScore);
+    
+    // Sync to cloud (with offline support)
+    await _syncToCloud(totalScore, _correctCount);
     
     if (percentage >= 70) {
       _confettiController.play();
@@ -186,6 +192,28 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
             confettiController: _confettiController,
           ),
         ),
+      );
+    }
+  }
+
+  Future<void> _syncToCloud(int score, int correctAnswers) async {
+    if (!SupabaseService.isInitialized || !SupabaseService.instance.isLoggedIn) return;
+    
+    final isOnline = ConnectivityService.instance.isOnline;
+    
+    if (isOnline) {
+      // Online: save directly to Supabase
+      await SupabaseService.instance.saveDailyChallengeScore(
+        score: score,
+        correctAnswers: correctAnswers,
+        totalQuestions: _totalQuestions,
+      );
+    } else {
+      // Offline: queue for later sync
+      await OfflineSyncService.instance.queueDailyChallengeScore(
+        score: score,
+        correctAnswers: correctAnswers,
+        totalQuestions: _totalQuestions,
       );
     }
   }

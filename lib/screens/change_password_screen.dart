@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/supabase_service.dart';
 import '../services/theme_service.dart';
+import '../widgets/password_strength_indicator.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -19,54 +20,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
-  
-  // Password strength
-  int _passwordStrength = 0;
-  String _passwordStrengthText = '';
-  Color _passwordStrengthColor = Colors.grey;
-
-  @override
-  void initState() {
-    super.initState();
-    _newPasswordController.addListener(_checkPasswordStrength);
-  }
+  String _password = '';
 
   @override
   void dispose() {
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
-  }
-
-  void _checkPasswordStrength() {
-    final password = _newPasswordController.text;
-    int strength = 0;
-    
-    if (password.length >= 6) strength++;
-    if (password.length >= 8) strength++;
-    if (password.contains(RegExp(r'[A-Z]'))) strength++;
-    if (password.contains(RegExp(r'[0-9]'))) strength++;
-    if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strength++;
-    
-    setState(() {
-      _passwordStrength = strength;
-      if (strength == 0) {
-        _passwordStrengthText = '';
-        _passwordStrengthColor = Colors.grey;
-      } else if (strength <= 2) {
-        _passwordStrengthText = 'Weak';
-        _passwordStrengthColor = Colors.red;
-      } else if (strength <= 3) {
-        _passwordStrengthText = 'Medium';
-        _passwordStrengthColor = Colors.orange;
-      } else if (strength <= 4) {
-        _passwordStrengthText = 'Strong';
-        _passwordStrengthColor = Colors.lightGreen;
-      } else {
-        _passwordStrengthText = 'Very Strong';
-        _passwordStrengthColor = Colors.green;
-      }
-    });
   }
 
   Future<void> _changePassword() async {
@@ -246,6 +206,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 child: TextFormField(
                   controller: _newPasswordController,
                   obscureText: _obscureNewPassword,
+                  onChanged: (v) => setState(() => _password = v),
                   style: GoogleFonts.poppins(
                     color: isDark ? Colors.white : Colors.black,
                   ),
@@ -273,42 +234,21 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter a password';
                     }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
+                    final result = PasswordStrengthChecker.check(value);
+                    if (!result.hasMinLength) return 'At least 8 characters required';
+                    if (!result.hasUppercase) return 'Add an uppercase letter';
+                    if (!result.hasLowercase) return 'Add a lowercase letter';
+                    if (!result.hasNumber) return 'Add a number';
                     return null;
                   },
                 ),
               ),
               
               // Password strength indicator
-              if (_newPasswordController.text.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: _passwordStrength / 5,
-                          backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation<Color>(_passwordStrengthColor),
-                          minHeight: 6,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      _passwordStrengthText,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: _passwordStrengthColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              PasswordStrengthIndicator(
+                password: _password,
+                showRequirements: true,
+              ),
               const SizedBox(height: 24),
               
               // Confirm Password Field
@@ -371,41 +311,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              
-              // Password requirements
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Password Requirements',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildRequirement('At least 6 characters', _newPasswordController.text.length >= 6, isDark),
-                    _buildRequirement('Contains uppercase letter', _newPasswordController.text.contains(RegExp(r'[A-Z]')), isDark),
-                    _buildRequirement('Contains number', _newPasswordController.text.contains(RegExp(r'[0-9]')), isDark),
-                    _buildRequirement('Contains special character', _newPasswordController.text.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')), isDark),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 40),
               
               // Change Password Button
               SizedBox(
@@ -473,28 +378,4 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  Widget _buildRequirement(String text, bool isMet, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(
-            isMet ? Icons.check_circle_rounded : Icons.circle_outlined,
-            size: 18,
-            color: isMet ? AppColors.success : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            text,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: isMet 
-                  ? (isDark ? Colors.white : const Color(0xFF1A1A2E))
-                  : (isDark ? Colors.grey.shade500 : Colors.grey.shade500),
-            ),
-          ),
-        ],
-      ),
-    );
   }
-}

@@ -22,6 +22,126 @@ class AdaptiveLearningService extends ChangeNotifier {
     _userProgress = await _storageService.loadProgress();
     _isInitialized = true;
     notifyListeners();
+    
+    // Sync with cloud for returning logged-in users
+    if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
+      await _syncWithCloud();
+    }
+  }
+  
+  /// Sync local progress with cloud data for returning users
+  Future<void> _syncWithCloud() async {
+    try {
+      final cloudData = await SupabaseService.instance.loadFullCloudProgress();
+      if (cloudData == null) return;
+      
+      final cloudProfile = cloudData['profile'] as Map<String, dynamic>?;
+      final cloudSubjectProgress = cloudData['subjectProgress'] as List<Map<String, dynamic>>?;
+      final cloudAchievements = cloudData['achievements'] as List<String>?;
+      
+      // Calculate local totals for comparison
+      int localQuizzes = 0;
+      int localCorrect = 0;
+      for (final sp in _userProgress.subjectProgress.values) {
+        localQuizzes += sp.totalQuizzesTaken;
+        localCorrect += sp.totalCorrectAnswers;
+      }
+      
+      // Merge cloud subject progress with local
+      if (cloudSubjectProgress != null && cloudSubjectProgress.isNotEmpty) {
+        for (final cloudSp in cloudSubjectProgress) {
+          final subjectId = cloudSp['subject_id'] as String?;
+          if (subjectId == null) continue;
+          
+          final cloudAnswered = cloudSp['questions_answered'] as int? ?? 0;
+          final cloudCorrectAnswers = cloudSp['correct_answers'] as int? ?? 0;
+          final easyCorrect = cloudSp['easy_correct'] as int? ?? 0;
+          final easyTotal = cloudSp['easy_total'] as int? ?? 0;
+          final mediumCorrect = cloudSp['medium_correct'] as int? ?? 0;
+          final mediumTotal = cloudSp['medium_total'] as int? ?? 0;
+          final hardCorrect = cloudSp['hard_correct'] as int? ?? 0;
+          final hardTotal = cloudSp['hard_total'] as int? ?? 0;
+          
+          // Get local subject progress if exists
+          final localSp = _userProgress.subjectProgress[subjectId];
+          
+          // Compare cloud vs local and take higher values
+          final mergedAnswered = (localSp?.totalQuestionsAnswered ?? 0) > cloudAnswered 
+              ? (localSp?.totalQuestionsAnswered ?? 0) : cloudAnswered;
+          final mergedCorrect = (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers 
+              ? (localSp?.totalCorrectAnswers ?? 0) : cloudCorrectAnswers;
+          
+          // Determine if difficulty levels are passed (70% threshold)
+          final easyPassed = easyTotal > 0 && (easyCorrect / easyTotal) >= 0.7;
+          final mediumPassed = mediumTotal > 0 && (mediumCorrect / mediumTotal) >= 0.7;
+          final hardPassed = hardTotal > 0 && (hardCorrect / hardTotal) >= 0.7;
+          
+          // Create merged subject progress
+          _userProgress.subjectProgress[subjectId] = SubjectProgress(
+            subjectId: subjectId,
+            topicProgress: localSp?.topicProgress ?? {},
+            totalQuizzesTaken: localSp?.totalQuizzesTaken ?? 0,
+            totalQuestionsAnswered: mergedAnswered,
+            totalCorrectAnswers: mergedCorrect,
+            lastStudyDate: cloudSp['last_study_date'] != null 
+                ? DateTime.tryParse(cloudSp['last_study_date']) 
+                : localSp?.lastStudyDate,
+            easyPassed: easyPassed || (localSp?.easyPassed ?? false),
+            mediumPassed: mediumPassed || (localSp?.mediumPassed ?? false),
+            hardPassed: hardPassed || (localSp?.hardPassed ?? false),
+            wrongQuestionIds: localSp?.wrongQuestionIds ?? {},
+            easyCorrect: easyCorrect > (localSp?.easyCorrect ?? 0) ? easyCorrect : (localSp?.easyCorrect ?? 0),
+            easyTotal: easyTotal > (localSp?.easyTotal ?? 0) ? easyTotal : (localSp?.easyTotal ?? 0),
+            mediumCorrect: mediumCorrect > (localSp?.mediumCorrect ?? 0) ? mediumCorrect : (localSp?.mediumCorrect ?? 0),
+            mediumTotal: mediumTotal > (localSp?.mediumTotal ?? 0) ? mediumTotal : (localSp?.mediumTotal ?? 0),
+            hardCorrect: hardCorrect > (localSp?.hardCorrect ?? 0) ? hardCorrect : (localSp?.hardCorrect ?? 0),
+            hardTotal: hardTotal > (localSp?.hardTotal ?? 0) ? hardTotal : (localSp?.hardTotal ?? 0),
+          );
+        }
+      }
+      
+      // Merge cloud achievements with local
+      if (cloudAchievements != null && cloudAchievements.isNotEmpty) {
+        final mergedAchievements = <String>{
+          ..._userProgress.unlockedAchievements,
+          ...cloudAchievements,
+        };
+        _userProgress.unlockedAchievements = mergedAchievements.toList();
+      }
+      
+      // Update streak from cloud if higher
+      if (cloudProfile != null) {
+        final cloudStreak = cloudProfile['current_streak'] as int? ?? 0;
+        final cloudBestStreak = cloudProfile['best_streak'] as int? ?? 0;
+        if (cloudStreak > _userProgress.currentStreak) {
+          _userProgress.currentStreak = cloudStreak;
+        }
+        if (cloudBestStreak > _userProgress.longestStreak) {
+          _userProgress.longestStreak = cloudBestStreak;
+        }
+      }
+      
+      // Save merged progress to local storage
+      await _storageService.saveProgress(_userProgress);
+      
+      // Sync the higher values back to cloud
+      final cloudQuizzes = cloudProfile?['total_quizzes'] as int? ?? 0;
+      final cloudCorrectTotal = cloudProfile?['total_correct'] as int? ?? 0;
+      final cloudPoints = cloudProfile?['total_points'] as int? ?? 0;
+      
+      await SupabaseService.instance.syncLocalProgress(
+        totalPoints: (localCorrect * 10) > cloudPoints ? (localCorrect * 10) : cloudPoints,
+        totalQuizzes: localQuizzes > cloudQuizzes ? localQuizzes : cloudQuizzes,
+        totalCorrect: localCorrect > cloudCorrectTotal ? localCorrect : cloudCorrectTotal,
+        currentStreak: _userProgress.currentStreak,
+        bestStreak: _userProgress.longestStreak,
+      );
+      
+      notifyListeners();
+    } catch (e) {
+      // Silently fail - local progress is still valid
+      print('Cloud sync error during init: $e');
+    }
   }
 
   bool get isInitialized => _isInitialized;
@@ -209,6 +329,22 @@ class AdaptiveLearningService extends ChangeNotifier {
         subjectProgress.wrongQuestionIds.add(question.id);
       }
 
+      // Update per-difficulty stats
+      switch (question.difficulty) {
+        case Difficulty.easy:
+          subjectProgress.easyTotal++;
+          if (isCorrect) subjectProgress.easyCorrect++;
+          break;
+        case Difficulty.medium:
+          subjectProgress.mediumTotal++;
+          if (isCorrect) subjectProgress.mediumCorrect++;
+          break;
+        case Difficulty.hard:
+          subjectProgress.hardTotal++;
+          if (isCorrect) subjectProgress.hardCorrect++;
+          break;
+      }
+
       // Update topic-level stats
       subjectProgress.topicProgress.putIfAbsent(
         question.topic,
@@ -247,8 +383,24 @@ class AdaptiveLearningService extends ChangeNotifier {
     // Check achievements
     _checkAchievements();
 
-    // Save progress
+    // Save progress locally
     await _storageService.saveProgress(_userProgress);
+    
+    // Sync to cloud if logged in
+    if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
+      await SupabaseService.instance.saveSubjectProgress(
+        subjectId: subjectId,
+        questionsAnswered: subjectProgress.totalQuestionsAnswered,
+        correctAnswers: subjectProgress.correctAnswers,
+        easyCorrect: subjectProgress.easyCorrect,
+        easyTotal: subjectProgress.easyTotal,
+        mediumCorrect: subjectProgress.mediumCorrect,
+        mediumTotal: subjectProgress.mediumTotal,
+        hardCorrect: subjectProgress.hardCorrect,
+        hardTotal: subjectProgress.hardTotal,
+      );
+    }
+    
     notifyListeners();
   }
   

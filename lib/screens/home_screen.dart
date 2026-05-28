@@ -8,6 +8,7 @@ import '../services/theme_service.dart';
 import '../services/ml_service.dart';
 import '../services/adaptive_ml_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/offline_sync_service.dart';
 import '../models/subject.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
@@ -117,32 +118,74 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: Column(
         children: [
           ListenableBuilder(
-            listenable: ConnectivityService.instance,
+            listenable: Listenable.merge([ConnectivityService.instance, OfflineSyncService.instance]),
             builder: (context, _) {
-              if (ConnectivityService.instance.isOnline) {
-                return const SizedBox.shrink();
+              final isOnline = ConnectivityService.instance.isOnline;
+              final syncService = OfflineSyncService.instance;
+              final hasPending = syncService.hasPendingSync;
+              final isSyncing = syncService.isSyncing;
+              final pendingCount = syncService.pendingCount;
+              
+              // Show syncing indicator when online and syncing
+              if (isOnline && isSyncing) {
+                return Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    bottom: 8,
+                    left: 16,
+                    right: 16,
+                  ),
+                  color: Colors.blue.shade600,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Syncing $pendingCount items...',
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                );
               }
-              return Container(
-                width: double.infinity,
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 8,
-                  bottom: 8,
-                  left: 16,
-                  right: 16,
-                ),
-                color: Colors.orange.shade700,
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'You\'re offline. Quiz & flashcards still work!',
-                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              );
+              
+              // Show offline indicator
+              if (!isOnline) {
+                return Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    bottom: 8,
+                    left: 16,
+                    right: 16,
+                  ),
+                  color: Colors.orange.shade700,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        hasPending 
+                            ? 'Offline - $pendingCount items will sync when online'
+                            : 'You\'re offline. Progress is saved locally!',
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              return const SizedBox.shrink();
             },
           ),
           Expanded(

@@ -230,22 +230,50 @@ Swipe Left/Right for Next/Previous
 └─────────────────────────────────────┘
 ```
 
-### Sync Flow
+### Sync Flow (Offline-First Architecture)
 ```
-Local Action (Quiz Complete, etc.)
+Local Action (Quiz Complete, Daily Challenge, etc.)
     │
     ▼
-Save to Local Storage
+Save to Local Storage (SharedPreferences)
     │
     ▼
-Check Internet Connection
+Check Internet Connection (ConnectivityService)
     │
-    ├── Offline ──► Queue for Later
+    ├── Offline ──► Queue in OfflineSyncService
+    │                   │
+    │                   ▼
+    │               Store in sync_queue (SharedPreferences)
+    │                   │
+    │                   ▼
+    │               Show "X items pending" indicator
+    │                   │
+    │                   └── When Online ──► Auto-sync all queued items
     │
-    └── Online ──► Sync to Supabase
+    └── Online ──► Sync to Supabase immediately
                        │
                        ▼
                    Update Leaderboard
+```
+
+### Offline Sync Queue Operations
+```
+┌─────────────────────────────────────┐
+│      OfflineSyncService             │
+├─────────────────────────────────────┤
+│ Queued Operations:                  │
+│ • Quiz Results                      │
+│ • Daily Challenge Scores            │
+│ • Subject Progress                  │
+│ • Achievement Unlocks               │
+│ • Profile Updates                   │
+├─────────────────────────────────────┤
+│ Features:                           │
+│ • Auto-retry (max 3 attempts)       │
+│ • Persists across app restarts      │
+│ • Visual sync status indicator      │
+│ • Automatic sync on reconnection    │
+└─────────────────────────────────────┘
 ```
 
 ## Email Verification Flow (Resend API)
