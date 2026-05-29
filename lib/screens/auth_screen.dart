@@ -5,6 +5,7 @@ import '../models/user_progress.dart';
 import '../services/theme_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
+import '../services/offline_sync_service.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import '../widgets/password_strength_indicator.dart';
@@ -75,6 +76,23 @@ class _AuthScreenState extends State<AuthScreen> {
       
       if (mounted && _supabase.isLoggedIn) {
         final storage = StorageService();
+        final currentUserId = _supabase.userId;
+        final lastUserId = await storage.getLastUserId();
+        
+        // Check if switching accounts
+        if (lastUserId != null && lastUserId != currentUserId) {
+          // Different user logging in - sync old user's pending data first
+          if (OfflineSyncService.instance.hasPendingSync) {
+            await OfflineSyncService.instance.syncPendingOperations();
+          }
+          // Clear old user's local quiz progress so new user starts fresh
+          await storage.clearQuizProgress();
+        }
+        
+        // Save current user ID
+        if (currentUserId != null) {
+          await storage.setLastUserId(currentUserId);
+        }
         
         // Load full cloud progress (profile + subject progress + achievements)
         final cloudData = await _supabase.loadFullCloudProgress();

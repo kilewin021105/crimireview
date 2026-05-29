@@ -6,6 +6,7 @@ import '../services/theme_service.dart';
 import '../services/email_verification_service.dart';
 import '../services/supabase_service.dart';
 import '../services/storage_service.dart';
+import '../services/offline_sync_service.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import 'home_screen.dart';
@@ -186,6 +187,23 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         await _supabase.ensureProfileExists(displayName: widget.displayName);
         
         final storage = StorageService();
+        final currentUserId = _supabase.userId;
+        final lastUserId = await storage.getLastUserId();
+        
+        // Check if switching accounts (new signup on device that had another user)
+        if (lastUserId != null && lastUserId != currentUserId) {
+          // Different user - sync old user's pending data, then clear local progress
+          if (OfflineSyncService.instance.hasPendingSync) {
+            await OfflineSyncService.instance.syncPendingOperations();
+          }
+          await storage.clearQuizProgress();
+        }
+        
+        // Save current user ID
+        if (currentUserId != null) {
+          await storage.setLastUserId(currentUserId);
+        }
+        
         if (widget.displayName != null && widget.displayName!.isNotEmpty) {
           await storage.setUserName(widget.displayName!);
         }

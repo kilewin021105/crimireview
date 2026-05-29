@@ -21,6 +21,7 @@ class StorageService {
   static const String _schoolKey = 'user_school';
   static const String _lastDailyChallengeKey = 'last_daily_challenge';
   static const String _dailyChallengeScoreKey = 'daily_challenge_score';
+  static const String _lastUserIdKey = 'last_user_id';
 
   Future<SharedPreferences> _getPrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -258,6 +259,28 @@ class StorageService {
     await prefs.remove(_userNameKey);
     await prefs.remove(_schoolKey);
     // Keep: progress, streak, study time, settings, daily challenge
+  }
+
+  // Track last logged-in user ID for account switching
+  Future<void> setLastUserId(String userId) async {
+    final prefs = await _getPrefs();
+    await prefs.setString(_lastUserIdKey, userId);
+  }
+
+  Future<String?> getLastUserId() async {
+    final prefs = await _getPrefs();
+    return prefs.getString(_lastUserIdKey);
+  }
+
+  /// Clear only quiz progress data (for account switching)
+  Future<void> clearQuizProgress() async {
+    final prefs = await _getPrefs();
+    await prefs.remove(_progressKey);
+    await prefs.remove(_dailyStreakKey);
+    await prefs.remove(_lastStudyDateKey);
+    await prefs.remove(_totalStudyTimeKey);
+    await prefs.remove(_lastDailyChallengeKey);
+    await prefs.remove(_dailyChallengeScoreKey);
   }
 
   // School/University
