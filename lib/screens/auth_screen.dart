@@ -403,6 +403,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       if (!_isLogin) {
                         final result = PasswordStrengthChecker.check(v);
                         if (!result.hasMinLength) return 'At least 8 characters required';
+                        if (!result.hasMaxLength) return 'Max 16 characters allowed';
                         if (!result.hasUppercase) return 'Add an uppercase letter';
                         if (!result.hasLowercase) return 'Add a lowercase letter';
                         if (!result.hasNumber) return 'Add a number';

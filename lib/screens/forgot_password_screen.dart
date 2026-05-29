@@ -122,6 +122,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() => _errorMessage = 'Password must be at least 8 characters');
       return;
     }
+    if (!result.hasMaxLength) {
+      setState(() => _errorMessage = 'Password must be at most 16 characters');
+      return;
+    }
     if (!result.hasUppercase) {
       setState(() => _errorMessage = 'Password must contain an uppercase letter');
       return;

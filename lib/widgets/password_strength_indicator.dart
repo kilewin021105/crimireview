@@ -11,6 +11,7 @@ enum PasswordStrength {
 class PasswordStrengthResult {
   final PasswordStrength strength;
   final bool hasMinLength;
+  final bool hasMaxLength;
   final bool hasUppercase;
   final bool hasLowercase;
   final bool hasNumber;
@@ -20,6 +21,7 @@ class PasswordStrengthResult {
   PasswordStrengthResult({
     required this.strength,
     required this.hasMinLength,
+    required this.hasMaxLength,
     required this.hasUppercase,
     required this.hasLowercase,
     required this.hasNumber,
@@ -27,7 +29,7 @@ class PasswordStrengthResult {
     required this.score,
   });
 
-  bool get isValid => hasMinLength && hasUppercase && hasLowercase && hasNumber;
+  bool get isValid => hasMinLength && hasMaxLength && hasUppercase && hasLowercase && hasNumber;
   bool get isStrong => strength == PasswordStrength.strong;
 }
 
@@ -37,6 +39,7 @@ class PasswordStrengthChecker {
       return PasswordStrengthResult(
         strength: PasswordStrength.empty,
         hasMinLength: false,
+        hasMaxLength: false,
         hasUppercase: false,
         hasLowercase: false,
         hasNumber: false,
@@ -46,13 +49,14 @@ class PasswordStrengthChecker {
     }
 
     final hasMinLength = password.length >= 8;
+    final hasMaxLength = password.length <= 16;
     final hasUppercase = password.contains(RegExp(r'[A-Z]'));
     final hasLowercase = password.contains(RegExp(r'[a-z]'));
     final hasNumber = password.contains(RegExp(r'[0-9]'));
     final hasSpecialChar = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/`~]'));
 
     int score = 0;
-    if (hasMinLength) score++;
+    if (hasMinLength && hasMaxLength) score++;
     if (hasUppercase) score++;
     if (hasLowercase) score++;
     if (hasNumber) score++;
@@ -76,6 +80,7 @@ class PasswordStrengthChecker {
     return PasswordStrengthResult(
       strength: strength,
       hasMinLength: hasMinLength,
+      hasMaxLength: hasMaxLength,
       hasUppercase: hasUppercase,
       hasLowercase: hasLowercase,
       hasNumber: hasNumber,
@@ -143,7 +148,7 @@ class PasswordStrengthIndicator extends StatelessWidget {
         if (showRequirements) ...[
           const SizedBox(height: 16),
           // Requirements list
-          _buildRequirement('At least 8 characters', result.hasMinLength, isDark),
+          _buildRequirement('8-16 characters', result.hasMinLength && result.hasMaxLength, isDark),
           const SizedBox(height: 6),
           _buildRequirement('Uppercase letter (A-Z)', result.hasUppercase, isDark),
           const SizedBox(height: 6),
