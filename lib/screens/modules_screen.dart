@@ -109,7 +109,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
                     // Chapter cards
                     ...(_moduleData!['chapters'] as List).map((ch) {
                       final colors = [const Color(0xFF3B82F6), const Color(0xFF10B981), const Color(0xFFF59E0B), const Color(0xFFEF4444), const Color(0xFF8B5CF6), const Color(0xFFEC4899), const Color(0xFF06B6D4), const Color(0xFF84CC16)];
-                      final color = colors[(ch['number'] as int - 1) % colors.length];
+                      final color = colors[((ch['number'] as int) - 1) % colors.length];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _buildModuleCard(
@@ -279,56 +279,8 @@ class _ModuleReaderScreenState extends State<ModuleReaderScreen> {
                           ),
                           const SizedBox(height: 32),
 
-                          // Key Concepts Section
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.lightbulb_rounded, color: AppColors.accent, size: 20),
-                                    const SizedBox(width: 10),
-                                    Text('Key Concepts', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                ...((chapter['keyConcepts'] as List).map((concept) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Container(margin: const EdgeInsets.only(top: 8), width: 6, height: 6, decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
-                                    const SizedBox(width: 12),
-                                    Expanded(child: Text(concept, style: GoogleFonts.poppins(fontSize: 14, color: isDark ? Colors.white70 : Colors.black87, height: 1.6))),
-                                  ]),
-                                ))),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Important Points
-                          Text('Important Points to Remember', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: isDark ? Colors.white : const Color(0xFF1A1A2E))),
-                          const SizedBox(height: 16),
-                          ...((chapter['keyConcepts'] as List).map((point) => Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E3A5F).withValues(alpha: 0.1) : const Color(0xFFEEF2FF),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.15)),
-                            ),
-                            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Icon(Icons.check_circle_outline_rounded, size: 18, color: const Color(0xFF8B5CF6)),
-                              const SizedBox(width: 10),
-                              Expanded(child: Text(point, style: GoogleFonts.poppins(fontSize: 14, color: isDark ? Colors.white70 : Colors.black87, height: 1.6))),
-                            ]),
-                          ))),
+                          // Chapter Content
+                          _buildChapterContent(chapter['content'] as String, isDark),
 
                         ],
                       ),
@@ -379,5 +331,75 @@ class _ModuleReaderScreenState extends State<ModuleReaderScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildChapterContent(String content, bool isDark) {
+    final lines = content.split('\n');
+    final widgets = <Widget>[];
+    int i = 0;
+
+    while (i < lines.length) {
+      final line = lines[i];
+      final stripped = line.trim();
+
+      // Skip Review Items section (empty since questions removed)
+      if (stripped.startsWith('### Review Items')) {
+        i++;
+        continue;
+      }
+
+      // Heading ##
+      if (stripped.startsWith('## ')) {
+        widgets.add(Text(
+          stripped.substring(3),
+          style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: isDark ? Colors.white : const Color(0xFF1A1A2E), height: 1.3),
+        ));
+        widgets.add(const SizedBox(height: 12));
+        i++;
+        continue;
+      }
+
+      // Subheading ###
+      if (stripped.startsWith('### ')) {
+        widgets.add(const SizedBox(height: 16));
+        widgets.add(Text(
+          stripped.substring(4).replaceFirst(':', ''),
+          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.accent, height: 1.3),
+        ));
+        widgets.add(const SizedBox(height: 12));
+        i++;
+        continue;
+      }
+
+      // Bullet point
+      if (stripped.startsWith('- ')) {
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(margin: const EdgeInsets.only(top: 8), width: 6, height: 6, decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
+            const SizedBox(width: 12),
+            Expanded(child: Text(stripped.substring(2), style: GoogleFonts.poppins(fontSize: 14, color: isDark ? Colors.white70 : Colors.black87, height: 1.6))),
+          ]),
+        ));
+        i++;
+        continue;
+      }
+
+      // Empty line
+      if (stripped.isEmpty) {
+        i++;
+        continue;
+      }
+
+      // Regular paragraph
+      widgets.add(Text(
+        stripped,
+        style: GoogleFonts.poppins(fontSize: 14, color: isDark ? Colors.white70 : Colors.black87, height: 1.7),
+      ));
+      widgets.add(const SizedBox(height: 8));
+      i++;
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
   }
 }

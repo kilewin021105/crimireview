@@ -293,6 +293,12 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
                 ],
               ),
               
+              const SizedBox(height: 24),
+              
+
+              // Board Exam Readiness
+              _buildBoardExamReadiness(context, isDark),
+              
               const Spacer(flex: 3),
               
 
@@ -388,5 +394,116 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
     if (percentage >= 70) return AppColors.success;
     if (percentage >= 50) return AppColors.accent;
     return AppColors.error;
+  }
+
+  Widget _buildBoardExamReadiness(BuildContext context, bool isDark) {
+    final service = Provider.of<AdaptiveLearningService>(context, listen: false);
+
+    // Only show if user has attempted ALL subjects
+    final allSubjects = CriminologySubjects.all;
+    final attemptedSubjects = allSubjects.where((s) {
+      final progress = service.userProgress.subjectProgress[s.id];
+      return progress != null && progress.totalQuestionsAnswered > 0;
+    }).length;
+
+    if (attemptedSubjects < allSubjects.length) {
+      final remaining = allSubjects.length - attemptedSubjects;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : AppColors.lightCard,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.lock_outline_rounded, color: AppColors.accent, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              'Board Exam Readiness',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Complete quizzes in all $remaining more subject${remaining > 1 ? 's' : ''} to unlock your predicted board exam score.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // All subjects attempted - show the predicted score
+    final readiness = service.getOverallBoardExamReadiness();
+    final isReady = readiness >= 75;
+    final needsWork = readiness < 60;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : AppColors.lightCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isReady
+              ? AppColors.success.withValues(alpha: 0.3)
+              : needsWork
+                  ? AppColors.error.withValues(alpha: 0.3)
+                  : AppColors.warning.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Board Exam Readiness',
+            style: TextStyle(fontSize: 13, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${readiness.toStringAsFixed(0)}%',
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w800,
+              color: isReady
+                  ? AppColors.success
+                  : needsWork
+                      ? AppColors.error
+                      : AppColors.warning,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: (isReady
+                      ? AppColors.success
+                      : needsWork
+                          ? AppColors.error
+                          : AppColors.warning)
+                  .withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              isReady
+                  ? 'You\'re ready to pass!'
+                  : needsWork
+                      ? 'Needs more practice'
+                      : 'Almost there!',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isReady
+                    ? AppColors.success
+                    : needsWork
+                        ? AppColors.error
+                        : AppColors.warning,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

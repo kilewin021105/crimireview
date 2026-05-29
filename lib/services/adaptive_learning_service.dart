@@ -617,4 +617,72 @@ class AdaptiveLearningService extends ChangeNotifier {
     
     return accuracies;
   }
+
+  /// Get per-difficulty stats for a subject
+  Map<String, dynamic> getSubjectDifficultyStats(String subjectId) {
+    final progress = _userProgress.subjectProgress[subjectId];
+    if (progress == null) {
+      return {
+        'easyAccuracy': 0.0,
+        'mediumAccuracy': 0.0,
+        'hardAccuracy': 0.0,
+        'hasEasy': false,
+        'hasMedium': false,
+        'hasHard': false,
+      };
+    }
+    return {
+      'easyAccuracy': progress.easyAccuracy,
+      'mediumAccuracy': progress.mediumAccuracy,
+      'hardAccuracy': progress.hardAccuracy,
+      'hasEasy': progress.easyTotal > 0,
+      'hasMedium': progress.mediumTotal > 0,
+      'hasHard': progress.hardTotal > 0,
+    };
+  }
+
+  /// Calculate overall Board Exam Readiness across all subjects
+  /// Uses PRC TOS weights: Easy 30%, Medium 50%, Hard 20%
+  double getOverallBoardExamReadiness() {
+    if (_userProgress.subjectProgress.isEmpty) return 0.0;
+
+    double totalReadiness = 0.0;
+    int subjectsWithData = 0;
+
+    for (var subject in CriminologySubjects.all) {
+      final progress = _userProgress.subjectProgress[subject.id];
+      if (progress == null) continue;
+      
+      final readiness = progress.boardExamReadiness;
+      if (readiness > 0) {
+        totalReadiness += readiness;
+        subjectsWithData++;
+      }
+    }
+
+    if (subjectsWithData == 0) return 0.0;
+    return totalReadiness / subjectsWithData;
+  }
+
+  /// Get how many subjects have completed each difficulty level
+  Map<String, int> getDifficultyCompletionCounts() {
+    int easyCompleted = 0;
+    int mediumCompleted = 0;
+    int hardCompleted = 0;
+
+    for (var subject in CriminologySubjects.all) {
+      final progress = _userProgress.subjectProgress[subject.id];
+      if (progress == null) continue;
+      if (progress.easyTotal > 0) easyCompleted++;
+      if (progress.mediumTotal > 0) mediumCompleted++;
+      if (progress.hardTotal > 0) hardCompleted++;
+    }
+
+    return {
+      'easy': easyCompleted,
+      'medium': mediumCompleted,
+      'hard': hardCompleted,
+      'totalSubjects': CriminologySubjects.all.length,
+    };
+  }
 }

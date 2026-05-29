@@ -488,10 +488,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
 
-    final predictedScore = mlService.predictScore(
-      subjectPerformance: subjectPerformance,
-      streak: service.userProgress.currentStreak,
-    );
+    final boardExamReadiness = service.getOverallBoardExamReadiness();
+    final diffCompletion = service.getDifficultyCompletionCounts();
+    final totalSubjects = diffCompletion['totalSubjects'] ?? 6;
     
     final recommendedDiff = mlService.recommendDifficulty(
       subjectPerformance: subjectPerformance,
@@ -506,8 +505,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final strongSubjects = weakAreas.where((w) => !w.isWeak && w.accuracy > 0.7).take(2).toList();
     
 
-    final isReady = predictedScore >= 75;
-    final needsWork = predictedScore < 60;
+    final isReady = boardExamReadiness >= 75;
+    final needsWork = boardExamReadiness < 60;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -547,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
             children: [
               Text(
-                'Predicted Board Exam Score',
+                'Board Exam Readiness',
                 style: TextStyle(
                   fontSize: 13,
                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -555,7 +554,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 8),
               Text(
-                '${predictedScore.toStringAsFixed(0)}%',
+                '${boardExamReadiness.toStringAsFixed(0)}%',
                 style: TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.w800,
@@ -594,9 +593,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              
+
+              // Difficulty completion progress
+              _buildDifficultyProgressBar(
+                'Easy', 
+                diffCompletion['easy'] ?? 0, 
+                totalSubjects, 
+                AppColors.success, 
+                isDark,
+              ),
+              const SizedBox(height: 8),
+              _buildDifficultyProgressBar(
+                'Medium', 
+                diffCompletion['medium'] ?? 0, 
+                totalSubjects, 
+                AppColors.warning, 
+                isDark,
+              ),
+              const SizedBox(height: 8),
+              _buildDifficultyProgressBar(
+                'Hard', 
+                diffCompletion['hard'] ?? 0, 
+                totalSubjects, 
+                AppColors.error, 
+                isDark,
+              ),
+              const SizedBox(height: 8),
               Text(
-                'Passing score: 75%',
+                'Complete all difficulties for best prediction',
                 style: TextStyle(
                   fontSize: 11,
                   color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
@@ -770,6 +796,52 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildDifficultyProgressBar(
+    String label,
+    int completed,
+    int total,
+    Color color,
+    bool isDark,
+  ) {
+    final progress = total > 0 ? completed / total : 0.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+              ),
+            ),
+            Text(
+              '$completed/$total subjects',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 6,
+          ),
+        ),
       ],
     );
   }

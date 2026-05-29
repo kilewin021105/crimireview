@@ -32,6 +32,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
   // Shuffled options for each question
   late List<List<String>> _shuffledOptions;
   late List<int> _shuffledCorrectIndices;
+  late List<int?> _userAnswers; // Track user's selected answer for each question
   
   late AnimationController _timerController;
   late Animation<double> _timerAnimation;
@@ -85,6 +86,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
     // Shuffle options for each question
     _shuffledOptions = [];
     _shuffledCorrectIndices = [];
+    _userAnswers = List.filled(_totalQuestions, null);
     
     for (final question in _questions) {
       final indices = List.generate(question.options.length, (i) => i);
@@ -109,6 +111,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
 
   void _handleTimeUp() {
     if (_selectedAnswer == null) {
+      _userAnswers[_currentIndex] = null; // Time ran out, no answer
       setState(() {
         _selectedAnswer = -1; // Mark as unanswered
         _showExplanation = true;
@@ -128,6 +131,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
     
     // Use shuffled correct index
     final isCorrect = index == _shuffledCorrectIndices[_currentIndex];
+    _userAnswers[_currentIndex] = index;
     
     setState(() {
       _selectedAnswer = index;
@@ -190,6 +194,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
             bonusPoints: bonusPoints,
             totalScore: totalScore,
             confettiController: _confettiController,
+            questions: _questions,
+            userAnswers: _userAnswers,
+            shuffledOptions: _shuffledOptions,
+            shuffledCorrectIndices: _shuffledCorrectIndices,
           ),
         ),
       );
@@ -953,31 +961,65 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
   }
 
   Widget _buildExplanationCard(Question question, bool isDark) {
+    final isCorrect = _selectedAnswer == _shuffledCorrectIndices[_currentIndex];
+    final correctLetter = String.fromCharCode(65 + _shuffledCorrectIndices[_currentIndex]);
+    final correctOption = _shuffledOptions[_currentIndex][_shuffledCorrectIndices[_currentIndex]];
+    
     return Container(
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.08),
+        color: isCorrect 
+          ? AppColors.success.withValues(alpha: 0.08)
+          : AppColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: isCorrect 
+            ? AppColors.success.withValues(alpha: 0.3)
+            : AppColors.error.withValues(alpha: 0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.lightbulb_rounded, color: AppColors.accent, size: 20),
+              Icon(
+                isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                color: isCorrect ? AppColors.success : AppColors.error,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
-                'Explanation',
+                isCorrect ? 'Correct!' : 'Wrong Answer',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.accent,
+                  color: isCorrect ? AppColors.success : AppColors.error,
                 ),
               ),
             ],
           ),
+          if (!isCorrect) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+              ),
+              child: Text(
+                'Correct Answer: $correctLetter - $correctOption',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.success,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Text(
             question.explanation!,
@@ -1044,6 +1086,10 @@ class _ChallengeResultsScreen extends StatefulWidget {
   final int bonusPoints;
   final int totalScore;
   final ConfettiController confettiController;
+  final List<Question> questions;
+  final List<int?> userAnswers;
+  final List<List<String>> shuffledOptions;
+  final List<int> shuffledCorrectIndices;
   
   const _ChallengeResultsScreen({
     required this.correctCount,
@@ -1053,6 +1099,10 @@ class _ChallengeResultsScreen extends StatefulWidget {
     required this.bonusPoints,
     required this.totalScore,
     required this.confettiController,
+    required this.questions,
+    required this.userAnswers,
+    required this.shuffledOptions,
+    required this.shuffledCorrectIndices,
   });
   
   @override
@@ -1380,6 +1430,12 @@ class _ChallengeResultsScreenState extends State<_ChallengeResultsScreen>
                             ),
                           ),
                           
+                          const SizedBox(height: 24),
+                          
+
+                          // Review Answers Section
+                          _buildReviewAnswersSection(isDark),
+                          
                           const SizedBox(height: 40),
                         ],
                       ),
@@ -1405,7 +1461,7 @@ class _ChallengeResultsScreenState extends State<_ChallengeResultsScreen>
                     child: SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accent,
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1450,6 +1506,154 @@ class _ChallengeResultsScreenState extends State<_ChallengeResultsScreen>
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildReviewAnswersSection(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.assignment_rounded,
+                color: AppColors.accent,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Review Answers',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...List.generate(widget.questions.length, (index) {
+            final question = widget.questions[index];
+            final userAnswer = widget.userAnswers[index];
+            final correctIndex = widget.shuffledCorrectIndices[index];
+            final isCorrect = userAnswer == correctIndex;
+            final isUnanswered = userAnswer == null;
+            final letter = String.fromCharCode(65 + correctIndex);
+            final correctOption = widget.shuffledOptions[index][correctIndex];
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isUnanswered
+                    ? (isDark ? Colors.orange.withValues(alpha: 0.08) : Colors.orange.withValues(alpha: 0.05))
+                    : isCorrect
+                      ? AppColors.success.withValues(alpha: 0.08)
+                      : AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isUnanswered
+                      ? Colors.orange.withValues(alpha: 0.3)
+                      : isCorrect
+                        ? AppColors.success.withValues(alpha: 0.3)
+                        : AppColors.error.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: isUnanswered
+                          ? Colors.orange.withValues(alpha: 0.15)
+                          : isCorrect
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.error.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isUnanswered
+                              ? Colors.orange
+                              : isCorrect
+                                ? AppColors.success
+                                : AppColors.error,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isUnanswered
+                              ? 'Time ran out'
+                              : isCorrect
+                                ? 'Correct'
+                                : 'Wrong',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isUnanswered
+                                ? Colors.orange
+                                : isCorrect
+                                  ? AppColors.success
+                                  : AppColors.error,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Answer: $letter - $correctOption',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      isUnanswered
+                        ? Icons.timer_off_rounded
+                        : isCorrect
+                          ? Icons.check_circle_rounded
+                          : Icons.cancel_rounded,
+                      color: isUnanswered
+                        ? Colors.orange
+                        : isCorrect
+                          ? AppColors.success
+                          : AppColors.error,
+                      size: 22,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );

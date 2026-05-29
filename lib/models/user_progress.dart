@@ -122,6 +122,48 @@ class SubjectProgress {
   double get overallAccuracy =>
       totalQuestionsAnswered > 0 ? totalCorrectAnswers / totalQuestionsAnswered : 0.0;
 
+  double get easyAccuracy => easyTotal > 0 ? easyCorrect / easyTotal : 0.0;
+  double get mediumAccuracy => mediumTotal > 0 ? mediumCorrect / mediumTotal : 0.0;
+  double get hardAccuracy => hardTotal > 0 ? hardCorrect / hardTotal : 0.0;
+
+  /// Board exam readiness based on PRC TOS weights:
+  /// Easy 30%, Medium 50%, Hard 20%
+  /// Unattempted difficulties penalize the score
+  double get boardExamReadiness {
+    // PRC TOS difficulty distribution weights
+    const easyWeight = 0.30;
+    const mediumWeight = 0.50;
+    const hardWeight = 0.20;
+
+    final eAcc = easyAccuracy;
+    final mAcc = mediumAccuracy;
+    final hAcc = hardAccuracy;
+
+    final hasEasy = easyTotal > 0;
+    final hasMedium = mediumTotal > 0;
+    final hasHard = hardTotal > 0;
+
+    if (!hasEasy && !hasMedium && !hasHard) return 0.0;
+
+    // If difficulty not attempted, assume baseline 40% (below passing)
+    final effectiveEasy = hasEasy ? eAcc : 0.40;
+    final effectiveMedium = hasMedium ? mAcc : 0.40;
+    final effectiveHard = hasHard ? hAcc : 0.40;
+
+    double weighted = (effectiveEasy * easyWeight) +
+                      (effectiveMedium * mediumWeight) +
+                      (effectiveHard * hardWeight);
+
+    // Completion bonus: up to +5% for completing all 3 difficulties
+    int completedLevels = 0;
+    if (hasEasy) completedLevels++;
+    if (hasMedium) completedLevels++;
+    if (hasHard) completedLevels++;
+    final completionBonus = (completedLevels / 3.0) * 5.0;
+
+    return ((weighted * 100) + completionBonus).clamp(0.0, 100.0);
+  }
+
   double get overallMastery {
     if (topicProgress.isEmpty) return 0.0;
     double totalMastery = topicProgress.values.fold(0.0, (sum, tp) => sum + tp.masteryLevel);
