@@ -449,7 +449,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
                             ],
                           ),
                           const SizedBox(height: 16),
-                          _buildTipItem(Icons.menu_book_rounded, 'Review flashcards to strengthen memory', isDark),
+                          _buildTipItem(Icons.menu_book_rounded, 'Study modules to strengthen memory', isDark),
                           const SizedBox(height: 12),
                           _buildTipItem(Icons.quiz_rounded, 'Take a practice quiz on weak subjects', isDark),
                           const SizedBox(height: 12),

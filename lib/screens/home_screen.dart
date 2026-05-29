@@ -20,7 +20,7 @@ import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'leaderboard_screen.dart';
 import 'daily_challenge_screen.dart';
-import 'flashcard_screen.dart';
+import 'modules_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1040,7 +1040,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Icon(Icons.menu_book_rounded, color: AppColors.accent, size: 22),
             const SizedBox(width: 8),
             Text(
-              'Study with Flashcards',
+              'Study Modules',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -1085,7 +1085,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       onTap: () {
         Navigator.push(
           context,
-          SlidePageRoute(page: FlashcardScreen(subject: subject)),
+          SlidePageRoute(page: ModulesScreen(subject: subject)),
         );
       },
       child: Container(
