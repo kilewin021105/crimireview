@@ -259,17 +259,20 @@ class _QuizScreenState extends State<QuizScreen> {
     Color bgColor, borderColor, letterBgColor, letterColor;
 
     if (_hasAnswered) {
-      if (isCorrect) {
+      if (isSelected && isCorrect) {
+        // User got it right - green
         bgColor = AppColors.success.withValues(alpha: 0.1);
         borderColor = AppColors.success;
         letterBgColor = AppColors.success;
         letterColor = Colors.white;
-      } else if (isSelected) {
+      } else if (isSelected && !isCorrect) {
+        // User got it wrong - red (don't reveal which is correct)
         bgColor = AppColors.error.withValues(alpha: 0.1);
         borderColor = AppColors.error;
         letterBgColor = AppColors.error;
         letterColor = Colors.white;
       } else {
+        // Not selected - neutral, don't highlight correct answer
         bgColor = isDark ? AppColors.darkCard : AppColors.lightCard;
         borderColor = Colors.transparent;
         letterBgColor = isDark ? Colors.white10 : Colors.grey.shade100;
@@ -312,7 +315,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
-                child: _hasAnswered && (isCorrect || isSelected)
+                child: _hasAnswered && isSelected
                     ? Icon(
                         isCorrect ? Icons.check_rounded : Icons.close_rounded,
                         color: Colors.white,
@@ -334,7 +337,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: _hasAnswered && !isCorrect && !isSelected
+                  color: _hasAnswered && !isSelected
                       ? (isDark ? Colors.white38 : Colors.grey.shade400)
                       : (isDark ? Colors.white : const Color(0xFF1A1A2E)),
                 ),
@@ -359,29 +362,35 @@ class _QuizScreenState extends State<QuizScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lightbulb_outline_rounded, color: color, size: 22),
+          Icon(
+            isCorrect ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+            color: color,
+            size: 22,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isCorrect ? 'Correct!' : 'Explanation',
+                  isCorrect ? 'Correct!' : 'Not quite!',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: color,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  question.explanation,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? Colors.white70 : Colors.black87,
-                    height: 1.5,
+                if (isCorrect) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    question.explanation,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                      height: 1.5,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

@@ -371,7 +371,7 @@ class StudyNotesScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${questions.length} questions await',
+                  '10 questions await',
                   style: TextStyle(
                     fontSize: 13,
                     color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,

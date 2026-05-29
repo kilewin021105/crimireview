@@ -370,7 +370,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
 
   void _startQuizWithDifficulty(BuildContext context, Subject subject, Difficulty difficulty) {
     final service = Provider.of<AdaptiveLearningService>(context, listen: false);
-    final questions = service.getQuestionsByDifficulty(subjectId: subject.id, difficulty: difficulty, count: 40);
+    final questions = service.getQuestionsByDifficulty(subjectId: subject.id, difficulty: difficulty, count: 10);
 
     if (questions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
