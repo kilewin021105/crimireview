@@ -962,19 +962,17 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
 
   Widget _buildExplanationCard(Question question, bool isDark) {
     final isCorrect = _selectedAnswer == _shuffledCorrectIndices[_currentIndex];
-    final correctLetter = String.fromCharCode(65 + _shuffledCorrectIndices[_currentIndex]);
-    final correctOption = _shuffledOptions[_currentIndex][_shuffledCorrectIndices[_currentIndex]];
-    
+
     return Container(
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isCorrect 
+        color: isCorrect
           ? AppColors.success.withValues(alpha: 0.08)
           : AppColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isCorrect 
+          color: isCorrect
             ? AppColors.success.withValues(alpha: 0.3)
             : AppColors.error.withValues(alpha: 0.3),
         ),
@@ -1000,26 +998,6 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
               ),
             ],
           ),
-          if (!isCorrect) ...[
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
-              ),
-              child: Text(
-                'Correct Answer: $correctLetter - $correctOption',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.success,
-                ),
-              ),
-            ),
-          ],
           const SizedBox(height: 12),
           Text(
             question.explanation!,
