@@ -144,9 +144,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: () async {
               await SupabaseService.instance.signOut();
-              await StorageService().clearAllData();
+              // Keep local quiz progress, only clear auth/profile data
+              await StorageService().clearAuthData();
               if (context.mounted) {
-                Provider.of<AdaptiveLearningService>(context, listen: false).resetProgress();
                 Navigator.pop(context);
                 Navigator.of(this.context).pushAndRemoveUntil(
                   SlidePageRoute(page: const AuthScreen()),

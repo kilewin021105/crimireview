@@ -248,6 +248,18 @@ class StorageService {
     await prefs.clear();
   }
 
+  /// Clear only auth-related data, keeping quiz progress intact
+  Future<void> clearAuthData() async {
+    final prefs = await _getPrefs();
+    await prefs.remove(_userEmailKey);
+    await prefs.remove(_passwordKey);
+    await prefs.remove(_avatarUrlKey);
+    await prefs.remove(_profileImageKey);
+    await prefs.remove(_userNameKey);
+    await prefs.remove(_schoolKey);
+    // Keep: progress, streak, study time, settings, daily challenge
+  }
+
   // School/University
   Future<void> setSchool(String school) async {
     final prefs = await _getPrefs();
