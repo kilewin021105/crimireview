@@ -29,14 +29,16 @@ class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _supabase = SupabaseService.instance;
   
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     super.dispose();
   }
 
@@ -64,7 +66,7 @@ class _AuthScreenState extends State<AuthScreen> {
             page: EmailVerificationScreen(
               email: _emailController.text.trim(),
               password: _passwordController.text,
-              displayName: _nameController.text.trim(),
+              displayName: '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
             ),
           ),
         );
@@ -322,12 +324,28 @@ class _AuthScreenState extends State<AuthScreen> {
                   SizedBox(height: isSmall ? 32 : 40),
                   
                   if (!_isLogin) ...[
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Full Name',
-                      icon: Icons.person_outline,
-                      isDark: isDark,
-                      validator: (v) => v!.isEmpty ? 'Enter your name' : null,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _firstNameController,
+                            label: 'First Name',
+                            icon: Icons.person_outline,
+                            isDark: isDark,
+                            validator: (v) => v!.isEmpty ? 'Enter first name' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _lastNameController,
+                            label: 'Last Name',
+                            icon: Icons.person_outline,
+                            isDark: isDark,
+                            validator: (v) => v!.isEmpty ? 'Enter last name' : null,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                   ],
