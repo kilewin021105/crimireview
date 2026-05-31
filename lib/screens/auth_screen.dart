@@ -317,7 +317,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   SizedBox(height: isSmall ? 24 : 32),
                   
                   Text(
-                    _isLogin ? 'Welcome Back' : 'Create Account',
+                    _isLogin ? 'CrimiReview' : 'Create Account',
                     style: TextStyle(
                       fontSize: titleSize,
                       fontWeight: FontWeight.bold,

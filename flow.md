@@ -1,407 +1,358 @@
-# CrimiReview System Flow
+# CrimiReview System Flow (Current)
+
+Last updated: May 31, 2026
 
 ## App Launch Flow
 
-```
+```text
 App Start
-    │
-    ▼
-Splash Screen (2s)
-    │
-    ▼
-Check Onboarding Status
-    │
-    ├── Not Completed ──► Onboarding Screen ──► Auth Screen
-    │
-    └── Completed ──► Check Auth Status
-                          │
-                          ├── Logged In ──► Home Screen
-                          │
-                          └── Not Logged In ──► Auth Screen
+    |
+    +--> Initialize core services
+    |      - StorageService
+    |      - SupabaseService
+    |      - NotificationService
+    |      - FeedbackService
+    |      - AdaptiveMLService
+    |      - ConnectivityService
+    |      - OfflineSyncService
+    |
+    +--> Splash Screen (about 2.5s)
+            |
+            +--> Check onboarding flag
+                    |
+                    +--> Not completed --> Onboarding Screen (4 pages) --> Auth Screen
+                    |
+                    +--> Completed --> Check auth status
+                                   |
+                                   +--> Logged in --> Home Screen
+                                   |
+                                   +--> Not logged in --> Auth Screen
 ```
 
 ## Authentication Flow
 
-### Sign Up
-```
-Auth Screen (Sign Up Mode)
-    │
-    ▼
-Enter Name, Email, Password
-    │
-    ▼
-Validate Input
-    │
-    ▼
-Email Verification Screen
-    │
-    ▼
-Send OTP via Resend API (noreply@crimireview.app)
-    │
-    ▼
-User Enters 6-Digit Code
-    │
-    ▼
-Verify Code with Backend
-    │
-    ├── Invalid ──► Show Error, Clear Code, Retry
-    │
-    └── Valid ──► Create Supabase Account
-                      │
-                      ▼
-                  Auto Sign In
-                      │
-                      ▼
-                  Sync Local Progress
-                      │
-                      ▼
-                  Home Screen
+### Sign Up (Current)
+
+```text
+Auth Screen (Sign Up mode)
+    |
+    +--> Enter First Name, Last Name, Email, Password
+    |
+    +--> Validate input
+    |      - Email must be valid
+    |      - Password: 8-16 chars, uppercase, lowercase, number
+    |
+    +--> Open Email Verification Screen
+            |
+            +--> Send OTP using Resend API
+            |      - Store code in email_verifications table
+            |
+            +--> User enters 6-digit code
+            |
+            +--> Verify code in Supabase table
+                    |
+                    +--> Invalid/expired --> Show error, clear code, retry
+                    |
+                    +--> Valid --> Create Supabase account
+                                  |
+                                  +--> Ensure profile exists
+                                  +--> Handle account switch if needed
+                                  +--> Sync local totals to cloud
+                                  +--> Navigate to Home Screen
 ```
 
-### Sign In
-```
-Auth Screen (Sign In Mode)
-    │
-    ▼
-Enter Email, Password
-    │
-    ▼
-Supabase Authentication
-    │
-    ├── Failed ──► Show Error Message
-    │
-    └── Success ──► Sync Progress ──► Home Screen
+### Sign In (Current)
+
+```text
+Auth Screen (Sign In mode)
+    |
+    +--> Enter Email + Password
+    |
+    +--> Supabase signIn
+            |
+            +--> Failed --> Show friendly error message
+            |
+            +--> Success --> Handle account switch if needed
+                            - Sync pending offline queue
+                            - Clear previous user's local quiz progress
+                            |
+                            +--> Load cloud profile/progress/achievements
+                            +--> Merge with local data (max/union strategy)
+                            +--> Save merged local data
+                            +--> Sync highest totals back to cloud
+                            +--> Navigate to Home Screen
 ```
 
-### Forgot Password
-```
-Auth Screen ──► Forgot Password Screen
-    │
-    ▼
-Step 1: Enter Email
-    │
-    ▼
-Send 6-Digit OTP via Resend API
-    │
-    ▼
-Step 2: Enter Verification Code
-    │
-    ▼
-Verify Code with Backend
-    │
-    ├── Invalid ──► Show Error, Retry
-    │
-    └── Valid ──► Step 3: Enter New Password
-                      │
-                      ▼
-                  Confirm Password
-                      │
-                      ▼
-                  Update via Supabase RPC
-                      │
-                      ▼
-                  Success ──► Back to Login
+### Forgot Password (Current)
+
+```text
+Auth Screen --> Forgot Password Screen
+    |
+    +--> Step 1: Enter Email
+    |      - Send OTP via Resend
+    |      - Store code in password_resets table
+    |
+    +--> Step 2: Enter 6-digit code
+    |      - Verify code in password_resets table
+    |
+    +--> Step 3: Enter New Password + Confirm Password
+           - Validate strength (8-16 chars, uppercase, lowercase, number)
+           - Call Supabase RPC reset_user_password
+           - Cleanup reset records
+           - Return to login
 ```
 
 ## Main App Flow
 
-### Home Screen
-```
-Home Screen
-    │
-    ├── Subject Cards ──► Quiz Screen
-    │
-    ├── Daily Challenge ──► Daily Challenge Screen
-    │
-    ├── Flashcards ──► Flashcard Screen
-    │
-    ├── Achievements ──► Achievements Screen
-    │
-    ├── Leaderboard ──► Leaderboard Screen
-    │
-    └── Settings ──► Settings Screen
+### Home Container (Bottom Navigation)
+
+```text
+Home Screen (container)
+    |
+    +--> Tab 1: Home
+    +--> Tab 2: Quiz (Subjects)
+    +--> Tab 3: Progress
+    +--> Tab 4: Settings
+
+Home header shortcuts:
+    +--> Profile icon --> Profile Screen
+    +--> Leaderboard icon --> Leaderboard Screen
 ```
 
-### Quiz Flow
-```
-Select Subject
-    │
-    ▼
-Select Difficulty (Easy/Medium/Hard)
-    │
-    ▼
-Load Questions from Database
-    │
-    ▼
-Display Question
-    │
-    ▼
-User Selects Answer
-    │
-    ├── Correct ──► Show Green, +10 Points
-    │
-    └── Wrong ──► Show Red, Show Correct Answer
-    │
-    ▼
-Next Question (repeat until done)
-    │
-    ▼
-Quiz Results Screen
-    │
-    ├── Score Summary
-    ├── Time Taken
-    ├── Accuracy %
-    └── Share Results Option
-    │
-    ▼
-Update Progress & Sync to Supabase
+### Quiz Flow (Current)
+
+```text
+Home/Quiz Tab --> Subjects Screen
+    |
+    +--> Select Subject
+    |
+    +--> Difficulty Sheet
+    |      - Easy: unlocked
+    |      - Medium: unlocks after Easy passed
+    |      - Hard: unlocks after Medium passed
+    |
+    +--> Load 10 questions for chosen difficulty
+    |
+    +--> Study Notes Screen
+    |
+    +--> Start Quiz --> Quiz Screen
+            |
+            +--> For each question:
+            |      - Select answer
+            |      - Check
+            |      - Next
+            |
+            +--> Finish quiz
+                   |
+                   +--> AdaptiveLearningService.recordQuizResult
+                   |      - Update local progress, streak, achievements
+                   |      - Save subject progress to cloud if logged in
+                   |
+                   +--> Results Screen
+                          - Mark level passed when score >= 75%
+                          - Record ML learning signal
+                          - Save quiz result:
+                                online  -> Supabase saveQuizResult
+                                offline -> queue in OfflineSyncService
+                          - Done/Try Again -> back to main app
 ```
 
-### Daily Challenge Flow
-```
-Daily Challenge Screen
-    │
-    ▼
-Check if Already Completed Today
-    │
-    ├── Yes ──► Show "Come Back Tomorrow"
-    │
-    └── No ──► Load 10 Random Questions
-                   │
-                   ▼
-               Complete Challenge
-                   │
-                   ▼
-               Award Bonus Points
-                   │
-                   ▼
-               Update Streak
+### Daily Challenge Flow (Current)
+
+```text
+Home Tab --> Daily Challenge Card --> DailyChallengeScreen
+    |
+    +--> Check local last_daily_challenge date
+            |
+            +--> Already done today
+            |      - Show completion screen + countdown to next day
+            |
+            +--> Not done today
+                   - Load 10 seeded random questions
+                   - 20-second timer per question
+                   - Time-out counts as unanswered
+                   |
+                   +--> Compute score
+                          base score = correct * 10
+                          total score includes 1.5x bonus
+                   |
+                   +--> Save local challenge date + local cumulative challenge score
+                   +--> Sync challenge score:
+                          online  -> Supabase saveDailyChallengeScore
+                          offline -> queue in OfflineSyncService
+                   +--> Show detailed results + review answers
+                   +--> Done -> back to Home
 ```
 
-### Flashcard Flow
+### Study Modules Flow (Current)
+
+```text
+Home Tab --> Study Modules grid --> Modules Screen
+    |
+    +--> Load assets/modules/<subject_id>_module.json
+    |
+    +--> Choose:
+           - Read Full Module
+           - Open Chapter
+    |
+    +--> ModuleReaderScreen
+           - Navigate chapter by chapter
+           - Finish -> back
 ```
-Select Subject
-    │
-    ▼
-Load Flashcards
-    │
-    ▼
-Display Front (Question)
-    │
-    ▼
-Tap to Flip ──► Show Back (Answer)
-    │
-    ▼
-Swipe Left/Right for Next/Previous
+
+Note: module reader is currently a study path only (no direct quiz launch inside module reader).
+
+### Progress and Achievements Flow
+
+```text
+Bottom Nav --> Progress Tab
+    |
+    +--> View overall stats, streak, subject breakdown
+    |
+    +--> Tap Achievements card --> Achievements Screen
+```
+
+### Settings and Account Flow (Current)
+
+```text
+Bottom Nav --> Settings Tab
+    |
+    +--> Profile tile --> Profile Screen
+    |      - Edit name, school, email
+    |      - Update profile photo (local and cloud when logged in)
+    |
+    +--> Appearance
+    |      - Dark mode toggle
+    |
+    +--> Notifications & Feedback
+    |      - Notifications toggle
+    |      - Sound effects toggle
+    |      - Haptic feedback toggle
+    |
+    +--> Account (if logged in)
+    |      - Change Password Screen (new + confirm)
+    |      - Sign Out
+    |           - Supabase signOut
+    |           - clearAuthData (keeps local quiz progress)
+    |           - go to Auth Screen
+    |
+    +--> Account (if logged out)
+    |      - Sign In tile -> Auth Screen
+    |
+    +--> Support
+           - Share app
+           - Rate app (placeholder)
+           - Send feedback (mailto)
 ```
 
 ## Data Flow
 
 ### Local Storage (SharedPreferences)
-```
-┌─────────────────────────────────────┐
-│         StorageService              │
-├─────────────────────────────────────┤
-│ • User Progress                     │
-│ • Subject Progress                  │
-│ • Quiz History                      │
-│ • Achievements                      │
-│ • Settings (Theme, Sound, etc.)     │
-│ • Onboarding Status                 │
-│ • User Name                         │
-└─────────────────────────────────────┘
+
+```text
+StorageService keys include:
+    - user_progress (full serialized progress)
+    - onboarding_completed
+    - user profile fields (name, email, school, avatar)
+    - settings (theme, notifications, sound, haptics, quiz prefs)
+    - daily challenge state (date + score)
+    - last_user_id (account switch handling)
+    - offline_sync_queue (pending cloud writes)
 ```
 
 ### Cloud Storage (Supabase)
-```
-┌─────────────────────────────────────┐
-│         Supabase Database           │
-├─────────────────────────────────────┤
-│ users                               │
-│ ├── id                              │
-│ ├── email                           │
-│ ├── display_name                    │
-│ ├── total_points                    │
-│ ├── total_quizzes                   │
-│ ├── total_correct                   │
-│ ├── current_streak                  │
-│ ├── best_streak                     │
-│ └── created_at                      │
-└─────────────────────────────────────┘
+
+```text
+Primary tables currently used:
+    - user_profiles
+    - quiz_results
+    - user_progress
+    - daily_challenge_scores
+    - user_achievements
+    - email_verifications
+    - password_resets
+
+Storage bucket:
+    - avatars
 ```
 
-### Sync Flow (Offline-First Architecture)
-```
-Local Action (Quiz Complete, Daily Challenge, etc.)
-    │
-    ▼
-Save to Local Storage (SharedPreferences)
-    │
-    ▼
-Check Internet Connection (ConnectivityService)
-    │
-    ├── Offline ──► Queue in OfflineSyncService
-    │                   │
-    │                   ▼
-    │               Store in sync_queue (SharedPreferences)
-    │                   │
-    │                   ▼
-    │               Show "X items pending" indicator
-    │                   │
-    │                   └── When Online ──► Auto-sync all queued items
-    │
-    └── Online ──► Sync to Supabase immediately
-                       │
-                       ▼
-                   Update Leaderboard
+### Offline-First Sync Flow
+
+```text
+Action requiring cloud write
+    |
+    +--> Check connectivity (ConnectivityService)
+            |
+            +--> Online  --> write to Supabase immediately
+            |
+            +--> Offline --> queue operation in OfflineSyncService
+                            (persisted in SharedPreferences)
+                            |
+                            +--> On reconnect: auto-sync pending queue
 ```
 
-### Offline Sync Queue Operations
-```
-┌─────────────────────────────────────┐
-│      OfflineSyncService             │
-├─────────────────────────────────────┤
-│ Queued Operations:                  │
-│ • Quiz Results                      │
-│ • Daily Challenge Scores            │
-│ • Subject Progress                  │
-│ • Achievement Unlocks               │
-│ • Profile Updates                   │
-├─────────────────────────────────────┤
-│ Features:                           │
-│ • Auto-retry (max 3 attempts)       │
-│ • Persists across app restarts      │
-│ • Visual sync status indicator      │
-│ • Automatic sync on reconnection    │
-└─────────────────────────────────────┘
+Current queue producers in active app flow:
+- Quiz result writes from Results Screen
+- Daily challenge score writes from DailyChallengeScreen
+
+Queue supports additional operation types:
+- subjectProgress
+- achievement
+- profileUpdate
+
+## Email Verification Integration Flow (Current)
+
+```text
+App --> Supabase table (email_verifications)
+App --> Resend API (send message)
+App --> verify code in Supabase table
+App --> proceed to Supabase signUp/signIn
 ```
 
-## Email Verification Flow (Resend API)
+## Password Reset Integration Flow (Current)
 
-```
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│   App        │    │  Supabase    │    │  Resend API  │
-│              │    │  Edge Func   │    │              │
-└──────┬───────┘    └──────┬───────┘    └──────┬───────┘
-       │                   │                   │
-       │ Send OTP Request  │                   │
-       │──────────────────►│                   │
-       │                   │ Send Email        │
-       │                   │──────────────────►│
-       │                   │                   │
-       │                   │   Email Sent      │
-       │                   │◄──────────────────│
-       │   OTP Stored      │                   │
-       │◄──────────────────│                   │
-       │                   │                   │
-       │ Verify OTP        │                   │
-       │──────────────────►│                   │
-       │                   │                   │
-       │   Result          │                   │
-       │◄──────────────────│                   │
-       │                   │                   │
+```text
+App --> Supabase table (password_resets)
+App --> Resend API (send OTP)
+App --> verify code in Supabase table
+App --> Supabase RPC reset_user_password
 ```
 
-## Settings Flow
+## Screen Navigation Map (Current)
 
-```
-Settings Screen
-    │
-    ├── Profile Section
-    │   ├── Edit Name
-    │   └── Change Password ──► Change Password Screen
-    │
-    ├── Preferences
-    │   ├── Dark/Light Theme Toggle
-    │   ├── Sound Effects Toggle
-    │   └── Notifications Toggle
-    │
-    ├── About
-    │   ├── App Version
-    │   ├── Privacy Policy
-    │   └── Terms of Service
-    │
-    └── Sign Out ──► Clear Session ──► Auth Screen
-```
-
-## Change Password Flow
-
-```
-Change Password Screen
-    │
-    ▼
-Enter Current Password
-    │
-    ▼
-Enter New Password
-    │
-    ▼
-Confirm New Password
-    │
-    ▼
-Validate Requirements
-    ├── Min 8 characters
-    ├── Uppercase letter
-    ├── Lowercase letter
-    ├── Number
-    └── Special character
-    │
-    ▼
-Update via Supabase
-    │
-    ├── Failed ──► Show Error
-    │
-    └── Success ──► Show Success ──► Back to Settings
+```text
+Splash
+  |
+  +--> Onboarding (if first run)
+  |      +--> Auth
+  |
+  +--> Auth (if not logged in)
+  |
+  +--> Home Container (if logged in)
+         |
+         +--> Home Tab
+         |     +--> Daily Challenge
+         |     +--> Study Modules -> Module Reader
+         |     +--> Leaderboard (header)
+         |     +--> Profile (header)
+         |
+         +--> Quiz Tab (Subjects)
+         |     +--> Difficulty Picker
+         |     +--> Study Notes
+         |     +--> Quiz
+         |     +--> Results
+         |
+         +--> Progress Tab
+         |     +--> Achievements
+         |
+         +--> Settings Tab
+               +--> Profile
+               +--> Change Password
+               +--> Sign Out
 ```
 
-## Achievement System
+## Current Notes
 
-```
-User Action
-    │
-    ▼
-Check Achievement Criteria
-    │
-    ├── First Quiz ──► "First Steps" Badge
-    ├── 10 Quizzes ──► "Quiz Enthusiast" Badge
-    ├── 100% Score ──► "Perfect Score" Badge
-    ├── 7 Day Streak ──► "Week Warrior" Badge
-    └── ... more achievements
-    │
-    ▼
-Unlock Achievement
-    │
-    ▼
-Show Notification
-    │
-    ▼
-Save to Progress
-```
-
-## Screen Navigation Map
-
-```
-                         ┌─────────────┐
-                         │   Splash    │
-                         └──────┬──────┘
-                                │
-              ┌─────────────────┼─────────────────┐
-              ▼                 ▼                 ▼
-       ┌────────────┐    ┌────────────┐    ┌────────────┐
-       │ Onboarding │───►│    Auth    │───►│    Home    │
-       └────────────┘    └─────┬──────┘    └─────┬──────┘
-                               │                 │
-                               ▼           ┌─────┼─────┬─────────┬──────────┐
-                        ┌────────────┐     │     │     │         │          │
-                        │   Email    │     ▼     ▼     ▼         ▼          ▼
-                        │   Verify   │  ┌─────┐┌─────┐┌─────┐┌────────┐┌────────┐
-                        └────────────┘  │Quiz ││Flash││Daily││Achieve-││Settings│
-                                        │     ││cards││Chall││ments   ││        │
-                                        └──┬──┘└─────┘└─────┘└────────┘└───┬────┘
-                                           │                               │
-                                           ▼                               ▼
-                                     ┌──────────┐                   ┌──────────┐
-                                     │ Results  │                   │ Change   │
-                                     │          │                   │ Password │
-                                     └──────────┘                   └──────────┘
-```
+- FlashcardScreen exists in code, but there is currently no navigation entry to it from active screens.
+- Change Password flow currently asks for new password and confirmation only (no current password field).
+- Daily challenge completion check is based on local stored date for the current device.
