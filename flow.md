@@ -59,6 +59,11 @@ Auth Screen (Sign Up mode)
                                   +--> Handle account switch if needed
                                   +--> Sync local totals to cloud
                                   +--> Navigate to Home Screen
+                                  |
+                                  +--> AdaptiveLearningService._initProgress
+                                        - Load local progress from storage
+                                        - If logged in: Sync cloud progress with local
+                                          (load cloud data, merge with local, save merged, sync highest back)
 ```
 
 ### Sign In (Current)
@@ -75,12 +80,12 @@ Auth Screen (Sign In mode)
             +--> Success --> Handle account switch if needed
                             - Sync pending offline queue
                             - Clear previous user's local quiz progress
+                            - Navigate to Home Screen
                             |
-                            +--> Load cloud profile/progress/achievements
-                            +--> Merge with local data (max/union strategy)
-                            +--> Save merged local data
-                            +--> Sync highest totals back to cloud
-                            +--> Navigate to Home Screen
+                            +--> AdaptiveLearningService._initProgress
+                                  - Load local progress from storage
+                                  - If logged in: Sync cloud progress with local
+                                    (load cloud data, merge with local, save merged, sync highest back)
 ```
 
 ### Forgot Password (Current)
@@ -146,14 +151,13 @@ Home/Quiz Tab --> Subjects Screen
                    |
                    +--> AdaptiveLearningService.recordQuizResult
                    |      - Update local progress, streak, achievements
-                   |      - Save subject progress to cloud if logged in
+                   |      - Queue subject progress sync via OfflineSyncService (if logged in)
+                   |      - Queue profile update sync via OfflineSyncService (if logged in)
                    |
                    +--> Results Screen
                           - Mark level passed when score >= 75%
                           - Record ML learning signal
-                          - Save quiz result:
-                                online  -> Supabase saveQuizResult
-                                offline -> queue in OfflineSyncService
+                          - Queue quiz result sync via OfflineSyncService
                           - Done/Try Again -> back to main app
 ```
 
@@ -177,9 +181,7 @@ Home Tab --> Daily Challenge Card --> DailyChallengeScreen
                           total score includes 1.5x bonus
                    |
                    +--> Save local challenge date + local cumulative challenge score
-                   +--> Sync challenge score:
-                          online  -> Supabase saveDailyChallengeScore
-                          offline -> queue in OfflineSyncService
+                   +--> Queue challenge score sync via OfflineSyncService
                    +--> Show detailed results + review answers
                    +--> Done -> back to Home
 ```
@@ -219,7 +221,7 @@ Bottom Nav --> Settings Tab
     |
     +--> Profile tile --> Profile Screen
     |      - Edit name, school, email
-    |      - Update profile photo (local and cloud when logged in)
+    |      - Update profile photo (local and cloud via OfflineSyncService when logged in)
     |
     +--> Appearance
     |      - Dark mode toggle
@@ -281,24 +283,26 @@ Storage bucket:
 ```text
 Action requiring cloud write
     |
-    +--> Check connectivity (ConnectivityService)
+    +--> Queue operation in OfflineSyncService
+    |      (persisted in SharedPreferences)
+    |
+    +--> Try immediate sync to Supabase
             |
-            +--> Online  --> write to Supabase immediately
+            +--> Success --> Remove from queue
             |
-            +--> Offline --> queue operation in OfflineSyncService
-                            (persisted in SharedPreferences)
-                            |
-                            +--> On reconnect: auto-sync pending queue
+            +--> Failure (offline/error) --> Keep in queue
+                                          |
+                                          +--> On reconnect: auto-sync pending queue
 ```
 
 Current queue producers in active app flow:
 - Quiz result writes from Results Screen
 - Daily challenge score writes from DailyChallengeScreen
-
-Queue supports additional operation types:
-- subjectProgress
-- achievement
-- profileUpdate
+- Subject progress writes from AdaptiveLearningService (per quiz)
+- Profile updates from Profile Screen
+- Avatar uploads from Profile Screen
+- Achievement unlocks from AdaptiveLearningService
+```
 
 ## Email Verification Integration Flow (Current)
 
