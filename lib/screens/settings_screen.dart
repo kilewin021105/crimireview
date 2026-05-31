@@ -37,12 +37,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadSettings();
+    StorageService.profileChangeNotifier.addListener(_handleProfileChanged);
     _updateAuthState();
     if (SupabaseService.isInitialized) {
       SupabaseService.instance.authStateChanges.listen((_) {
         if (mounted) _updateAuthState();
       });
     }
+  }
+
+  void _handleProfileChanged() {
+    _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    StorageService.profileChangeNotifier.removeListener(_handleProfileChanged);
+    super.dispose();
   }
 
   void _updateAuthState() {

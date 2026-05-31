@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import '../services/offline_sync_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/theme_service.dart';
@@ -72,10 +73,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
         
         if (SupabaseService.instance.isLoggedIn) {
-          final avatarUrl = await SupabaseService.instance.uploadAvatar(File(savedPath));
+          final avatarUrl = await OfflineSyncService.instance.uploadAvatarOrQueue(savedPath);
           if (avatarUrl != null && mounted) {
-            // Save avatar URL to local storage
-            await _storage.setAvatarUrl(avatarUrl);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Photo uploaded to cloud'),
@@ -171,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         setState(() => _profileImagePath = null);
                         
                         if (SupabaseService.instance.isLoggedIn) {
-                          await SupabaseService.instance.removeAvatar();
+                          await OfflineSyncService.instance.removeAvatarOrQueue();
                         }
                       },
                       isDark: isDark,
@@ -249,7 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     
     // Sync to Supabase if logged in
     if (SupabaseService.instance.isLoggedIn) {
-      await SupabaseService.instance.updateProfile(
+      await OfflineSyncService.instance.saveProfileDetailsOrQueue(
         displayName: name,
         school: school.isNotEmpty ? school : null,
       );

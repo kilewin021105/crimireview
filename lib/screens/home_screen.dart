@@ -40,11 +40,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _loadUserData();
+    StorageService.profileChangeNotifier.addListener(_handleProfileChanged);
     ConnectivityService.instance.startMonitoring();
+  }
+
+  void _handleProfileChanged() {
+    _loadUserData();
   }
   
   @override
   void dispose() {
+    StorageService.profileChangeNotifier.removeListener(_handleProfileChanged);
     ConnectivityService.instance.stopMonitoring();
     super.dispose();
   }

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'connectivity_service.dart';
+import 'storage_service.dart';
 import 'supabase_service.dart';
 
 enum SyncOperationType {
@@ -11,6 +13,9 @@ enum SyncOperationType {
   subjectProgress,
   achievement,
   profileUpdate,
+  profileDetails,
+  avatarUpload,
+  avatarRemove,
 }
 
 class SyncOperation {
@@ -53,31 +58,59 @@ class OfflineSyncService extends ChangeNotifier {
 
   static const String _queueKey = 'offline_sync_queue';
   static const int _maxRetries = 3;
+  static const Duration _retryDelay = Duration(seconds: 10);
 
   SharedPreferences? _prefs;
   List<SyncOperation> _pendingOperations = [];
   bool _isSyncing = false;
   StreamSubscription? _connectivitySubscription;
+  Timer? _retryTimer;
+  bool _isListening = false;
 
   bool get isSyncing => _isSyncing;
   int get pendingCount => _pendingOperations.length;
   bool get hasPendingSync => _pendingOperations.isNotEmpty;
+  bool get _hasAuthenticatedSession =>
+      SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     await _loadQueue();
     _startListening();
+    await syncPendingOperations();
   }
 
   void _startListening() {
-    // Listen to connectivity changes
+    if (_isListening) return;
     ConnectivityService.instance.addListener(_onConnectivityChanged);
+    _isListening = true;
   }
 
   void _onConnectivityChanged() {
     if (ConnectivityService.instance.isOnline && hasPendingSync) {
-      syncPendingOperations();
+      unawaited(syncPendingOperations());
     }
+  }
+
+  Future<bool> _canSyncNow() async {
+    if (!_hasAuthenticatedSession) {
+      return false;
+    }
+
+    return ConnectivityService.instance.checkConnectivity();
+  }
+
+  void _scheduleRetryIfNeeded() {
+    if (!hasPendingSync) {
+      _retryTimer?.cancel();
+      _retryTimer = null;
+      return;
+    }
+
+    _retryTimer?.cancel();
+    _retryTimer = Timer(_retryDelay, () {
+      unawaited(syncPendingOperations());
+    });
   }
 
   Future<void> _loadQueue() async {
@@ -218,23 +251,293 @@ class OfflineSyncService extends ChangeNotifier {
     await _addOperation(operation);
   }
 
+  Future<void> queueProfileDetails({
+    String? displayName,
+    String? school,
+  }) async {
+    final operation = SyncOperation(
+      id: _generateId(),
+      type: SyncOperationType.profileDetails,
+      data: {
+        if (displayName != null) 'displayName': displayName,
+        if (school != null) 'school': school,
+      },
+      createdAt: DateTime.now(),
+    );
+
+    await _addOperation(operation);
+  }
+
+  Future<void> queueAvatarUpload(String avatarLocalPath) async {
+    final operation = SyncOperation(
+      id: _generateId(),
+      type: SyncOperationType.avatarUpload,
+      data: {'avatarLocalPath': avatarLocalPath},
+      createdAt: DateTime.now(),
+    );
+
+    await _addOperation(operation);
+  }
+
+  Future<void> queueAvatarRemoval() async {
+    final operation = SyncOperation(
+      id: _generateId(),
+      type: SyncOperationType.avatarRemove,
+      data: const {},
+      createdAt: DateTime.now(),
+    );
+
+    await _addOperation(operation);
+  }
+
   Future<void> _addOperation(SyncOperation operation) async {
     _pendingOperations.add(operation);
     await _saveQueue();
     notifyListeners();
 
-    // Try to sync immediately if online
-    if (ConnectivityService.instance.isOnline) {
-      syncPendingOperations();
+    unawaited(syncPendingOperations());
+  }
+
+  Future<void> saveQuizResultOrQueue({
+    required String subjectId,
+    required String difficulty,
+    required int score,
+    required int totalQuestions,
+    required int correctAnswers,
+    int? timeTakenSeconds,
+  }) async {
+    if (!_hasAuthenticatedSession) return;
+
+    if (await _canSyncNow()) {
+      try {
+        await SupabaseService.instance.saveQuizResult(
+          subjectId: subjectId,
+          difficulty: difficulty,
+          score: score,
+          totalQuestions: totalQuestions,
+          correctAnswers: correctAnswers,
+          timeTakenSeconds: timeTakenSeconds,
+        );
+        return;
+      } catch (e) {
+        debugPrint('saveQuizResult failed, queueing for retry: $e');
+      }
     }
+
+    await queueQuizResult(
+      subjectId: subjectId,
+      difficulty: difficulty,
+      score: score,
+      totalQuestions: totalQuestions,
+      correctAnswers: correctAnswers,
+      timeTakenSeconds: timeTakenSeconds,
+    );
+  }
+
+  Future<void> saveDailyChallengeScoreOrQueue({
+    required int score,
+    required int correctAnswers,
+    int totalQuestions = 10,
+  }) async {
+    if (!_hasAuthenticatedSession) return;
+
+    if (await _canSyncNow()) {
+      try {
+        await SupabaseService.instance.saveDailyChallengeScore(
+          score: score,
+          correctAnswers: correctAnswers,
+          totalQuestions: totalQuestions,
+        );
+        return;
+      } catch (e) {
+        debugPrint('saveDailyChallengeScore failed, queueing for retry: $e');
+      }
+    }
+
+    await queueDailyChallengeScore(
+      score: score,
+      correctAnswers: correctAnswers,
+      totalQuestions: totalQuestions,
+    );
+  }
+
+  Future<void> saveSubjectProgressOrQueue({
+    required String subjectId,
+    required int questionsAnswered,
+    required int correctAnswers,
+    required int easyCorrect,
+    required int easyTotal,
+    required int mediumCorrect,
+    required int mediumTotal,
+    required int hardCorrect,
+    required int hardTotal,
+  }) async {
+    if (!_hasAuthenticatedSession) return;
+
+    if (await _canSyncNow()) {
+      try {
+        await SupabaseService.instance.saveSubjectProgress(
+          subjectId: subjectId,
+          questionsAnswered: questionsAnswered,
+          correctAnswers: correctAnswers,
+          easyCorrect: easyCorrect,
+          easyTotal: easyTotal,
+          mediumCorrect: mediumCorrect,
+          mediumTotal: mediumTotal,
+          hardCorrect: hardCorrect,
+          hardTotal: hardTotal,
+        );
+        return;
+      } catch (e) {
+        debugPrint('saveSubjectProgress failed, queueing for retry: $e');
+      }
+    }
+
+    await queueSubjectProgress(
+      subjectId: subjectId,
+      questionsAnswered: questionsAnswered,
+      correctAnswers: correctAnswers,
+      easyCorrect: easyCorrect,
+      easyTotal: easyTotal,
+      mediumCorrect: mediumCorrect,
+      mediumTotal: mediumTotal,
+      hardCorrect: hardCorrect,
+      hardTotal: hardTotal,
+    );
+  }
+
+  Future<void> unlockAchievementOrQueue(String achievementId) async {
+    if (!_hasAuthenticatedSession) return;
+
+    if (await _canSyncNow()) {
+      try {
+        await SupabaseService.instance.unlockAchievement(achievementId);
+        return;
+      } catch (e) {
+        debugPrint('unlockAchievement failed, queueing for retry: $e');
+      }
+    }
+
+    await queueAchievement(achievementId);
+  }
+
+  Future<void> syncProfileUpdateOrQueue({
+    required int totalPoints,
+    required int totalQuizzes,
+    required int totalCorrect,
+    required int currentStreak,
+    required int bestStreak,
+  }) async {
+    if (!_hasAuthenticatedSession) return;
+
+    if (await _canSyncNow()) {
+      try {
+        await SupabaseService.instance.syncLocalProgress(
+          totalPoints: totalPoints,
+          totalQuizzes: totalQuizzes,
+          totalCorrect: totalCorrect,
+          currentStreak: currentStreak,
+          bestStreak: bestStreak,
+        );
+        return;
+      } catch (e) {
+        debugPrint('syncLocalProgress failed, queueing for retry: $e');
+      }
+    }
+
+    await queueProfileUpdate(
+      totalPoints: totalPoints,
+      totalQuizzes: totalQuizzes,
+      totalCorrect: totalCorrect,
+      currentStreak: currentStreak,
+      bestStreak: bestStreak,
+    );
+  }
+
+  Future<void> saveProfileDetailsOrQueue({
+    String? displayName,
+    String? school,
+  }) async {
+    if (!_hasAuthenticatedSession) return;
+
+    final normalizedSchool = (school != null && school.isEmpty) ? null : school;
+
+    if (await _canSyncNow()) {
+      try {
+        await SupabaseService.instance.updateProfile(
+          displayName: displayName,
+          school: normalizedSchool,
+        );
+        return;
+      } catch (e) {
+        debugPrint('updateProfile failed, queueing for retry: $e');
+      }
+    }
+
+    await queueProfileDetails(
+      displayName: displayName,
+      school: normalizedSchool,
+    );
+  }
+
+  Future<String?> uploadAvatarOrQueue(String avatarLocalPath) async {
+    if (!_hasAuthenticatedSession) return null;
+
+    if (await _canSyncNow()) {
+      try {
+        final avatarUrl = await _uploadAvatarFromPath(avatarLocalPath);
+        return avatarUrl;
+      } catch (e) {
+        debugPrint('uploadAvatar failed, queueing for retry: $e');
+      }
+    }
+
+    await queueAvatarUpload(avatarLocalPath);
+    return null;
+  }
+
+  Future<void> removeAvatarOrQueue() async {
+    if (!_hasAuthenticatedSession) return;
+
+    if (await _canSyncNow()) {
+      try {
+        await _removeAvatarFromCloud();
+        return;
+      } catch (e) {
+        debugPrint('removeAvatar failed, queueing for retry: $e');
+      }
+    }
+
+    await queueAvatarRemoval();
+  }
+
+  Future<String> _uploadAvatarFromPath(String avatarLocalPath) async {
+    final avatarFile = File(avatarLocalPath);
+    if (!await avatarFile.exists()) {
+      throw Exception('Avatar file no longer exists');
+    }
+
+    final avatarUrl = await SupabaseService.instance.uploadAvatar(avatarFile);
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      throw Exception('Avatar upload failed');
+    }
+
+    await StorageService().setAvatarUrl(avatarUrl);
+    return avatarUrl;
+  }
+
+  Future<void> _removeAvatarFromCloud() async {
+    await SupabaseService.instance.removeAvatar();
+    await StorageService().setAvatarUrl(null);
   }
 
   /// Sync all pending operations to the cloud
   Future<void> syncPendingOperations() async {
     if (_isSyncing || _pendingOperations.isEmpty) return;
-    if (!SupabaseService.instance.isLoggedIn) return;
+    if (!await _canSyncNow()) return;
 
     _isSyncing = true;
+    _retryTimer?.cancel();
     notifyListeners();
 
     final List<SyncOperation> completed = [];
@@ -261,6 +564,8 @@ class OfflineSyncService extends ChangeNotifier {
 
     _isSyncing = false;
     notifyListeners();
+
+    _scheduleRetryIfNeeded();
 
     if (completed.isNotEmpty) {
       print('Synced ${completed.length} operations to cloud');
@@ -320,20 +625,41 @@ class OfflineSyncService extends ChangeNotifier {
           );
         }
         break;
+
+      case SyncOperationType.profileDetails:
+        await supabase.updateProfile(
+          displayName: operation.data['displayName'],
+          school: operation.data['school'],
+        );
+        break;
+
+      case SyncOperationType.avatarUpload:
+        await _uploadAvatarFromPath(operation.data['avatarLocalPath']);
+        break;
+
+      case SyncOperationType.avatarRemove:
+        await _removeAvatarFromCloud();
+        break;
     }
   }
 
   /// Clear all pending operations (use with caution)
   Future<void> clearQueue() async {
     _pendingOperations.clear();
+    _retryTimer?.cancel();
+    _retryTimer = null;
     await _saveQueue();
     notifyListeners();
   }
 
   @override
   void dispose() {
-    ConnectivityService.instance.removeListener(_onConnectivityChanged);
+    if (_isListening) {
+      ConnectivityService.instance.removeListener(_onConnectivityChanged);
+      _isListening = false;
+    }
     _connectivitySubscription?.cancel();
+    _retryTimer?.cancel();
     super.dispose();
   }
 }

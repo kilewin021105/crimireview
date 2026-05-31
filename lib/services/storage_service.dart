@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_progress.dart';
 
 class StorageService {
+  static final ValueNotifier<int> profileChangeNotifier = ValueNotifier<int>(0);
+
   SharedPreferences? _prefs;
   static const String _progressKey = 'user_progress';
   static const String _onboardingKey = 'onboarding_completed';
@@ -22,6 +25,10 @@ class StorageService {
   static const String _lastDailyChallengeKey = 'last_daily_challenge';
   static const String _dailyChallengeScoreKey = 'daily_challenge_score';
   static const String _lastUserIdKey = 'last_user_id';
+
+  void _notifyProfileChanged() {
+    profileChangeNotifier.value++;
+  }
 
   Future<SharedPreferences> _getPrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -94,6 +101,7 @@ class StorageService {
   Future<void> setUserName(String name) async {
     final prefs = await _getPrefs();
     await prefs.setString(_userNameKey, name);
+    _notifyProfileChanged();
   }
 
   Future<String> getUserName() async {
@@ -108,6 +116,7 @@ class StorageService {
   Future<void> setUserEmail(String email) async {
     final prefs = await _getPrefs();
     await prefs.setString(_userEmailKey, email);
+    _notifyProfileChanged();
   }
 
   Future<String?> getUserEmail() async {
@@ -118,6 +127,7 @@ class StorageService {
   Future<void> setUserAvatar(String avatarPath) async {
     final prefs = await _getPrefs();
     await prefs.setString(_userAvatarKey, avatarPath);
+    _notifyProfileChanged();
   }
 
   Future<String?> getUserAvatar() async {
@@ -129,6 +139,7 @@ class StorageService {
   Future<void> setProfileImage(String imagePath) async {
     final prefs = await _getPrefs();
     await prefs.setString(_profileImageKey, imagePath);
+    _notifyProfileChanged();
   }
 
   Future<String?> getProfileImage() async {
@@ -146,6 +157,7 @@ class StorageService {
     } else {
       await prefs.remove(_avatarUrlKey);
     }
+    _notifyProfileChanged();
   }
 
   Future<String?> getAvatarUrl() async {
@@ -247,6 +259,7 @@ class StorageService {
   Future<void> clearAllData() async {
     final prefs = await _getPrefs();
     await prefs.clear();
+    _notifyProfileChanged();
   }
 
   /// Clear only auth-related data, keeping quiz progress intact
@@ -259,6 +272,7 @@ class StorageService {
     await prefs.remove(_userNameKey);
     await prefs.remove(_schoolKey);
     // Keep: progress, streak, study time, settings, daily challenge
+    _notifyProfileChanged();
   }
 
   // Track last logged-in user ID for account switching
@@ -287,6 +301,7 @@ class StorageService {
   Future<void> setSchool(String school) async {
     final prefs = await _getPrefs();
     await prefs.setString(_schoolKey, school);
+    _notifyProfileChanged();
   }
 
   Future<String?> getSchool() async {

@@ -7,6 +7,7 @@ import '../models/achievement.dart';
 import '../data/questions_database.dart';
 import 'storage_service.dart';
 import 'supabase_service.dart';
+import 'offline_sync_service.dart';
 
 class AdaptiveLearningService extends ChangeNotifier {
   final StorageService _storageService;
@@ -381,17 +382,28 @@ class AdaptiveLearningService extends ChangeNotifier {
     _updateStreak();
     
     // Check achievements
-    _checkAchievements();
+    await _checkAchievements();
 
     // Save progress locally
     await _storageService.saveProgress(_userProgress);
     
-    // Sync to cloud if logged in
+    // Sync to cloud or queue for retry if needed
     if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
-      await SupabaseService.instance.saveSubjectProgress(
+      final totalQuizzes = CriminologySubjects.all.fold<int>(
+        0,
+        (sum, subject) =>
+            sum + (_userProgress.subjectProgress[subject.id]?.totalQuizzesTaken ?? 0),
+      );
+      final totalCorrect = CriminologySubjects.all.fold<int>(
+        0,
+        (sum, subject) =>
+            sum + (_userProgress.subjectProgress[subject.id]?.totalCorrectAnswers ?? 0),
+      );
+
+      await OfflineSyncService.instance.saveSubjectProgressOrQueue(
         subjectId: subjectId,
         questionsAnswered: subjectProgress.totalQuestionsAnswered,
-        correctAnswers: subjectProgress.correctAnswers,
+        correctAnswers: subjectProgress.totalCorrectAnswers,
         easyCorrect: subjectProgress.easyCorrect,
         easyTotal: subjectProgress.easyTotal,
         mediumCorrect: subjectProgress.mediumCorrect,
@@ -399,12 +411,20 @@ class AdaptiveLearningService extends ChangeNotifier {
         hardCorrect: subjectProgress.hardCorrect,
         hardTotal: subjectProgress.hardTotal,
       );
+
+      await OfflineSyncService.instance.syncProfileUpdateOrQueue(
+        totalPoints: totalCorrect * 10,
+        totalQuizzes: totalQuizzes,
+        totalCorrect: totalCorrect,
+        currentStreak: _userProgress.currentStreak,
+        bestStreak: _userProgress.longestStreak,
+      );
     }
     
     notifyListeners();
   }
   
-  void _checkAchievements() {
+  Future<void> _checkAchievements() async {
     final totalQuizzes = CriminologySubjects.all.fold<int>(
       0, (sum, s) => sum + (_userProgress.subjectProgress[s.id]?.totalQuizzesTaken ?? 0),
     );
@@ -435,18 +455,14 @@ class AdaptiveLearningService extends ChangeNotifier {
       
       if (unlocked) {
         _userProgress.unlockedAchievements.add(achievement.id);
-        _syncAchievementToCloud(achievement.id);
+        await _syncAchievementToCloud(achievement.id);
       }
     }
   }
 
   Future<void> _syncAchievementToCloud(String achievementId) async {
-    try {
-      if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
-        await SupabaseService.instance.unlockAchievement(achievementId);
-      }
-    } catch (e) {
-      // Ignore sync errors
+    if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
+      await OfflineSyncService.instance.unlockAchievementOrQueue(achievementId);
     }
   }
   

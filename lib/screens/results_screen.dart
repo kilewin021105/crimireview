@@ -5,10 +5,8 @@ import '../models/question.dart';
 import '../models/subject.dart';
 import '../services/adaptive_learning_service.dart';
 import '../services/adaptive_ml_service.dart';
-import '../services/ml_service.dart';
 import '../services/theme_service.dart';
 import '../services/supabase_service.dart';
-import '../services/connectivity_service.dart';
 import '../services/offline_sync_service.dart';
 
 class ResultsScreen extends StatefulWidget {
@@ -69,29 +67,14 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
     
     final score = correctCount * 10;
     final difficultyStr = widget.difficulty?.toString().split('.').last ?? 'medium';
-    
-    // Check connectivity and use offline sync if needed
-    final isOnline = ConnectivityService.instance.isOnline;
-    
-    if (isOnline) {
-      // Online: save directly to Supabase
-      await SupabaseService.instance.saveQuizResult(
-        subjectId: widget.subject.id,
-        difficulty: difficultyStr,
-        score: score,
-        totalQuestions: widget.questions.length,
-        correctAnswers: correctCount,
-      );
-    } else {
-      // Offline: queue for later sync
-      await OfflineSyncService.instance.queueQuizResult(
-        subjectId: widget.subject.id,
-        difficulty: difficultyStr,
-        score: score,
-        totalQuestions: widget.questions.length,
-        correctAnswers: correctCount,
-      );
-    }
+
+    await OfflineSyncService.instance.saveQuizResultOrQueue(
+      subjectId: widget.subject.id,
+      difficulty: difficultyStr,
+      score: score,
+      totalQuestions: widget.questions.length,
+      correctAnswers: correctCount,
+    );
   }
 
   /// Record quiz result for ML model self-learning

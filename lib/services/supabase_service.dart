@@ -235,7 +235,9 @@ class SupabaseService {
     if (!isLoggedIn) return;
     
     final profile = await getUserProfile();
-    if (profile == null) return;
+    if (profile == null) {
+      throw Exception('User profile not found');
+    }
     
     final currentPoints = profile['total_points'] ?? 0;
     
@@ -260,37 +262,35 @@ class SupabaseService {
     
     // Ensure profile exists
     await ensureProfileExists();
-    
-    try {
-      await client.from('quiz_results').insert({
-        'user_id': userId,
-        'subject_id': subjectId,
-        'difficulty': difficulty,
-        'score': score,
-        'total_questions': totalQuestions,
-        'correct_answers': correctAnswers,
-        'time_taken_seconds': timeTakenSeconds,
-      });
-    } catch (e) {
-      print('Quiz result insert error: $e');
-    }
+
+    await client.from('quiz_results').insert({
+      'user_id': userId,
+      'subject_id': subjectId,
+      'difficulty': difficulty,
+      'score': score,
+      'total_questions': totalQuestions,
+      'correct_answers': correctAnswers,
+      'time_taken_seconds': timeTakenSeconds,
+    });
     
     final profile = await getUserProfile();
-    if (profile != null) {
-      final currentQuizzes = (profile['total_quizzes'] as num?)?.toInt() ?? 0;
-      final currentCorrect = (profile['total_correct'] as num?)?.toInt() ?? 0;
-      final currentPoints = (profile['total_points'] as num?)?.toInt() ?? 0;
-      
-      await client
-          .from('user_profiles')
-          .update({
-            'total_quizzes': currentQuizzes + 1,
-            'total_correct': currentCorrect + correctAnswers,
-            'total_points': currentPoints + score,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId!);
+    if (profile == null) {
+      throw Exception('User profile not found');
     }
+
+    final currentQuizzes = (profile['total_quizzes'] as num?)?.toInt() ?? 0;
+    final currentCorrect = (profile['total_correct'] as num?)?.toInt() ?? 0;
+    final currentPoints = (profile['total_points'] as num?)?.toInt() ?? 0;
+    
+    await client
+        .from('user_profiles')
+        .update({
+          'total_quizzes': currentQuizzes + 1,
+          'total_correct': currentCorrect + correctAnswers,
+          'total_points': currentPoints + score,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', userId!);
   }
 
   Future<void> saveSubjectProgress({
@@ -447,15 +447,11 @@ class SupabaseService {
 
   Future<void> unlockAchievement(String achievementId) async {
     if (!isLoggedIn) return;
-    
-    try {
-      await client.from('user_achievements').insert({
-        'user_id': userId,
-        'achievement_id': achievementId,
-      });
-    } catch (e) {
 
-    }
+    await client.from('user_achievements').upsert({
+      'user_id': userId,
+      'achievement_id': achievementId,
+    }, onConflict: 'user_id,achievement_id');
   }
 
   Future<List<String>> getUnlockedAchievements() async {
@@ -484,7 +480,9 @@ class SupabaseService {
     await ensureProfileExists();
     
     final profile = await getUserProfile();
-    if (profile == null) return;
+    if (profile == null) {
+      throw Exception('User profile not found');
+    }
     
     final cloudPoints = (profile['total_points'] as num?)?.toInt() ?? 0;
     final cloudQuizzes = (profile['total_quizzes'] as num?)?.toInt() ?? 0;
@@ -508,42 +506,36 @@ class SupabaseService {
 
   Future<String?> uploadAvatar(File imageFile) async {
     if (!isLoggedIn) return null;
+
+    final fileExt = imageFile.path.split('.').last;
+    final fileName = 'avatar.$fileExt';
+    final filePath = '$userId/$fileName';
     
-    try {
-      final fileExt = imageFile.path.split('.').last;
-      final fileName = 'avatar.$fileExt';
-      final filePath = '$userId/$fileName';
-      
-      await client.storage
-          .from('avatars')
-          .upload(filePath, imageFile, fileOptions: const FileOptions(upsert: true));
-      
-      final publicUrl = client.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-      
-      await updateProfile(avatarUrl: publicUrl);
-      
-      return publicUrl;
-    } catch (e) {
-      return null;
-    }
+    await client.storage
+        .from('avatars')
+        .upload(filePath, imageFile, fileOptions: const FileOptions(upsert: true));
+    
+    final publicUrl = client.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+    
+    await updateProfile(avatarUrl: publicUrl);
+    
+    return publicUrl;
   }
 
   Future<void> removeAvatar() async {
     if (!isLoggedIn) return;
+
+    final extensions = ['jpg', 'jpeg', 'png', 'gif'];
+    for (final ext in extensions) {
+      try {
+        await client.storage
+            .from('avatars')
+            .remove(['$userId/avatar.$ext']);
+      } catch (_) {}
+    }
     
-    try {
-      final extensions = ['jpg', 'jpeg', 'png', 'gif'];
-      for (final ext in extensions) {
-        try {
-          await client.storage
-              .from('avatars')
-              .remove(['$userId/avatar.$ext']);
-        } catch (_) {}
-      }
-      
-      await updateProfile(avatarUrl: '');
-    } catch (_) {}
+    await updateProfile(avatarUrl: '');
   }
 }

@@ -8,7 +8,6 @@ import '../data/questions_database.dart';
 import '../services/storage_service.dart';
 import '../services/theme_service.dart';
 import '../services/supabase_service.dart';
-import '../services/connectivity_service.dart';
 import '../services/offline_sync_service.dart';
 
 class DailyChallengeScreen extends StatefulWidget {
@@ -206,24 +205,12 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
 
   Future<void> _syncToCloud(int score, int correctAnswers) async {
     if (!SupabaseService.isInitialized || !SupabaseService.instance.isLoggedIn) return;
-    
-    final isOnline = ConnectivityService.instance.isOnline;
-    
-    if (isOnline) {
-      // Online: save directly to Supabase
-      await SupabaseService.instance.saveDailyChallengeScore(
-        score: score,
-        correctAnswers: correctAnswers,
-        totalQuestions: _totalQuestions,
-      );
-    } else {
-      // Offline: queue for later sync
-      await OfflineSyncService.instance.queueDailyChallengeScore(
-        score: score,
-        correctAnswers: correctAnswers,
-        totalQuestions: _totalQuestions,
-      );
-    }
+
+    await OfflineSyncService.instance.saveDailyChallengeScoreOrQueue(
+      score: score,
+      correctAnswers: correctAnswers,
+      totalQuestions: _totalQuestions,
+    );
   }
 
   @override
