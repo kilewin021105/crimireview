@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/user_progress.dart';
 import '../services/adaptive_learning_service.dart';
 import '../services/theme_service.dart';
 import '../models/subject.dart';
@@ -321,7 +322,7 @@ class ProgressScreen extends StatelessWidget {
   }
 
   Color _getAccuracyColor(double accuracy) {
-    if (accuracy >= 0.7) return AppColors.success;
+    if (accuracy >= SubjectProgress.levelPassThreshold) return AppColors.success;
     if (accuracy >= 0.5) return AppColors.primary;
     return AppColors.error;
   }

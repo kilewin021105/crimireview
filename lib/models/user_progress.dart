@@ -75,6 +75,8 @@ class TopicProgress {
 }
 
 class SubjectProgress {
+  static const double levelPassThreshold = 0.75;
+
   final String subjectId;
   Map<String, TopicProgress> topicProgress;
   int totalQuizzesTaken;

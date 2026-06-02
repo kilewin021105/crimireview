@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
+import '../models/user_progress.dart';
 import '../services/adaptive_learning_service.dart';
 import '../services/adaptive_ml_service.dart';
 import '../services/theme_service.dart';
@@ -42,7 +43,7 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
     final correctCount = widget.results.where((r) => r).length;
     final percentage = correctCount / widget.questions.length;
     
-    if (widget.difficulty != null && percentage >= 0.75) {
+    if (widget.difficulty != null && percentage >= SubjectProgress.levelPassThreshold) {
       _levelPassed = true;
       _markLevelPassed();
     }
@@ -65,7 +66,7 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
   Future<void> _saveToSupabase(int correctCount) async {
     if (!SupabaseService.isInitialized || !SupabaseService.instance.isLoggedIn) return;
     
-    final score = correctCount * 10;
+    final score = ((correctCount / widget.questions.length) * 100).round();
     final difficultyStr = widget.difficulty?.toString().split('.').last ?? 'medium';
 
     await OfflineSyncService.instance.saveQuizResultOrQueue(
@@ -374,7 +375,9 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
   }
 
   Color _getScoreColor(int percentage) {
-    if (percentage >= 70) return AppColors.success;
+    if (percentage >= (SubjectProgress.levelPassThreshold * 100).round()) {
+      return AppColors.success;
+    }
     if (percentage >= 50) return AppColors.accent;
     return AppColors.error;
   }

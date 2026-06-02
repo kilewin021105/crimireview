@@ -136,7 +136,7 @@ Home/Quiz Tab --> Subjects Screen
     |      - Medium: unlocks after Easy passed
     |      - Hard: unlocks after Medium passed
     |
-    +--> Load 10 questions for chosen difficulty
+    +--> Load 40 questions for chosen difficulty
     |
     +--> Study Notes Screen
     |
@@ -155,7 +155,7 @@ Home/Quiz Tab --> Subjects Screen
                    |      - Queue profile update sync via OfflineSyncService (if logged in)
                    |
                    +--> Results Screen
-                          - Mark level passed when score >= 75%
+                          - Mark level passed when score >= 75% (30/40 correct)
                           - Record ML learning signal
                           - Queue quiz result sync via OfflineSyncService
                           - Done/Try Again -> back to main app

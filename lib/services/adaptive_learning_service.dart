@@ -72,10 +72,10 @@ class AdaptiveLearningService extends ChangeNotifier {
           final mergedCorrect = (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers 
               ? (localSp?.totalCorrectAnswers ?? 0) : cloudCorrectAnswers;
           
-          // Determine if difficulty levels are passed (70% threshold)
-          final easyPassed = easyTotal > 0 && (easyCorrect / easyTotal) >= 0.7;
-          final mediumPassed = mediumTotal > 0 && (mediumCorrect / mediumTotal) >= 0.7;
-          final hardPassed = hardTotal > 0 && (hardCorrect / hardTotal) >= 0.7;
+          // Determine if difficulty levels are passed (75% threshold)
+          final easyPassed = easyTotal > 0 && (easyCorrect / easyTotal) >= SubjectProgress.levelPassThreshold;
+          final mediumPassed = mediumTotal > 0 && (mediumCorrect / mediumTotal) >= SubjectProgress.levelPassThreshold;
+          final hardPassed = hardTotal > 0 && (hardCorrect / hardTotal) >= SubjectProgress.levelPassThreshold;
           
           // Create merged subject progress
           _userProgress.subjectProgress[subjectId] = SubjectProgress(

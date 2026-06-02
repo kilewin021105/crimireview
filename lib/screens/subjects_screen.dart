@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
+import '../models/user_progress.dart';
 import '../services/adaptive_learning_service.dart';
 import '../services/theme_service.dart';
 import '../utils/page_transitions.dart';
-import 'quiz_screen.dart';
 import 'study_notes_screen.dart';
 
 class SubjectsScreen extends StatefulWidget {
@@ -16,6 +16,7 @@ class SubjectsScreen extends StatefulWidget {
 }
 
 class _SubjectsScreenState extends State<SubjectsScreen> {
+  static const int _questionsPerSubjectQuiz = 40;
   
   @override
   Widget build(BuildContext context) {
@@ -142,7 +143,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
   }
 
   Color _getAccuracyColor(double accuracy) {
-    if (accuracy >= 0.7) return AppColors.success;
+    if (accuracy >= SubjectProgress.levelPassThreshold) return AppColors.success;
     if (accuracy >= 0.5) return AppColors.primary;
     return AppColors.error;
   }
@@ -156,6 +157,9 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     final easyPassed = progress?.easyPassed ?? false;
     final mediumPassed = progress?.mediumPassed ?? false;
     final hardPassed = progress?.hardPassed ?? false;
+    final easyProgress = progress?.easyAccuracy ?? 0.0;
+    final mediumProgress = progress?.mediumAccuracy ?? 0.0;
+    final hardProgress = progress?.hardAccuracy ?? 0.0;
     
     showModalBottomSheet(
       context: context,
@@ -218,11 +222,12 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               context: context,
               isDark: isDark,
               title: 'Easy',
-              subtitle: '10 questions',
+              subtitle: '$_questionsPerSubjectQuiz questions',
               icon: Icons.sentiment_satisfied_rounded,
               color: const Color(0xFF22C55E),
               isLocked: false,
               isPassed: easyPassed,
+              progressValue: easyProgress,
               onTap: () {
                 Navigator.pop(context);
                 _startQuizWithDifficulty(context, subject, Difficulty.easy);
@@ -235,11 +240,12 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               context: context,
               isDark: isDark,
               title: 'Medium',
-              subtitle: easyPassed ? '10 questions' : 'Pass Easy to unlock',
+              subtitle: easyPassed ? '$_questionsPerSubjectQuiz questions' : 'Pass Easy to unlock',
               icon: Icons.sentiment_neutral_rounded,
               color: const Color(0xFFF59E0B),
               isLocked: !easyPassed,
               isPassed: mediumPassed,
+              progressValue: easyPassed ? mediumProgress : null,
               onTap: easyPassed ? () {
                 Navigator.pop(context);
                 _startQuizWithDifficulty(context, subject, Difficulty.medium);
@@ -252,11 +258,12 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               context: context,
               isDark: isDark,
               title: 'Hard',
-              subtitle: mediumPassed ? '10 questions' : 'Pass Medium to unlock',
+              subtitle: mediumPassed ? '$_questionsPerSubjectQuiz questions' : 'Pass Medium to unlock',
               icon: Icons.sentiment_very_dissatisfied_rounded,
               color: const Color(0xFFEF4444),
               isLocked: !mediumPassed,
               isPassed: hardPassed,
+              progressValue: mediumPassed ? hardProgress : null,
               onTap: mediumPassed ? () {
                 Navigator.pop(context);
                 _startQuizWithDifficulty(context, subject, Difficulty.hard);
@@ -279,8 +286,13 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     required Color color,
     required bool isLocked,
     required bool isPassed,
+    double? progressValue,
     VoidCallback? onTap,
   }) {
+    final normalizedProgress = (progressValue ?? 0.0).clamp(0.0, 1.0).toDouble();
+    final progressColor = isPassed ? AppColors.success : AppColors.error;
+    final showProgress = !isLocked && progressValue != null;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -297,71 +309,103 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
             width: 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isLocked 
-                  ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
-                  : color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                isLocked ? Icons.lock_rounded : icon,
-                color: isLocked 
-                  ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
-                  : color,
-                size: 24,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: isLocked 
+                      ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+                      : color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isLocked ? Icons.lock_rounded : icon,
+                    color: isLocked 
+                      ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
+                      : color,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isLocked 
+                            ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
+                            : (isDark ? Colors.white : const Color(0xFF1A1A2E)),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isLocked 
+                            ? (isDark ? Colors.grey.shade700 : Colors.grey.shade500)
+                            : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isPassed)
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF22C55E).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Color(0xFF22C55E),
+                      size: 20,
+                    ),
+                  )
+                else if (!isLocked)
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                  ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            if (showProgress) ...[
+              const SizedBox(height: 14),
+              Row(
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isLocked 
-                        ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
-                        : (isDark ? Colors.white : const Color(0xFF1A1A2E)),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 8,
+                        value: normalizedProgress,
+                        backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation(progressColor),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(width: 10),
                   Text(
-                    subtitle,
+                    '${(normalizedProgress * 100).round()}%',
                     style: TextStyle(
-                      fontSize: 13,
-                      color: isLocked 
-                        ? (isDark ? Colors.grey.shade700 : Colors.grey.shade500)
-                        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: progressColor,
                     ),
                   ),
                 ],
               ),
-            ),
-            if (isPassed)
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF22C55E).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  color: Color(0xFF22C55E),
-                  size: 20,
-                ),
-              )
-            else if (!isLocked)
-              Icon(
-                Icons.chevron_right_rounded,
-                color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
-              ),
+            ],
           ],
         ),
       ),
@@ -370,7 +414,11 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
 
   void _startQuizWithDifficulty(BuildContext context, Subject subject, Difficulty difficulty) {
     final service = Provider.of<AdaptiveLearningService>(context, listen: false);
-    final questions = service.getQuestionsByDifficulty(subjectId: subject.id, difficulty: difficulty, count: 10);
+    final questions = service.getQuestionsByDifficulty(
+      subjectId: subject.id,
+      difficulty: difficulty,
+      count: _questionsPerSubjectQuiz,
+    );
 
     if (questions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
