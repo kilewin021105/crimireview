@@ -63,6 +63,11 @@ class AdaptiveLearningService extends ChangeNotifier {
           final hardCorrect = cloudSp['hard_correct'] as int? ?? 0;
           final hardTotal = cloudSp['hard_total'] as int? ?? 0;
           
+          // Get segment progress from cloud if available
+          final cloudEasySegments = cloudSp['easy_segments'] as List<dynamic>?;
+          final cloudMediumSegments = cloudSp['medium_segments'] as List<dynamic>?;
+          final cloudHardSegments = cloudSp['hard_segments'] as List<dynamic>?;
+          
           // Get local subject progress if exists
           final localSp = _userProgress.subjectProgress[subjectId];
           
@@ -72,10 +77,42 @@ class AdaptiveLearningService extends ChangeNotifier {
           final mergedCorrect = (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers 
               ? (localSp?.totalCorrectAnswers ?? 0) : cloudCorrectAnswers;
           
-          // Determine if difficulty levels are passed (75% threshold)
-          final easyPassed = easyTotal > 0 && (easyCorrect / easyTotal) >= SubjectProgress.levelPassThreshold;
-          final mediumPassed = mediumTotal > 0 && (mediumCorrect / mediumTotal) >= SubjectProgress.levelPassThreshold;
-          final hardPassed = hardTotal > 0 && (hardCorrect / hardTotal) >= SubjectProgress.levelPassThreshold;
+          // Merge segment progress (take higher questionsAnswered per segment)
+          List<SegmentProgress> mergeSegments(List<SegmentProgress>? local, List<dynamic>? cloud) {
+            return List.generate(4, (i) {
+              final localSeg = local?[i];
+              final cloudSegJson = cloud != null && i < cloud.length ? cloud[i] as Map<String, dynamic>? : null;
+              final cloudSeg = cloudSegJson != null ? SegmentProgress.fromJson(cloudSegJson) : null;
+              
+              if (localSeg == null) return cloudSeg ?? SegmentProgress(segmentIndex: i);
+              if (cloudSeg == null) return localSeg;
+              
+              // Take higher questionsAnswered and corresponding correctAnswers
+              if (cloudSeg.questionsAnswered > localSeg.questionsAnswered) {
+                return cloudSeg;
+              } else if (localSeg.questionsAnswered > cloudSeg.questionsAnswered) {
+                return localSeg;
+              } else {
+                // Equal questions answered, take max correct
+                return SegmentProgress(
+                  segmentIndex: i,
+                  questionsAnswered: localSeg.questionsAnswered,
+                  correctAnswers: localSeg.correctAnswers > cloudSeg.correctAnswers 
+                      ? localSeg.correctAnswers 
+                      : cloudSeg.correctAnswers,
+                );
+              }
+            });
+          }
+          
+          final mergedEasySegments = mergeSegments(localSp?.easySegments, cloudEasySegments);
+          final mergedMediumSegments = mergeSegments(localSp?.mediumSegments, cloudMediumSegments);
+          final mergedHardSegments = mergeSegments(localSp?.hardSegments, cloudHardSegments);
+          
+          // Determine if difficulty levels are passed (all segments must be passed)
+          final easyPassed = mergedEasySegments.every((s) => s.isPassed);
+          final mediumPassed = mergedMediumSegments.every((s) => s.isPassed);
+          final hardPassed = mergedHardSegments.every((s) => s.isPassed);
           
           // Create merged subject progress
           _userProgress.subjectProgress[subjectId] = SubjectProgress(
@@ -87,9 +124,9 @@ class AdaptiveLearningService extends ChangeNotifier {
             lastStudyDate: cloudSp['last_study_date'] != null 
                 ? DateTime.tryParse(cloudSp['last_study_date']) 
                 : localSp?.lastStudyDate,
-            easyPassed: easyPassed || (localSp?.easyPassed ?? false),
-            mediumPassed: mediumPassed || (localSp?.mediumPassed ?? false),
-            hardPassed: hardPassed || (localSp?.hardPassed ?? false),
+            easyPassed: easyPassed,
+            mediumPassed: mediumPassed,
+            hardPassed: hardPassed,
             wrongQuestionIds: localSp?.wrongQuestionIds ?? {},
             easyCorrect: easyCorrect > (localSp?.easyCorrect ?? 0) ? easyCorrect : (localSp?.easyCorrect ?? 0),
             easyTotal: easyTotal > (localSp?.easyTotal ?? 0) ? easyTotal : (localSp?.easyTotal ?? 0),
@@ -97,6 +134,9 @@ class AdaptiveLearningService extends ChangeNotifier {
             mediumTotal: mediumTotal > (localSp?.mediumTotal ?? 0) ? mediumTotal : (localSp?.mediumTotal ?? 0),
             hardCorrect: hardCorrect > (localSp?.hardCorrect ?? 0) ? hardCorrect : (localSp?.hardCorrect ?? 0),
             hardTotal: hardTotal > (localSp?.hardTotal ?? 0) ? hardTotal : (localSp?.hardTotal ?? 0),
+            easySegments: mergedEasySegments,
+            mediumSegments: mergedMediumSegments,
+            hardSegments: mergedHardSegments,
           );
         }
       }
@@ -335,14 +375,35 @@ class AdaptiveLearningService extends ChangeNotifier {
         case Difficulty.easy:
           subjectProgress.easyTotal++;
           if (isCorrect) subjectProgress.easyCorrect++;
+          // Update segment progress
+          final segmentIndex = (subjectProgress.easyTotal - 1) ~/ 10;
+          if (segmentIndex < 4) {
+            final segment = subjectProgress.easySegments[segmentIndex];
+            segment.questionsAnswered++;
+            if (isCorrect) segment.correctAnswers++;
+          }
           break;
         case Difficulty.medium:
           subjectProgress.mediumTotal++;
           if (isCorrect) subjectProgress.mediumCorrect++;
+          // Update segment progress
+          final segmentIndex = (subjectProgress.mediumTotal - 1) ~/ 10;
+          if (segmentIndex < 4) {
+            final segment = subjectProgress.mediumSegments[segmentIndex];
+            segment.questionsAnswered++;
+            if (isCorrect) segment.correctAnswers++;
+          }
           break;
         case Difficulty.hard:
           subjectProgress.hardTotal++;
           if (isCorrect) subjectProgress.hardCorrect++;
+          // Update segment progress
+          final segmentIndex = (subjectProgress.hardTotal - 1) ~/ 10;
+          if (segmentIndex < 4) {
+            final segment = subjectProgress.hardSegments[segmentIndex];
+            segment.questionsAnswered++;
+            if (isCorrect) segment.correctAnswers++;
+          }
           break;
       }
 
@@ -410,6 +471,9 @@ class AdaptiveLearningService extends ChangeNotifier {
         mediumTotal: subjectProgress.mediumTotal,
         hardCorrect: subjectProgress.hardCorrect,
         hardTotal: subjectProgress.hardTotal,
+        easySegments: subjectProgress.easySegments.map((s) => s.toJson()).toList(),
+        mediumSegments: subjectProgress.mediumSegments.map((s) => s.toJson()).toList(),
+        hardSegments: subjectProgress.hardSegments.map((s) => s.toJson()).toList(),
       );
 
       await OfflineSyncService.instance.syncProfileUpdateOrQueue(

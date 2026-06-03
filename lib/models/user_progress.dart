@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'question.dart';
 
 class QuestionAttempt {
@@ -26,6 +27,44 @@ class QuestionAttempt {
         isCorrect: json['isCorrect'],
         timestamp: DateTime.parse(json['timestamp']),
         responseTimeMs: json['responseTimeMs'],
+      );
+}
+
+class SegmentProgress {
+  static const int questionsPerSegment = 10;
+  static const double passThreshold = 0.75;
+  
+  final int segmentIndex; // 0-3 (segments 1-4)
+  int questionsAnswered;
+  int correctAnswers;
+  
+  SegmentProgress({
+    required this.segmentIndex,
+    this.questionsAnswered = 0,
+    this.correctAnswers = 0,
+  });
+  
+  double get accuracy => questionsAnswered > 0 ? correctAnswers / questionsAnswered : 0.0;
+  
+  bool get isPassed => questionsAnswered >= questionsPerSegment && accuracy >= passThreshold;
+  
+  bool get isCompleted => questionsAnswered >= questionsPerSegment;
+  
+  Color get statusColor {
+    if (!isCompleted) return Colors.grey;
+    return isPassed ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
+  }
+  
+  Map<String, dynamic> toJson() => {
+        'segmentIndex': segmentIndex,
+        'questionsAnswered': questionsAnswered,
+        'correctAnswers': correctAnswers,
+      };
+  
+  factory SegmentProgress.fromJson(Map<String, dynamic> json) => SegmentProgress(
+        segmentIndex: json['segmentIndex'],
+        questionsAnswered: json['questionsAnswered'] ?? 0,
+        correctAnswers: json['correctAnswers'] ?? 0,
       );
 }
 
@@ -94,6 +133,10 @@ class SubjectProgress {
   int mediumTotal;
   int hardCorrect;
   int hardTotal;
+  // Segment progress: 4 segments of 10 questions each per difficulty
+  List<SegmentProgress> easySegments;
+  List<SegmentProgress> mediumSegments;
+  List<SegmentProgress> hardSegments;
   // Track wrong answers for review
   Set<String> wrongQuestionIds;
 
@@ -113,8 +156,14 @@ class SubjectProgress {
     this.mediumTotal = 0,
     this.hardCorrect = 0,
     this.hardTotal = 0,
+    List<SegmentProgress>? easySegments,
+    List<SegmentProgress>? mediumSegments,
+    List<SegmentProgress>? hardSegments,
     Set<String>? wrongQuestionIds,
   }) : topicProgress = topicProgress ?? {},
+       easySegments = easySegments ?? List.generate(4, (i) => SegmentProgress(segmentIndex: i)),
+       mediumSegments = mediumSegments ?? List.generate(4, (i) => SegmentProgress(segmentIndex: i)),
+       hardSegments = hardSegments ?? List.generate(4, (i) => SegmentProgress(segmentIndex: i)),
        wrongQuestionIds = wrongQuestionIds ?? {};
 
   // Aliases for consistency
@@ -188,6 +237,9 @@ class SubjectProgress {
         'mediumTotal': mediumTotal,
         'hardCorrect': hardCorrect,
         'hardTotal': hardTotal,
+        'easySegments': easySegments.map((s) => s.toJson()).toList(),
+        'mediumSegments': mediumSegments.map((s) => s.toJson()).toList(),
+        'hardSegments': hardSegments.map((s) => s.toJson()).toList(),
         'wrongQuestionIds': wrongQuestionIds.toList(),
       };
 
@@ -211,6 +263,15 @@ class SubjectProgress {
         mediumTotal: json['mediumTotal'] ?? 0,
         hardCorrect: json['hardCorrect'] ?? 0,
         hardTotal: json['hardTotal'] ?? 0,
+        easySegments: (json['easySegments'] as List<dynamic>?)
+            ?.map((s) => SegmentProgress.fromJson(s))
+            .toList(),
+        mediumSegments: (json['mediumSegments'] as List<dynamic>?)
+            ?.map((s) => SegmentProgress.fromJson(s))
+            .toList(),
+        hardSegments: (json['hardSegments'] as List<dynamic>?)
+            ?.map((s) => SegmentProgress.fromJson(s))
+            .toList(),
         wrongQuestionIds: (json['wrongQuestionIds'] as List<dynamic>?)
             ?.cast<String>().toSet() ?? {},
       );

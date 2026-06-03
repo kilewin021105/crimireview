@@ -154,12 +154,15 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     final service = Provider.of<AdaptiveLearningService>(context, listen: false);
     final progress = service.userProgress.subjectProgress[subject.id];
     
-    final easyPassed = progress?.easyPassed ?? false;
-    final mediumPassed = progress?.mediumPassed ?? false;
-    final hardPassed = progress?.hardPassed ?? false;
-    final easyProgress = progress?.easyAccuracy ?? 0.0;
-    final mediumProgress = progress?.mediumAccuracy ?? 0.0;
-    final hardProgress = progress?.hardAccuracy ?? 0.0;
+    // Determine if all segments are passed for each difficulty
+    final easyPassed = progress?.easySegments.every((s) => s.isPassed) ?? false;
+    final mediumPassed = progress?.mediumSegments.every((s) => s.isPassed) ?? false;
+    final hardPassed = progress?.hardSegments.every((s) => s.isPassed) ?? false;
+    
+    // Medium is locked if Easy not passed
+    final mediumUnlocked = easyPassed;
+    // Hard is locked if Medium not passed
+    final hardUnlocked = mediumPassed;
     
     showModalBottomSheet(
       context: context,
@@ -227,7 +230,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               color: const Color(0xFF22C55E),
               isLocked: false,
               isPassed: easyPassed,
-              progressValue: easyProgress,
+              segments: progress?.easySegments,
               onTap: () {
                 Navigator.pop(context);
                 _startQuizWithDifficulty(context, subject, Difficulty.easy);
@@ -243,10 +246,10 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               subtitle: easyPassed ? '$_questionsPerSubjectQuiz questions' : 'Pass Easy to unlock',
               icon: Icons.sentiment_neutral_rounded,
               color: const Color(0xFFF59E0B),
-              isLocked: !easyPassed,
+              isLocked: !mediumUnlocked,
               isPassed: mediumPassed,
-              progressValue: easyPassed ? mediumProgress : null,
-              onTap: easyPassed ? () {
+              segments: mediumUnlocked ? progress?.mediumSegments : null,
+              onTap: mediumUnlocked ? () {
                 Navigator.pop(context);
                 _startQuizWithDifficulty(context, subject, Difficulty.medium);
               } : null,
@@ -261,10 +264,10 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               subtitle: mediumPassed ? '$_questionsPerSubjectQuiz questions' : 'Pass Medium to unlock',
               icon: Icons.sentiment_very_dissatisfied_rounded,
               color: const Color(0xFFEF4444),
-              isLocked: !mediumPassed,
+              isLocked: !hardUnlocked,
               isPassed: hardPassed,
-              progressValue: mediumPassed ? hardProgress : null,
-              onTap: mediumPassed ? () {
+              segments: hardUnlocked ? progress?.hardSegments : null,
+              onTap: hardUnlocked ? () {
                 Navigator.pop(context);
                 _startQuizWithDifficulty(context, subject, Difficulty.hard);
               } : null,
@@ -286,12 +289,10 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     required Color color,
     required bool isLocked,
     required bool isPassed,
-    double? progressValue,
+    List<SegmentProgress>? segments,
     VoidCallback? onTap,
   }) {
-    final normalizedProgress = (progressValue ?? 0.0).clamp(0.0, 1.0).toDouble();
-    final progressColor = isPassed ? AppColors.success : AppColors.error;
-    final showProgress = !isLocked && progressValue != null;
+    final showProgress = !isLocked && segments != null;
 
     return GestureDetector(
       onTap: onTap,
@@ -381,30 +382,37 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
             ),
             if (showProgress) ...[
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        minHeight: 8,
-                        value: normalizedProgress,
-                        backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                        valueColor: AlwaysStoppedAnimation(progressColor),
+              ...List.generate(4, (index) {
+                final segment = segments[index];
+                final progress = segment.questionsAnswered / SegmentProgress.questionsPerSegment;
+                return Padding(
+                  padding: EdgeInsets.only(bottom: index < 3 ? 8 : 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            minHeight: 8,
+                            value: progress.clamp(0.0, 1.0),
+                            backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                            valueColor: AlwaysStoppedAnimation(segment.statusColor),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '${segment.questionsAnswered}/${SegmentProgress.questionsPerSegment}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: segment.statusColor,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '${(normalizedProgress * 100).round()}%',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: progressColor,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              }),
             ],
           ],
         ),

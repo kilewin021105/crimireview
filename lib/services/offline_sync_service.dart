@@ -194,21 +194,37 @@ class OfflineSyncService extends ChangeNotifier {
     required int mediumTotal,
     required int hardCorrect,
     required int hardTotal,
+    List<Map<String, dynamic>>? easySegments,
+    List<Map<String, dynamic>>? mediumSegments,
+    List<Map<String, dynamic>>? hardSegments,
   }) async {
+    final data = {
+      'subjectId': subjectId,
+      'questionsAnswered': questionsAnswered,
+      'correctAnswers': correctAnswers,
+      'easyCorrect': easyCorrect,
+      'easyTotal': easyTotal,
+      'mediumCorrect': mediumCorrect,
+      'mediumTotal': mediumTotal,
+      'hardCorrect': hardCorrect,
+      'hardTotal': hardTotal,
+    };
+    
+    // Add segment progress if provided
+    if (easySegments != null) {
+      data['easySegments'] = easySegments;
+    }
+    if (mediumSegments != null) {
+      data['mediumSegments'] = mediumSegments;
+    }
+    if (hardSegments != null) {
+      data['hardSegments'] = hardSegments;
+    }
+    
     final operation = SyncOperation(
       id: _generateId(),
       type: SyncOperationType.subjectProgress,
-      data: {
-        'subjectId': subjectId,
-        'questionsAnswered': questionsAnswered,
-        'correctAnswers': correctAnswers,
-        'easyCorrect': easyCorrect,
-        'easyTotal': easyTotal,
-        'mediumCorrect': mediumCorrect,
-        'mediumTotal': mediumTotal,
-        'hardCorrect': hardCorrect,
-        'hardTotal': hardTotal,
-      },
+      data: data,
       createdAt: DateTime.now(),
     );
 
@@ -371,6 +387,9 @@ class OfflineSyncService extends ChangeNotifier {
     required int mediumTotal,
     required int hardCorrect,
     required int hardTotal,
+    List<Map<String, dynamic>>? easySegments,
+    List<Map<String, dynamic>>? mediumSegments,
+    List<Map<String, dynamic>>? hardSegments,
   }) async {
     if (!_hasAuthenticatedSession) return;
 
@@ -386,6 +405,9 @@ class OfflineSyncService extends ChangeNotifier {
           mediumTotal: mediumTotal,
           hardCorrect: hardCorrect,
           hardTotal: hardTotal,
+          easySegments: easySegments,
+          mediumSegments: mediumSegments,
+          hardSegments: hardSegments,
         );
         return;
       } catch (e) {
@@ -403,6 +425,9 @@ class OfflineSyncService extends ChangeNotifier {
       mediumTotal: mediumTotal,
       hardCorrect: hardCorrect,
       hardTotal: hardTotal,
+      easySegments: easySegments,
+      mediumSegments: mediumSegments,
+      hardSegments: hardSegments,
     );
   }
 

@@ -303,10 +303,13 @@ class SupabaseService {
     required int mediumTotal,
     required int hardCorrect,
     required int hardTotal,
+    List<Map<String, dynamic>>? easySegments,
+    List<Map<String, dynamic>>? mediumSegments,
+    List<Map<String, dynamic>>? hardSegments,
   }) async {
     if (!isLoggedIn) return;
     
-    await client.from('user_progress').upsert({
+    final data = {
       'user_id': userId,
       'subject_id': subjectId,
       'questions_answered': questionsAnswered,
@@ -319,7 +322,20 @@ class SupabaseService {
       'hard_total': hardTotal,
       'last_study_date': DateTime.now().toIso8601String(),
       'updated_at': DateTime.now().toIso8601String(),
-    }, onConflict: 'user_id,subject_id');
+    };
+    
+    // Add segment progress if provided (may not exist in database yet)
+    if (easySegments != null) {
+      data['easy_segments'] = easySegments;
+    }
+    if (mediumSegments != null) {
+      data['medium_segments'] = mediumSegments;
+    }
+    if (hardSegments != null) {
+      data['hard_segments'] = hardSegments;
+    }
+    
+    await client.from('user_progress').upsert(data, onConflict: 'user_id,subject_id');
   }
 
   Future<List<Map<String, dynamic>>> getSubjectProgress() async {
