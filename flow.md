@@ -132,9 +132,11 @@ Home/Quiz Tab --> Subjects Screen
     +--> Select Subject
     |
     +--> Difficulty Sheet
-    |      - Easy: unlocked
-    |      - Medium: unlocks after Easy passed
-    |      - Hard: unlocks after Medium passed
+    |      - Shows 4 segments of 10 questions each per difficulty
+    |      - Segment colors: Green=passed, Red=failed, Grey=incomplete
+    |      - Easy: unlocked (4 segments)
+    |      - Medium: unlocks after all 4 Easy segments passed (>=75% per segment)
+    |      - Hard: unlocks after all 4 Medium segments passed (>=75% per segment)
     |
     +--> Load 40 questions for chosen difficulty
     |
@@ -150,12 +152,14 @@ Home/Quiz Tab --> Subjects Screen
             +--> Finish quiz
                    |
                    +--> AdaptiveLearningService.recordQuizResult
+                   |      - Update segment progress (questions 1-10, 11-20, 21-30, 31-40)
                    |      - Update local progress, streak, achievements
                    |      - Queue subject progress sync via OfflineSyncService (if logged in)
                    |      - Queue profile update sync via OfflineSyncService (if logged in)
                    |
                    +--> Results Screen
-                          - Mark level passed when score >= 75% (30/40 correct)
+                          - Segment progress updated per 10-question block
+                          - Difficulty passed when all 4 segments achieve >=75% accuracy
                           - Record ML learning signal
                           - Queue quiz result sync via OfflineSyncService
                           - Done/Try Again -> back to main app
