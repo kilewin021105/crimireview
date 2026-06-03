@@ -16,8 +16,6 @@ class SubjectsScreen extends StatefulWidget {
 }
 
 class _SubjectsScreenState extends State<SubjectsScreen> {
-  static const int _questionsPerSubjectQuiz = 40;
-  
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -155,9 +153,9 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     final progress = service.userProgress.subjectProgress[subject.id];
     
     // Determine if all segments are passed for each difficulty
-    final easyPassed = progress?.easySegments.every((s) => s.isPassed) ?? false;
-    final mediumPassed = progress?.mediumSegments.every((s) => s.isPassed) ?? false;
-    final hardPassed = progress?.hardSegments.every((s) => s.isPassed) ?? false;
+    final easyPassed = progress?.isDifficultyPassed(Difficulty.easy) ?? false;
+    final mediumPassed = progress?.isDifficultyPassed(Difficulty.medium) ?? false;
+    final hardPassed = progress?.isDifficultyPassed(Difficulty.hard) ?? false;
     
     // Medium is locked if Easy not passed
     final mediumUnlocked = easyPassed;
@@ -225,12 +223,18 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               context: context,
               isDark: isDark,
               title: 'Easy',
-              subtitle: '$_questionsPerSubjectQuiz questions',
+              subtitle: easyPassed
+                  ? 'All segments passed'
+                  : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.easy)}',
               icon: Icons.sentiment_satisfied_rounded,
               color: const Color(0xFF22C55E),
               isLocked: false,
               isPassed: easyPassed,
-              segments: progress?.easySegments,
+              segments: progress?.easySegments ??
+                  List.generate(
+                    SegmentProgress.segmentCount,
+                    (index) => SegmentProgress(segmentIndex: index),
+                  ),
               onTap: () {
                 Navigator.pop(context);
                 _startQuizWithDifficulty(context, subject, Difficulty.easy);
@@ -243,7 +247,11 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               context: context,
               isDark: isDark,
               title: 'Medium',
-              subtitle: easyPassed ? '$_questionsPerSubjectQuiz questions' : 'Pass Easy to unlock',
+              subtitle: !mediumUnlocked
+                  ? 'Pass Easy to unlock'
+                  : mediumPassed
+                      ? 'All segments passed'
+                      : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.medium)}',
               icon: Icons.sentiment_neutral_rounded,
               color: const Color(0xFFF59E0B),
               isLocked: !mediumUnlocked,
@@ -261,7 +269,11 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               context: context,
               isDark: isDark,
               title: 'Hard',
-              subtitle: mediumPassed ? '$_questionsPerSubjectQuiz questions' : 'Pass Medium to unlock',
+              subtitle: !hardUnlocked
+                  ? 'Pass Medium to unlock'
+                  : hardPassed
+                      ? 'All segments passed'
+                      : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.hard)}',
               icon: Icons.sentiment_very_dissatisfied_rounded,
               color: const Color(0xFFEF4444),
               isLocked: !hardUnlocked,
@@ -293,6 +305,12 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     VoidCallback? onTap,
   }) {
     final showProgress = !isLocked && segments != null;
+    final currentSegmentIndex = showProgress
+        ? segments.indexWhere((segment) => !segment.isPassed)
+        : -1;
+    final activeSegmentIndex = currentSegmentIndex == -1
+        ? (segments?.length ?? SegmentProgress.segmentCount) - 1
+        : currentSegmentIndex;
 
     return GestureDetector(
       onTap: onTap,
@@ -382,37 +400,63 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
             ),
             if (showProgress) ...[
               const SizedBox(height: 14),
-              ...List.generate(4, (index) {
-                final segment = segments[index];
-                final progress = segment.questionsAnswered / SegmentProgress.questionsPerSegment;
-                return Padding(
-                  padding: EdgeInsets.only(bottom: index < 3 ? 8 : 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            minHeight: 8,
-                            value: progress.clamp(0.0, 1.0),
-                            backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                            valueColor: AlwaysStoppedAnimation(segment.statusColor),
+              Row(
+                children: List.generate(segments.length, (index) {
+                  final segment = segments[index];
+                  final barColor = segment.isPassed
+                      ? AppColors.success
+                      : AppColors.error;
+                  final barValue = segment.isAttempted
+                      ? segment.accuracy.clamp(0.0, 1.0)
+                      : 1.0;
+                  final isActiveSegment = index == activeSegmentIndex && !isPassed;
+
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: index < segments.length - 1 ? 8 : 0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              border: isActiveSegment
+                                  ? Border.all(
+                                      color: color.withValues(alpha: 0.35),
+                                    )
+                                  : null,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                minHeight: 8,
+                                value: barValue,
+                                backgroundColor: isDark
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200,
+                                valueColor: AlwaysStoppedAnimation(barColor),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 6),
+                          Text(
+                            segment.rangeLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isActiveSegment
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: barColor,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        '${segment.questionsAnswered}/${SegmentProgress.questionsPerSegment}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: segment.statusColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
+                    ),
+                  );
+                }),
+              ),
             ],
           ],
         ),
@@ -422,16 +466,21 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
 
   void _startQuizWithDifficulty(BuildContext context, Subject subject, Difficulty difficulty) {
     final service = Provider.of<AdaptiveLearningService>(context, listen: false);
-    final questions = service.getQuestionsByDifficulty(
+    final segmentIndex = service.getCurrentSegmentIndex(
       subjectId: subject.id,
       difficulty: difficulty,
-      count: _questionsPerSubjectQuiz,
+    );
+    final questions = service.getQuestionsForCurrentSegment(
+      subjectId: subject.id,
+      difficulty: difficulty,
     );
 
     if (questions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No ${difficulty.name} questions available'),
+          content: Text(
+            'No ${difficulty.name} questions available for ${SegmentProgress.rangeLabelFor(segmentIndex)}',
+          ),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -448,6 +497,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
           subject: subject, 
           questions: questions,
           difficulty: difficulty,
+          segmentIndex: segmentIndex,
         ),
       ),
     );

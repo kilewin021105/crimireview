@@ -79,9 +79,11 @@ class AdaptiveLearningService extends ChangeNotifier {
           
           // Merge segment progress (take higher questionsAnswered per segment)
           List<SegmentProgress> mergeSegments(List<SegmentProgress>? local, List<dynamic>? cloud) {
-            return List.generate(4, (i) {
+            return List.generate(SegmentProgress.segmentCount, (i) {
               final localSeg = local?[i];
-              final cloudSegJson = cloud != null && i < cloud.length ? cloud[i] as Map<String, dynamic>? : null;
+              final cloudSegJson = cloud != null && i < cloud.length
+                  ? Map<String, dynamic>.from(cloud[i] as Map)
+                  : null;
               final cloudSeg = cloudSegJson != null ? SegmentProgress.fromJson(cloudSegJson) : null;
               
               if (localSeg == null) return cloudSeg ?? SegmentProgress(segmentIndex: i);
@@ -343,6 +345,7 @@ class AdaptiveLearningService extends ChangeNotifier {
     required List<Question> questions,
     required List<bool> results,
     required List<int> responseTimes,
+    int? segmentIndex,
   }) async {
     // Ensure subject progress exists
     _userProgress.subjectProgress.putIfAbsent(
@@ -353,11 +356,20 @@ class AdaptiveLearningService extends ChangeNotifier {
     final subjectProgress = _userProgress.subjectProgress[subjectId]!;
     subjectProgress.totalQuizzesTaken++;
     subjectProgress.lastStudyDate = DateTime.now();
+    final difficultyQuestionCounts = <Difficulty, int>{};
+    final difficultyCorrectCounts = <Difficulty, int>{};
 
     for (int i = 0; i < questions.length; i++) {
       final question = questions[i];
       final isCorrect = results[i];
       final responseTime = responseTimes[i];
+
+      difficultyQuestionCounts[question.difficulty] =
+          (difficultyQuestionCounts[question.difficulty] ?? 0) + 1;
+      if (isCorrect) {
+        difficultyCorrectCounts[question.difficulty] =
+            (difficultyCorrectCounts[question.difficulty] ?? 0) + 1;
+      }
 
       // Update subject-level stats
       subjectProgress.totalQuestionsAnswered++;
@@ -375,35 +387,14 @@ class AdaptiveLearningService extends ChangeNotifier {
         case Difficulty.easy:
           subjectProgress.easyTotal++;
           if (isCorrect) subjectProgress.easyCorrect++;
-          // Update segment progress
-          final segmentIndex = (subjectProgress.easyTotal - 1) ~/ 10;
-          if (segmentIndex < 4) {
-            final segment = subjectProgress.easySegments[segmentIndex];
-            segment.questionsAnswered++;
-            if (isCorrect) segment.correctAnswers++;
-          }
           break;
         case Difficulty.medium:
           subjectProgress.mediumTotal++;
           if (isCorrect) subjectProgress.mediumCorrect++;
-          // Update segment progress
-          final segmentIndex = (subjectProgress.mediumTotal - 1) ~/ 10;
-          if (segmentIndex < 4) {
-            final segment = subjectProgress.mediumSegments[segmentIndex];
-            segment.questionsAnswered++;
-            if (isCorrect) segment.correctAnswers++;
-          }
           break;
         case Difficulty.hard:
           subjectProgress.hardTotal++;
           if (isCorrect) subjectProgress.hardCorrect++;
-          // Update segment progress
-          final segmentIndex = (subjectProgress.hardTotal - 1) ~/ 10;
-          if (segmentIndex < 4) {
-            final segment = subjectProgress.hardSegments[segmentIndex];
-            segment.questionsAnswered++;
-            if (isCorrect) segment.correctAnswers++;
-          }
           break;
       }
 
@@ -433,6 +424,21 @@ class AdaptiveLearningService extends ChangeNotifier {
       // Adjust difficulty based on recent performance
       _adjustTopicDifficulty(topicProgress);
     }
+
+    for (final entry in difficultyQuestionCounts.entries) {
+      final resolvedSegmentIndex =
+          difficultyQuestionCounts.length == 1 && segmentIndex != null
+              ? segmentIndex
+              : _getCurrentSegmentIndexForProgress(subjectProgress, entry.key);
+      _updateSegmentProgress(
+        subjectProgress: subjectProgress,
+        difficulty: entry.key,
+        segmentIndex: resolvedSegmentIndex,
+        questionsAnswered: entry.value,
+        correctAnswers: difficultyCorrectCounts[entry.key] ?? 0,
+      );
+    }
+    _syncDifficultyPassFlags(subjectProgress);
 
     // Check for perfect score
     if (results.every((r) => r)) {
@@ -590,6 +596,95 @@ class AdaptiveLearningService extends ChangeNotifier {
     }
   }
 
+  List<SegmentProgress> _segmentsForDifficulty(
+    SubjectProgress subjectProgress,
+    Difficulty difficulty,
+  ) {
+    switch (difficulty) {
+      case Difficulty.easy:
+        return subjectProgress.easySegments;
+      case Difficulty.medium:
+        return subjectProgress.mediumSegments;
+      case Difficulty.hard:
+        return subjectProgress.hardSegments;
+    }
+  }
+
+  void _syncDifficultyPassFlags(SubjectProgress subjectProgress) {
+    subjectProgress.easyPassed = subjectProgress.isDifficultyPassed(Difficulty.easy);
+    subjectProgress.mediumPassed = subjectProgress.isDifficultyPassed(Difficulty.medium);
+    subjectProgress.hardPassed = subjectProgress.isDifficultyPassed(Difficulty.hard);
+  }
+
+  void _updateSegmentProgress({
+    required SubjectProgress subjectProgress,
+    required Difficulty difficulty,
+    required int segmentIndex,
+    required int questionsAnswered,
+    required int correctAnswers,
+  }) {
+    final segments = _segmentsForDifficulty(subjectProgress, difficulty);
+    if (segmentIndex < 0 || segmentIndex >= segments.length) return;
+
+    final segment = segments[segmentIndex];
+    if (segment.isPassed) return;
+
+    final normalizedQuestionsAnswered =
+        min(questionsAnswered, SegmentProgress.questionsPerSegment);
+    if (normalizedQuestionsAnswered >= segment.questionsAnswered) {
+      segment.questionsAnswered = normalizedQuestionsAnswered;
+    }
+    if (correctAnswers > segment.correctAnswers) {
+      segment.correctAnswers = correctAnswers;
+    }
+  }
+
+  int _getCurrentSegmentIndexForProgress(
+    SubjectProgress? subjectProgress,
+    Difficulty difficulty,
+  ) {
+    if (subjectProgress == null) return 0;
+    return subjectProgress.currentSegmentIndexForDifficulty(difficulty);
+  }
+
+  int getCurrentSegmentIndex({
+    required String subjectId,
+    required Difficulty difficulty,
+  }) {
+    final subjectProgress = _userProgress.subjectProgress[subjectId];
+    return _getCurrentSegmentIndexForProgress(subjectProgress, difficulty);
+  }
+
+  String getCurrentSegmentRangeLabel({
+    required String subjectId,
+    required Difficulty difficulty,
+  }) {
+    return SegmentProgress.rangeLabelFor(
+      getCurrentSegmentIndex(subjectId: subjectId, difficulty: difficulty),
+    );
+  }
+
+  List<Question> getQuestionsForCurrentSegment({
+    required String subjectId,
+    required Difficulty difficulty,
+  }) {
+    final filteredQuestions = QuestionsDatabase.getBySubject(subjectId)
+        .where((question) => question.difficulty == difficulty)
+        .toList();
+    if (filteredQuestions.isEmpty) return [];
+
+    final segmentIndex =
+        getCurrentSegmentIndex(subjectId: subjectId, difficulty: difficulty);
+    final start = segmentIndex * SegmentProgress.questionsPerSegment;
+    if (start >= filteredQuestions.length) return [];
+
+    final end = min(
+      start + SegmentProgress.questionsPerSegment,
+      filteredQuestions.length,
+    );
+    return filteredQuestions.sublist(start, end);
+  }
+
   // Get questions by specific difficulty level - prioritizes unanswered questions
   List<Question> getQuestionsByDifficulty({
     required String subjectId,
@@ -650,18 +745,7 @@ class AdaptiveLearningService extends ChangeNotifier {
     );
 
     final subjectProgress = _userProgress.subjectProgress[subjectId]!;
-    
-    switch (difficulty) {
-      case Difficulty.easy:
-        subjectProgress.easyPassed = true;
-        break;
-      case Difficulty.medium:
-        subjectProgress.mediumPassed = true;
-        break;
-      case Difficulty.hard:
-        subjectProgress.hardPassed = true;
-        break;
-    }
+    _syncDifficultyPassFlags(subjectProgress);
 
     await _storageService.saveProgress(_userProgress);
     notifyListeners();

@@ -143,6 +143,9 @@ class _AuthScreenState extends State<AuthScreen> {
             final mediumTotal = cloudSp['medium_total'] as int? ?? 0;
             final hardCorrect = cloudSp['hard_correct'] as int? ?? 0;
             final hardTotal = cloudSp['hard_total'] as int? ?? 0;
+            final cloudEasySegments = cloudSp['easy_segments'] as List<dynamic>?;
+            final cloudMediumSegments = cloudSp['medium_segments'] as List<dynamic>?;
+            final cloudHardSegments = cloudSp['hard_segments'] as List<dynamic>?;
             
             // Get or create local subject progress
             final localSp = localProgress.subjectProgress[subjectId];
@@ -152,11 +155,45 @@ class _AuthScreenState extends State<AuthScreen> {
                 ? (localSp?.totalQuestionsAnswered ?? 0) : cloudAnswered;
             final mergedCorrect = (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers 
                 ? (localSp?.totalCorrectAnswers ?? 0) : cloudCorrectAnswers;
+
+            List<SegmentProgress> mergeSegments(List<SegmentProgress>? local, List<dynamic>? cloud) {
+              return List.generate(SegmentProgress.segmentCount, (i) {
+                final localSeg = local?[i];
+                final cloudSegJson = cloud != null && i < cloud.length
+                    ? Map<String, dynamic>.from(cloud[i] as Map)
+                    : null;
+                final cloudSeg = cloudSegJson != null
+                    ? SegmentProgress.fromJson(cloudSegJson)
+                    : null;
+
+                if (localSeg == null) return cloudSeg ?? SegmentProgress(segmentIndex: i);
+                if (cloudSeg == null) return localSeg;
+
+                if (cloudSeg.questionsAnswered > localSeg.questionsAnswered) {
+                  return cloudSeg;
+                }
+                if (localSeg.questionsAnswered > cloudSeg.questionsAnswered) {
+                  return localSeg;
+                }
+
+                return SegmentProgress(
+                  segmentIndex: i,
+                  questionsAnswered: localSeg.questionsAnswered,
+                  correctAnswers: localSeg.correctAnswers > cloudSeg.correctAnswers
+                      ? localSeg.correctAnswers
+                      : cloudSeg.correctAnswers,
+                );
+              });
+            }
+
+            final mergedEasySegments = mergeSegments(localSp?.easySegments, cloudEasySegments);
+            final mergedMediumSegments = mergeSegments(localSp?.mediumSegments, cloudMediumSegments);
+            final mergedHardSegments = mergeSegments(localSp?.hardSegments, cloudHardSegments);
             
-            // Determine if difficulty levels are passed (75% threshold)
-            final easyPassed = easyTotal > 0 && (easyCorrect / easyTotal) >= SubjectProgress.levelPassThreshold;
-            final mediumPassed = mediumTotal > 0 && (mediumCorrect / mediumTotal) >= SubjectProgress.levelPassThreshold;
-            final hardPassed = hardTotal > 0 && (hardCorrect / hardTotal) >= SubjectProgress.levelPassThreshold;
+            // Determine if difficulty levels are passed (all segments must be passed)
+            final easyPassed = mergedEasySegments.every((segment) => segment.isPassed);
+            final mediumPassed = mergedMediumSegments.every((segment) => segment.isPassed);
+            final hardPassed = mergedHardSegments.every((segment) => segment.isPassed);
             
             // Create merged subject progress
             localProgress.subjectProgress[subjectId] = SubjectProgress(
@@ -168,10 +205,31 @@ class _AuthScreenState extends State<AuthScreen> {
               lastStudyDate: cloudSp['last_study_date'] != null 
                   ? DateTime.tryParse(cloudSp['last_study_date']) 
                   : localSp?.lastStudyDate,
-              easyPassed: easyPassed || (localSp?.easyPassed ?? false),
-              mediumPassed: mediumPassed || (localSp?.mediumPassed ?? false),
-              hardPassed: hardPassed || (localSp?.hardPassed ?? false),
+                easyPassed: easyPassed,
+                mediumPassed: mediumPassed,
+                hardPassed: hardPassed,
               wrongQuestionIds: localSp?.wrongQuestionIds ?? {},
+                easyCorrect: easyCorrect > (localSp?.easyCorrect ?? 0)
+                  ? easyCorrect
+                  : (localSp?.easyCorrect ?? 0),
+                easyTotal: easyTotal > (localSp?.easyTotal ?? 0)
+                  ? easyTotal
+                  : (localSp?.easyTotal ?? 0),
+                mediumCorrect: mediumCorrect > (localSp?.mediumCorrect ?? 0)
+                  ? mediumCorrect
+                  : (localSp?.mediumCorrect ?? 0),
+                mediumTotal: mediumTotal > (localSp?.mediumTotal ?? 0)
+                  ? mediumTotal
+                  : (localSp?.mediumTotal ?? 0),
+                hardCorrect: hardCorrect > (localSp?.hardCorrect ?? 0)
+                  ? hardCorrect
+                  : (localSp?.hardCorrect ?? 0),
+                hardTotal: hardTotal > (localSp?.hardTotal ?? 0)
+                  ? hardTotal
+                  : (localSp?.hardTotal ?? 0),
+                easySegments: mergedEasySegments,
+                mediumSegments: mergedMediumSegments,
+                hardSegments: mergedHardSegments,
             );
           }
         }

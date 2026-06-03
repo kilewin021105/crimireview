@@ -14,8 +14,15 @@ class QuizScreen extends StatefulWidget {
   final Subject subject;
   final List<Question> questions;
   final Difficulty? difficulty;
+  final int? segmentIndex;
 
-  const QuizScreen({super.key, required this.subject, required this.questions, this.difficulty});
+  const QuizScreen({
+    super.key,
+    required this.subject,
+    required this.questions,
+    this.difficulty,
+    this.segmentIndex,
+  });
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -431,13 +438,16 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-  void _finishQuiz() {
-    Provider.of<AdaptiveLearningService>(context, listen: false).recordQuizResult(
+  Future<void> _finishQuiz() async {
+    await Provider.of<AdaptiveLearningService>(context, listen: false).recordQuizResult(
       subjectId: widget.subject.id,
       questions: widget.questions,
       results: _results,
       responseTimes: _responseTimes,
+      segmentIndex: widget.segmentIndex,
     );
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       ScalePageRoute(
@@ -447,6 +457,7 @@ class _QuizScreenState extends State<QuizScreen> {
           results: _results,
           responseTimes: _responseTimes,
           difficulty: widget.difficulty,
+          segmentIndex: widget.segmentIndex,
         ),
       ),
     );

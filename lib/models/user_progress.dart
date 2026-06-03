@@ -32,7 +32,17 @@ class QuestionAttempt {
 
 class SegmentProgress {
   static const int questionsPerSegment = 10;
+  static const int segmentCount = 4;
   static const double passThreshold = 0.75;
+
+  static int startQuestionFor(int segmentIndex) =>
+    (segmentIndex * questionsPerSegment) + 1;
+
+  static int endQuestionFor(int segmentIndex) =>
+    startQuestionFor(segmentIndex) + questionsPerSegment - 1;
+
+  static String rangeLabelFor(int segmentIndex) =>
+    '${startQuestionFor(segmentIndex)}-${endQuestionFor(segmentIndex)}';
   
   final int segmentIndex; // 0-3 (segments 1-4)
   int questionsAnswered;
@@ -45,13 +55,15 @@ class SegmentProgress {
   });
   
   double get accuracy => questionsAnswered > 0 ? correctAnswers / questionsAnswered : 0.0;
+  bool get isAttempted => questionsAnswered > 0;
   
   bool get isPassed => questionsAnswered >= questionsPerSegment && accuracy >= passThreshold;
   
   bool get isCompleted => questionsAnswered >= questionsPerSegment;
+
+  String get rangeLabel => rangeLabelFor(segmentIndex);
   
   Color get statusColor {
-    if (!isCompleted) return Colors.grey;
     return isPassed ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
   }
   
@@ -161,9 +173,9 @@ class SubjectProgress {
     List<SegmentProgress>? hardSegments,
     Set<String>? wrongQuestionIds,
   }) : topicProgress = topicProgress ?? {},
-       easySegments = easySegments ?? List.generate(4, (i) => SegmentProgress(segmentIndex: i)),
-       mediumSegments = mediumSegments ?? List.generate(4, (i) => SegmentProgress(segmentIndex: i)),
-       hardSegments = hardSegments ?? List.generate(4, (i) => SegmentProgress(segmentIndex: i)),
+       easySegments = easySegments ?? List.generate(SegmentProgress.segmentCount, (i) => SegmentProgress(segmentIndex: i)),
+       mediumSegments = mediumSegments ?? List.generate(SegmentProgress.segmentCount, (i) => SegmentProgress(segmentIndex: i)),
+       hardSegments = hardSegments ?? List.generate(SegmentProgress.segmentCount, (i) => SegmentProgress(segmentIndex: i)),
        wrongQuestionIds = wrongQuestionIds ?? {};
 
   // Aliases for consistency
@@ -176,6 +188,29 @@ class SubjectProgress {
   double get easyAccuracy => easyTotal > 0 ? easyCorrect / easyTotal : 0.0;
   double get mediumAccuracy => mediumTotal > 0 ? mediumCorrect / mediumTotal : 0.0;
   double get hardAccuracy => hardTotal > 0 ? hardCorrect / hardTotal : 0.0;
+
+  List<SegmentProgress> segmentsForDifficulty(Difficulty difficulty) {
+    switch (difficulty) {
+      case Difficulty.easy:
+        return easySegments;
+      case Difficulty.medium:
+        return mediumSegments;
+      case Difficulty.hard:
+        return hardSegments;
+    }
+  }
+
+  bool isDifficultyPassed(Difficulty difficulty) =>
+      segmentsForDifficulty(difficulty).every((segment) => segment.isPassed);
+
+  int currentSegmentIndexForDifficulty(Difficulty difficulty) {
+    final segments = segmentsForDifficulty(difficulty);
+    final nextIndex = segments.indexWhere((segment) => !segment.isPassed);
+    return nextIndex == -1 ? SegmentProgress.segmentCount - 1 : nextIndex;
+  }
+
+  String currentSegmentRangeForDifficulty(Difficulty difficulty) =>
+      SegmentProgress.rangeLabelFor(currentSegmentIndexForDifficulty(difficulty));
 
   /// Board exam readiness based on PRC TOS weights:
   /// Easy 30%, Medium 50%, Hard 20%

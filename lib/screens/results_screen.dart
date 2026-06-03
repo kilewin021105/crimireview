@@ -16,6 +16,7 @@ class ResultsScreen extends StatefulWidget {
   final List<bool> results;
   final List<int> responseTimes;
   final Difficulty? difficulty;
+  final int? segmentIndex;
 
   const ResultsScreen({
     super.key,
@@ -24,6 +25,7 @@ class ResultsScreen extends StatefulWidget {
     required this.results,
     required this.responseTimes,
     this.difficulty,
+    this.segmentIndex,
   });
 
   @override
@@ -33,7 +35,8 @@ class ResultsScreen extends StatefulWidget {
 class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scoreAnimation;
-  bool _levelPassed = false;
+  bool _segmentPassed = false;
+  bool _difficultyCompleted = false;
 
   @override
   void initState() {
@@ -44,8 +47,12 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
     final percentage = correctCount / widget.questions.length;
     
     if (widget.difficulty != null && percentage >= SubjectProgress.levelPassThreshold) {
-      _levelPassed = true;
-      _markLevelPassed();
+      _segmentPassed = true;
+      final service = Provider.of<AdaptiveLearningService>(context, listen: false);
+      final subjectProgress = service.userProgress.subjectProgress[widget.subject.id];
+      if (subjectProgress != null) {
+        _difficultyCompleted = subjectProgress.isDifficultyPassed(widget.difficulty!);
+      }
     }
     
     _recordForMLLearning(percentage * 100);
@@ -113,17 +120,6 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
     );
     
     print('ML Learning: Subject=${widget.subject.id}, Predicted=$predictedScore, Actual=$actualScore');
-  }
-
-  void _markLevelPassed() {
-    if (widget.difficulty == null) return;
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AdaptiveLearningService>(context, listen: false).markLevelPassed(
-        subjectId: widget.subject.id,
-        difficulty: widget.difficulty!,
-      );
-    });
   }
 
   @override
@@ -228,7 +224,7 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
               ),
               
 
-              if (_levelPassed && widget.difficulty != null) ...[
+              if (_segmentPassed && widget.difficulty != null) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -240,10 +236,18 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.lock_open_rounded, color: AppColors.success, size: 20),
+                      Icon(
+                        _difficultyCompleted
+                            ? Icons.workspace_premium_rounded
+                            : Icons.lock_open_rounded,
+                        color: AppColors.success,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
-                        '${widget.difficulty!.name.toUpperCase()} Level Passed!',
+                        _difficultyCompleted
+                            ? '${widget.difficulty!.name.toUpperCase()} Difficulty Completed!'
+                            : 'Segment ${SegmentProgress.rangeLabelFor(widget.segmentIndex ?? 0)} Passed!',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/subject.dart';
 import '../models/question.dart';
+import '../models/user_progress.dart';
 import '../services/theme_service.dart';
 import '../utils/page_transitions.dart';
 import 'quiz_screen.dart';
@@ -9,12 +10,14 @@ class StudyNotesScreen extends StatelessWidget {
   final Subject subject;
   final Difficulty difficulty;
   final List<Question> questions;
+  final int segmentIndex;
 
   const StudyNotesScreen({
     super.key,
     required this.subject,
     required this.difficulty,
     required this.questions,
+    required this.segmentIndex,
   });
 
   @override
@@ -153,6 +156,22 @@ class StudyNotesScreen extends StatelessWidget {
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: diffColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        SegmentProgress.rangeLabelFor(segmentIndex),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.accent,
                         ),
                       ),
                     ),
@@ -390,6 +409,7 @@ class StudyNotesScreen extends StatelessWidget {
                     subject: subject,
                     questions: questions,
                     difficulty: difficulty,
+                    segmentIndex: segmentIndex,
                   ),
                 ),
               );

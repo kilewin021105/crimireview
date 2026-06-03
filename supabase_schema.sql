@@ -88,10 +88,17 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
   medium_total INTEGER DEFAULT 0,
   hard_correct INTEGER DEFAULT 0,
   hard_total INTEGER DEFAULT 0,
+  easy_segments JSONB,
+  medium_segments JSONB,
+  hard_segments JSONB,
   last_study_date TIMESTAMPTZ,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, subject_id)
 );
+
+ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS easy_segments JSONB;
+ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS medium_segments JSONB;
+ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS hard_segments JSONB;
 
 -- Enable RLS
 ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;
