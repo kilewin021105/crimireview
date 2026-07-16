@@ -5,9 +5,9 @@ import 'supabase_service.dart';
 class QuestionService {
   static QuestionService? _instance;
   static QuestionService get instance => _instance ??= QuestionService._();
-  
+
   QuestionService._();
-  
+
   List<Question>? _cachedQuestions;
   DateTime? _cacheTime;
   static const _cacheDuration = Duration(hours: 1);
@@ -23,7 +23,7 @@ class QuestionService {
 
     // If Supabase not initialized, use local
     if (!SupabaseService.isInitialized) {
-      return _getLocalQuestions();
+      //return _getLocalQuestions();
     }
 
     try {
@@ -35,10 +35,11 @@ class QuestionService {
 
       if (response.isEmpty) {
         // No questions in database, use local
-        return _getLocalQuestions();
+        // return _getLocalQuestions();
       }
 
-      _cachedQuestions = (response as List).map((json) => _fromJson(json)).toList();
+      _cachedQuestions =
+          (response as List).map((json) => _fromJson(json)).toList();
       _cacheTime = DateTime.now();
       return _cachedQuestions!;
     } catch (e) {
@@ -49,7 +50,8 @@ class QuestionService {
   }
 
   /// Fetch questions by subject
-  Future<List<Question>> getQuestionsBySubject(String subject, {Difficulty? difficulty}) async {
+  Future<List<Question>> getQuestionsBySubject(String subject,
+      {Difficulty? difficulty}) async {
     final all = await getAllQuestions();
     return all.where((q) {
       final matchSubject = q.subject == subject;
@@ -97,7 +99,7 @@ class QuestionService {
   Question _fromJson(Map<String, dynamic> json) {
     final optionsList = (json['options'] as List).cast<String>();
     final diffStr = json['difficulty'] as String;
-    
+
     return Question(
       id: json['id'] as String,
       subject: json['subject'] as String,
