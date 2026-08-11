@@ -1,11 +1,16 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../models/answer_feedback.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
 import '../services/adaptive_learning_service.dart';
+import '../services/explanation_service.dart';
 import '../services/feedback_service.dart';
+import '../services/mastery_service.dart';
+import '../services/question_selection_service.dart';
 import '../services/theme_service.dart';
 import '../utils/page_transitions.dart';
 import 'results_screen.dart';
@@ -35,25 +40,48 @@ class _QuizScreenState extends State<QuizScreen> {
   final List<bool> _results = [];
   final List<int> _responseTimes = [];
   late Stopwatch _stopwatch;
-  
+
   late List<List<String>> _shuffledOptions;
   late List<int> _shuffledCorrectIndices;
+
+  /// The shuffle permutation itself, per question: `_shuffledIndexMap[q][k]`
+  /// is the ORIGINAL `Question.answerOptions` index behind shuffled slot
+  /// `k`. Needed because `Question.rationaleFor()` and
+  /// `MasteryService.recordAttempt()` both key off the original,
+  /// stem-order index -- not the shuffled position the student tapped --
+  /// and that mapping is otherwise lost once the options are shuffled for
+  /// display.
+  late List<List<int>> _shuffledIndexMap;
+
+  /// Built fresh per answered question by `ExplanationService`. Panel note
+  /// 5's whole guarantee -- a non-empty reason on a wrong answer -- lives in
+  /// this object, not in a hand-written if/else in the widget tree.
+  AnswerFeedback? _currentFeedback;
 
   @override
   void initState() {
     super.initState();
     _stopwatch = Stopwatch()..start();
     _shuffleAllOptions();
+
+    // Panel note 3, rule R1 ("never repeat while unseen items remain"): the
+    // exposure ledger only knows a question was "seen" if something tells
+    // it so. This is that one call -- once per quiz, for the whole set, per
+    // QuestionSelectionService's own contract. Fire-and-forget: a slow or
+    // offline device must never delay the first question.
+    unawaited(QuestionSelectionService.instance.markServed(widget.questions));
   }
 
   void _shuffleAllOptions() {
     final random = Random();
     _shuffledOptions = [];
     _shuffledCorrectIndices = [];
-    
+    _shuffledIndexMap = [];
+
     for (final question in widget.questions) {
       final indices = List.generate(question.options.length, (i) => i);
       indices.shuffle(random);
+      _shuffledIndexMap.add(indices);
       final shuffled = indices.map((i) => question.options[i]).toList();
       _shuffledOptions.add(shuffled);
       _shuffledCorrectIndices.add(indices.indexOf(question.correctAnswerIndex));
@@ -186,9 +214,9 @@ class _QuizScreenState extends State<QuizScreen> {
                       }),
 
 
-                      if (_hasAnswered) ...[
+                      if (_hasAnswered && _currentFeedback != null) ...[
                         const SizedBox(height: 16),
-                        _buildExplanation(question, isDark),
+                        _buildExplanation(_currentFeedback!, isDark),
                       ],
                     ],
                   ),
@@ -201,7 +229,9 @@ class _QuizScreenState extends State<QuizScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _selectedAnswer == null ? null : (_hasAnswered ? _nextQuestion : _submitAnswer),
+                    onPressed: _selectedAnswer == null
+                        ? null
+                        : (_hasAnswered ? _nextQuestion : () { _submitAnswer(); }),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accent,
                       foregroundColor: Colors.white,
@@ -356,9 +386,13 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
-  Widget _buildExplanation(Question question, bool isDark) {
-    final isCorrect = _selectedAnswer == _shuffledCorrectIndices[_currentIndex];
-    final color = isCorrect ? AppColors.success : AppColors.accent;
+  /// Panel note 5, verbatim: *"Your App can explain WHY the answer is
+  /// wrong."* [feedback.primaryReason] is guaranteed non-empty on BOTH
+  /// branches by `ExplanationService` -- there is no `if (isCorrect)` gate
+  /// here anymore, on purpose. A wrong answer used to render "Not quite!"
+  /// and stop; it now always renders the specific reason that option fails.
+  Widget _buildExplanation(AnswerFeedback feedback, bool isDark) {
+    final color = feedback.isCorrect ? AppColors.success : AppColors.accent;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -370,7 +404,7 @@ class _QuizScreenState extends State<QuizScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            isCorrect ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+            feedback.isCorrect ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
             color: color,
             size: 22,
           ),
@@ -380,24 +414,44 @@ class _QuizScreenState extends State<QuizScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isCorrect ? 'Correct!' : 'Not quite!',
+                  feedback.headline,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: color,
                   ),
                 ),
-                if (isCorrect) ...[
-                  const SizedBox(height: 4),
+                const SizedBox(height: 4),
+                Text(
+                  feedback.primaryReason,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                    height: 1.5,
+                  ),
+                ),
+                if (feedback.hasLegalBasis) ...[
+                  const SizedBox(height: 8),
                   Text(
-                    question.explanation,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                      height: 1.5,
-                    ),
+                    'Basis: ${feedback.legalBasis}',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
                   ),
                 ],
+                // Panel note 2: progress must be visible, not just tracked
+                // internally. This is the BKT model's estimate moving,
+                // shown at the moment it changes.
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.psychology_rounded, size: 14, color: color),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Topic mastery: ${feedback.masteryPercent.round()}%'
+                      '${feedback.masteryDelta != 0 ? ' (${feedback.masteryDeltaPercent >= 0 ? '+' : ''}${feedback.masteryDeltaPercent.round()}%)' : ''}',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -406,22 +460,56 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
-  void _submitAnswer() {
+  /// Scores the answer, updates the Bayesian Knowledge Tracing model for
+  /// this topic (panel notes 2 & 4 -- `MasteryService.recordAttempt`, the
+  /// only place `topic_mastery` and `question_attempts` are ever written),
+  /// and builds the feedback card (panel note 5). All local computation --
+  /// this never blocks on the network.
+  Future<void> _submitAnswer() async {
     if (_selectedAnswer == null) return;
     _stopwatch.stop();
-    
-    final isCorrect = _selectedAnswer == _shuffledCorrectIndices[_currentIndex];
+
+    final question = widget.questions[_currentIndex];
+    final selectedShuffledIndex = _selectedAnswer!;
+    final originalIndex = _shuffledIndexMap[_currentIndex][selectedShuffledIndex];
+    final isCorrect = selectedShuffledIndex == _shuffledCorrectIndices[_currentIndex];
     _results.add(isCorrect);
     _responseTimes.add(_stopwatch.elapsedMilliseconds);
-    
+
 
     if (isCorrect) {
       FeedbackService.instance.onCorrectAnswer();
     } else {
       FeedbackService.instance.onWrongAnswer();
     }
-    
-    setState(() => _hasAnswered = true);
+
+    final masteryBefore = MasteryService.instance
+        .masteryFor(widget.subject.id, question.topic)
+        .pKnown;
+
+    final updated = await MasteryService.instance.recordAttempt(
+      subjectId: widget.subject.id,
+      topic: question.topic,
+      isCorrect: isCorrect,
+      difficulty: question.difficulty,
+      responseTimeMs: _responseTimes.last,
+      questionId: question.id,
+      selectedIndex: originalIndex,
+      optionCount: question.answerOptions.length,
+    );
+
+    final feedback = ExplanationService.instance.build(
+      question: question,
+      selectedIndex: originalIndex,
+      masteryBefore: masteryBefore,
+      masteryAfter: updated.pKnown,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _hasAnswered = true;
+      _currentFeedback = feedback;
+    });
   }
 
   void _nextQuestion() {
@@ -430,6 +518,7 @@ class _QuizScreenState extends State<QuizScreen> {
         _currentIndex++;
         _selectedAnswer = null;
         _hasAnswered = false;
+        _currentFeedback = null;
         _stopwatch.reset();
         _stopwatch.start();
       });
@@ -500,3 +589,6 @@ class _QuizScreenState extends State<QuizScreen> {
     ) ?? false;
   }
 }
+
+// Clean Architecture 
+// Unit Test

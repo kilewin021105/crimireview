@@ -1,130 +1,83 @@
 import '../models/question.dart';
-import '../data/questions_database.dart';
-import 'supabase_service.dart';
+import 'question_repository.dart';
 
+/// DEPRECATED -- use [QuestionRepository] instead.
+///
+/// This class used to talk to Supabase itself and, whenever that failed, fell
+/// back to `QuestionsDatabase` -- 6045 lines of questions compiled into the
+/// app. Panel note 7 ("Do NOT put your questions in your code. It should have
+/// an ADMIN to add questions, or you automate everything") rules that out, so
+/// the fetching/caching/offline logic now lives in exactly one place,
+/// [QuestionRepository], and the hardcoded fallback is gone.
+///
+/// What survives here is only the old method surface, so nothing that already
+/// imports this file breaks. Every call is forwarded verbatim:
+///
+/// ```dart
+/// // old
+/// final qs = await QuestionService.instance.getQuestionsBySubject('criminology');
+/// // new
+/// final qs = await QuestionRepository.instance.bySubject('criminology');
+/// ```
+///
+/// New code must call [QuestionRepository] directly -- it exposes topic,
+/// difficulty and id lookups, offline state ([QuestionRepository.hasCachedQuestions]),
+/// and change notifications that this facade cannot.
+@Deprecated(
+  'Use QuestionRepository.instance instead. QuestionService is a thin '
+  'delegating facade kept only for source compatibility and will be removed.',
+)
 class QuestionService {
+  QuestionService._();
+
   static QuestionService? _instance;
   static QuestionService get instance => _instance ??= QuestionService._();
-  
-  QuestionService._();
-  
-  List<Question>? _cachedQuestions;
-  DateTime? _cacheTime;
-  static const _cacheDuration = Duration(hours: 1);
 
-  /// Fetch all questions from Supabase with local fallback
-  Future<List<Question>> getAllQuestions({bool forceRefresh = false}) async {
-    // Check cache first
-    if (!forceRefresh && _cachedQuestions != null && _cacheTime != null) {
-      if (DateTime.now().difference(_cacheTime!) < _cacheDuration) {
-        return _cachedQuestions!;
-      }
-    }
+  QuestionRepository get _repo => QuestionRepository.instance;
 
-    // If Supabase not initialized, use local
-    if (!SupabaseService.isInitialized) {
-      return _getLocalQuestions();
-    }
-
-    try {
-      final response = await SupabaseService.instance.client
-          .from('questions')
-          .select()
-          .eq('is_active', true)
-          .timeout(const Duration(seconds: 10));
-
-      if (response.isEmpty) {
-        // No questions in database, use local
-        return _getLocalQuestions();
-      }
-
-      _cachedQuestions = (response as List).map((json) => _fromJson(json)).toList();
-      _cacheTime = DateTime.now();
-      return _cachedQuestions!;
-    } catch (e) {
-      // Fallback to local questions
-      print('QuestionService: Using local questions (error: $e)');
-      return _getLocalQuestions();
-    }
+  /// Every active question. Delegates to [QuestionRepository.all].
+  ///
+  /// Returns `[]` when the device is offline and no snapshot has ever been
+  /// downloaded. It never returns compiled-in content, because there is none.
+  Future<List<Question>> getAllQuestions({bool forceRefresh = false}) {
+    return _repo.all(forceRefresh: forceRefresh);
   }
 
-  /// Fetch questions by subject
-  Future<List<Question>> getQuestionsBySubject(String subject, {Difficulty? difficulty}) async {
-    final all = await getAllQuestions();
-    return all.where((q) {
-      final matchSubject = q.subject == subject;
-      final matchDifficulty = difficulty == null || q.difficulty == difficulty;
-      return matchSubject && matchDifficulty;
-    }).toList();
+  /// Questions for one subject, optionally narrowed to a difficulty tier.
+  /// Delegates to [QuestionRepository.bySubject] / [QuestionRepository.byDifficulty].
+  Future<List<Question>> getQuestionsBySubject(
+    String subject, {
+    Difficulty? difficulty,
+  }) {
+    if (difficulty == null) return _repo.bySubject(subject);
+    return _repo.byDifficulty(subject, difficulty);
   }
 
-  /// Fetch questions for daily challenge (random mix)
+  /// A random mix for the daily challenge.
+  ///
+  /// Note: this is a plain shuffle with no exposure tracking. The adaptive
+  /// path (panel note 3, "repeat the topic but NOT the same question") goes
+  /// through `QuestionSelectionService` instead.
   Future<List<Question>> getDailyChallengeQuestions({int count = 10}) async {
-    final all = await getAllQuestions();
-    final shuffled = List<Question>.from(all)..shuffle();
-    return shuffled.take(count).toList();
+    final all = await _repo.all();
+    all.shuffle();
+    return all.take(count).toList();
   }
 
-  /// Get questions by difficulty
+  /// Every active question at one difficulty tier, across all subjects.
   Future<List<Question>> getQuestionsByDifficulty(Difficulty difficulty) async {
-    final all = await getAllQuestions();
+    final all = await _repo.all();
     return all.where((q) => q.difficulty == difficulty).toList();
   }
 
-  /// Get available subjects
-  Future<List<String>> getAvailableSubjects() async {
-    final all = await getAllQuestions();
-    return all.map((q) => q.subject).toSet().toList();
-  }
+  /// Subject ids that currently have content.
+  Future<List<String>> getAvailableSubjects() => _repo.subjects();
 
-  /// Get question count by subject
-  Future<Map<String, int>> getQuestionCountBySubject() async {
-    final all = await getAllQuestions();
-    final counts = <String, int>{};
-    for (final q in all) {
-      counts[q.subject] = (counts[q.subject] ?? 0) + 1;
-    }
-    return counts;
-  }
+  /// `{subjectId: activeQuestionCount}`.
+  Future<Map<String, int>> getQuestionCountBySubject() =>
+      _repo.countBySubject();
 
-  /// Clear cache to force refresh
-  void clearCache() {
-    _cachedQuestions = null;
-    _cacheTime = null;
-  }
-
-  /// Convert JSON to Question
-  Question _fromJson(Map<String, dynamic> json) {
-    final optionsList = (json['options'] as List).cast<String>();
-    final diffStr = json['difficulty'] as String;
-    
-    return Question(
-      id: json['id'] as String,
-      subject: json['subject'] as String,
-      topic: json['topic'] as String,
-      questionText: json['question_text'] as String,
-      options: optionsList,
-      correctAnswerIndex: json['correct_answer_index'] as int,
-      difficulty: _parseDifficulty(diffStr),
-      explanation: (json['explanation'] as String?) ?? '',
-    );
-  }
-
-  Difficulty _parseDifficulty(String s) {
-    switch (s.toLowerCase()) {
-      case 'easy':
-        return Difficulty.easy;
-      case 'medium':
-        return Difficulty.medium;
-      case 'hard':
-        return Difficulty.hard;
-      default:
-        return Difficulty.medium;
-    }
-  }
-
-  /// Get local questions as fallback
-  List<Question> _getLocalQuestions() {
-    return QuestionsDatabase.getAllQuestions();
-  }
+  /// Marks the bank stale and triggers a background refresh. The current
+  /// content keeps serving until the new content lands.
+  void clearCache() => _repo.invalidate();
 }

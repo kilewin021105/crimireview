@@ -15,6 +15,7 @@ import '../utils/responsive.dart';
 import '../widgets/animated_widgets.dart';
 import '../widgets/streak_widget.dart';
 import 'subjects_screen.dart';
+import 'flashcards_home_screen.dart';
 import 'progress_screen.dart';
 import 'settings_screen.dart';
 import 'profile_screen.dart';
@@ -211,6 +212,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 children: [
                   _buildHomeContent(context),
                   const SubjectsScreen(),
+                  const FlashcardsHomeScreen(),
                   const ProgressScreen(),
                   SettingsScreen(key: ValueKey('settings_$_currentIndex')),
                 ],
@@ -243,8 +245,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               _buildNavItem(0, Icons.home_rounded, 'Home', isDark),
               _buildNavItem(1, Icons.quiz_rounded, 'Quiz', isDark),
-              _buildNavItem(2, Icons.bar_chart_rounded, 'Progress', isDark),
-              _buildNavItem(3, Icons.settings_rounded, 'Settings', isDark),
+              _buildNavItem(2, Icons.style_rounded, 'Cards', isDark),
+              _buildNavItem(3, Icons.bar_chart_rounded, 'Progress', isDark),
+              _buildNavItem(4, Icons.settings_rounded, 'Settings', isDark),
             ],
           ),
         ),

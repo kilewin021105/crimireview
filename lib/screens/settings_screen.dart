@@ -389,7 +389,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 GestureDetector(
                   onTap: () => _showSignOutDialog(isDark),
                   child: _buildSettingTile(

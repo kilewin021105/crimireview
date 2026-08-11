@@ -4,16 +4,46 @@ import '../models/question.dart';
 import '../models/subject.dart';
 import '../models/user_progress.dart';
 import '../models/achievement.dart';
-import '../data/questions_database.dart';
+import '../models/mastery.dart';
 import 'storage_service.dart';
 import 'supabase_service.dart';
 import 'offline_sync_service.dart';
+import 'mastery_service.dart';
+import 'question_selection_service.dart';
 
+/// Orchestrates the learning loop: which questions to serve, what the answers
+/// mean, and how progress is stored.
+///
+/// ---------------------------------------------------------------------------
+/// WHAT THE RE-ENGINEERING CHANGED (panel note 6)
+/// ---------------------------------------------------------------------------
+/// This class used to reach straight into `QuestionsDatabase`, a 6045-line file
+/// of hardcoded [Question] objects (panel note 7 violation), and it sliced that
+/// bank with a stable `sublist()`, so retrying a failed segment served the SAME
+/// ten items in the SAME order (panel note 3 violation).
+///
+/// Both are gone. Every question now comes from `QuestionRepository`
+/// (Supabase-backed, admin-authored or auto-generated) by way of
+/// `QuestionSelectionService`, which guarantees unseen-first selection. The
+/// hardcoded `accuracy >= 0.8 ? hard : ...` ladder is replaced by the Bayesian
+/// Knowledge Tracing estimates held in `MasteryService` (Corbett & Anderson,
+/// 1995), which is the citable basis panel note 4 asked for.
+///
+/// Everything else this class already did -- segment progress, difficulty pass
+/// flags, streaks, achievements, cloud merge, the offline sync queue and the
+/// board-exam readiness maths -- is preserved unchanged.
 class AdaptiveLearningService extends ChangeNotifier {
   final StorageService _storageService;
   UserProgress _userProgress = UserProgress();
-  final Random _random = Random();
   bool _isInitialized = false;
+
+  /// BKT p(known) for each question's topic, captured immediately BEFORE the
+  /// answer was scored, keyed by question id. Populated by [recordQuizResult]
+  /// so the results screen can show "this answer moved you from X% to Y%".
+  final Map<String, double> _lastMasteryBefore = <String, double>{};
+
+  /// The matching p(known) immediately AFTER the answer was scored.
+  final Map<String, double> _lastMasteryAfter = <String, double>{};
 
   AdaptiveLearningService(this._storageService) {
     _initProgress();
@@ -23,23 +53,24 @@ class AdaptiveLearningService extends ChangeNotifier {
     _userProgress = await _storageService.loadProgress();
     _isInitialized = true;
     notifyListeners();
-    
+
     // Sync with cloud for returning logged-in users
     if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
       await _syncWithCloud();
     }
   }
-  
+
   /// Sync local progress with cloud data for returning users
   Future<void> _syncWithCloud() async {
     try {
       final cloudData = await SupabaseService.instance.loadFullCloudProgress();
       if (cloudData == null) return;
-      
+
       final cloudProfile = cloudData['profile'] as Map<String, dynamic>?;
-      final cloudSubjectProgress = cloudData['subjectProgress'] as List<Map<String, dynamic>>?;
+      final cloudSubjectProgress =
+          cloudData['subjectProgress'] as List<Map<String, dynamic>>?;
       final cloudAchievements = cloudData['achievements'] as List<String>?;
-      
+
       // Calculate local totals for comparison
       int localQuizzes = 0;
       int localCorrect = 0;
@@ -47,13 +78,13 @@ class AdaptiveLearningService extends ChangeNotifier {
         localQuizzes += sp.totalQuizzesTaken;
         localCorrect += sp.totalCorrectAnswers;
       }
-      
+
       // Merge cloud subject progress with local
       if (cloudSubjectProgress != null && cloudSubjectProgress.isNotEmpty) {
         for (final cloudSp in cloudSubjectProgress) {
           final subjectId = cloudSp['subject_id'] as String?;
           if (subjectId == null) continue;
-          
+
           final cloudAnswered = cloudSp['questions_answered'] as int? ?? 0;
           final cloudCorrectAnswers = cloudSp['correct_answers'] as int? ?? 0;
           final easyCorrect = cloudSp['easy_correct'] as int? ?? 0;
@@ -62,60 +93,74 @@ class AdaptiveLearningService extends ChangeNotifier {
           final mediumTotal = cloudSp['medium_total'] as int? ?? 0;
           final hardCorrect = cloudSp['hard_correct'] as int? ?? 0;
           final hardTotal = cloudSp['hard_total'] as int? ?? 0;
-          
+
           // Get segment progress from cloud if available
           final cloudEasySegments = cloudSp['easy_segments'] as List<dynamic>?;
-          final cloudMediumSegments = cloudSp['medium_segments'] as List<dynamic>?;
+          final cloudMediumSegments =
+              cloudSp['medium_segments'] as List<dynamic>?;
           final cloudHardSegments = cloudSp['hard_segments'] as List<dynamic>?;
-          
+
           // Get local subject progress if exists
           final localSp = _userProgress.subjectProgress[subjectId];
-          
+
           // Compare cloud vs local and take higher values
-          final mergedAnswered = (localSp?.totalQuestionsAnswered ?? 0) > cloudAnswered 
-              ? (localSp?.totalQuestionsAnswered ?? 0) : cloudAnswered;
-          final mergedCorrect = (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers 
-              ? (localSp?.totalCorrectAnswers ?? 0) : cloudCorrectAnswers;
-          
+          final mergedAnswered =
+              (localSp?.totalQuestionsAnswered ?? 0) > cloudAnswered
+                  ? (localSp?.totalQuestionsAnswered ?? 0)
+                  : cloudAnswered;
+          final mergedCorrect =
+              (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers
+                  ? (localSp?.totalCorrectAnswers ?? 0)
+                  : cloudCorrectAnswers;
+
           // Merge segment progress (take higher questionsAnswered per segment)
-          List<SegmentProgress> mergeSegments(List<SegmentProgress>? local, List<dynamic>? cloud) {
+          List<SegmentProgress> mergeSegments(
+              List<SegmentProgress>? local, List<dynamic>? cloud) {
             return List.generate(SegmentProgress.segmentCount, (i) {
               final localSeg = local?[i];
               final cloudSegJson = cloud != null && i < cloud.length
                   ? Map<String, dynamic>.from(cloud[i] as Map)
                   : null;
-              final cloudSeg = cloudSegJson != null ? SegmentProgress.fromJson(cloudSegJson) : null;
-              
-              if (localSeg == null) return cloudSeg ?? SegmentProgress(segmentIndex: i);
+              final cloudSeg = cloudSegJson != null
+                  ? SegmentProgress.fromJson(cloudSegJson)
+                  : null;
+
+              if (localSeg == null)
+                return cloudSeg ?? SegmentProgress(segmentIndex: i);
               if (cloudSeg == null) return localSeg;
-              
+
               // Take higher questionsAnswered and corresponding correctAnswers
               if (cloudSeg.questionsAnswered > localSeg.questionsAnswered) {
                 return cloudSeg;
-              } else if (localSeg.questionsAnswered > cloudSeg.questionsAnswered) {
+              } else if (localSeg.questionsAnswered >
+                  cloudSeg.questionsAnswered) {
                 return localSeg;
               } else {
                 // Equal questions answered, take max correct
                 return SegmentProgress(
                   segmentIndex: i,
                   questionsAnswered: localSeg.questionsAnswered,
-                  correctAnswers: localSeg.correctAnswers > cloudSeg.correctAnswers 
-                      ? localSeg.correctAnswers 
-                      : cloudSeg.correctAnswers,
+                  correctAnswers:
+                      localSeg.correctAnswers > cloudSeg.correctAnswers
+                          ? localSeg.correctAnswers
+                          : cloudSeg.correctAnswers,
                 );
               }
             });
           }
-          
-          final mergedEasySegments = mergeSegments(localSp?.easySegments, cloudEasySegments);
-          final mergedMediumSegments = mergeSegments(localSp?.mediumSegments, cloudMediumSegments);
-          final mergedHardSegments = mergeSegments(localSp?.hardSegments, cloudHardSegments);
-          
+
+          final mergedEasySegments =
+              mergeSegments(localSp?.easySegments, cloudEasySegments);
+          final mergedMediumSegments =
+              mergeSegments(localSp?.mediumSegments, cloudMediumSegments);
+          final mergedHardSegments =
+              mergeSegments(localSp?.hardSegments, cloudHardSegments);
+
           // Determine if difficulty levels are passed (all segments must be passed)
           final easyPassed = mergedEasySegments.every((s) => s.isPassed);
           final mediumPassed = mergedMediumSegments.every((s) => s.isPassed);
           final hardPassed = mergedHardSegments.every((s) => s.isPassed);
-          
+
           // Create merged subject progress
           _userProgress.subjectProgress[subjectId] = SubjectProgress(
             subjectId: subjectId,
@@ -123,26 +168,38 @@ class AdaptiveLearningService extends ChangeNotifier {
             totalQuizzesTaken: localSp?.totalQuizzesTaken ?? 0,
             totalQuestionsAnswered: mergedAnswered,
             totalCorrectAnswers: mergedCorrect,
-            lastStudyDate: cloudSp['last_study_date'] != null 
-                ? DateTime.tryParse(cloudSp['last_study_date']) 
+            lastStudyDate: cloudSp['last_study_date'] != null
+                ? DateTime.tryParse(cloudSp['last_study_date'])
                 : localSp?.lastStudyDate,
             easyPassed: easyPassed,
             mediumPassed: mediumPassed,
             hardPassed: hardPassed,
             wrongQuestionIds: localSp?.wrongQuestionIds ?? {},
-            easyCorrect: easyCorrect > (localSp?.easyCorrect ?? 0) ? easyCorrect : (localSp?.easyCorrect ?? 0),
-            easyTotal: easyTotal > (localSp?.easyTotal ?? 0) ? easyTotal : (localSp?.easyTotal ?? 0),
-            mediumCorrect: mediumCorrect > (localSp?.mediumCorrect ?? 0) ? mediumCorrect : (localSp?.mediumCorrect ?? 0),
-            mediumTotal: mediumTotal > (localSp?.mediumTotal ?? 0) ? mediumTotal : (localSp?.mediumTotal ?? 0),
-            hardCorrect: hardCorrect > (localSp?.hardCorrect ?? 0) ? hardCorrect : (localSp?.hardCorrect ?? 0),
-            hardTotal: hardTotal > (localSp?.hardTotal ?? 0) ? hardTotal : (localSp?.hardTotal ?? 0),
+            easyCorrect: easyCorrect > (localSp?.easyCorrect ?? 0)
+                ? easyCorrect
+                : (localSp?.easyCorrect ?? 0),
+            easyTotal: easyTotal > (localSp?.easyTotal ?? 0)
+                ? easyTotal
+                : (localSp?.easyTotal ?? 0),
+            mediumCorrect: mediumCorrect > (localSp?.mediumCorrect ?? 0)
+                ? mediumCorrect
+                : (localSp?.mediumCorrect ?? 0),
+            mediumTotal: mediumTotal > (localSp?.mediumTotal ?? 0)
+                ? mediumTotal
+                : (localSp?.mediumTotal ?? 0),
+            hardCorrect: hardCorrect > (localSp?.hardCorrect ?? 0)
+                ? hardCorrect
+                : (localSp?.hardCorrect ?? 0),
+            hardTotal: hardTotal > (localSp?.hardTotal ?? 0)
+                ? hardTotal
+                : (localSp?.hardTotal ?? 0),
             easySegments: mergedEasySegments,
             mediumSegments: mergedMediumSegments,
             hardSegments: mergedHardSegments,
           );
         }
       }
-      
+
       // Merge cloud achievements with local
       if (cloudAchievements != null && cloudAchievements.isNotEmpty) {
         final mergedAchievements = <String>{
@@ -151,7 +208,7 @@ class AdaptiveLearningService extends ChangeNotifier {
         };
         _userProgress.unlockedAchievements = mergedAchievements.toList();
       }
-      
+
       // Update streak from cloud if higher
       if (cloudProfile != null) {
         final cloudStreak = cloudProfile['current_streak'] as int? ?? 0;
@@ -163,23 +220,26 @@ class AdaptiveLearningService extends ChangeNotifier {
           _userProgress.longestStreak = cloudBestStreak;
         }
       }
-      
+
       // Save merged progress to local storage
       await _storageService.saveProgress(_userProgress);
-      
+
       // Sync the higher values back to cloud
       final cloudQuizzes = cloudProfile?['total_quizzes'] as int? ?? 0;
       final cloudCorrectTotal = cloudProfile?['total_correct'] as int? ?? 0;
       final cloudPoints = cloudProfile?['total_points'] as int? ?? 0;
-      
+
       await SupabaseService.instance.syncLocalProgress(
-        totalPoints: (localCorrect * 10) > cloudPoints ? (localCorrect * 10) : cloudPoints,
+        totalPoints: (localCorrect * 10) > cloudPoints
+            ? (localCorrect * 10)
+            : cloudPoints,
         totalQuizzes: localQuizzes > cloudQuizzes ? localQuizzes : cloudQuizzes,
-        totalCorrect: localCorrect > cloudCorrectTotal ? localCorrect : cloudCorrectTotal,
+        totalCorrect:
+            localCorrect > cloudCorrectTotal ? localCorrect : cloudCorrectTotal,
         currentStreak: _userProgress.currentStreak,
         bestStreak: _userProgress.longestStreak,
       );
-      
+
       notifyListeners();
     } catch (e) {
       // Silently fail - local progress is still valid
@@ -190,153 +250,116 @@ class AdaptiveLearningService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   UserProgress get userProgress => _userProgress;
 
+  /// Wipes local progress AND the two models that drive adaptivity.
+  ///
+  /// The exposure ledger must be cleared too: without it a "reset progress"
+  /// would leave every question marked as already seen, and the learner would
+  /// immediately fall into the recycling branch of the selection rules.
   Future<void> resetProgress() async {
     _userProgress = UserProgress();
     _isInitialized = false;
+    _lastMasteryBefore.clear();
+    _lastMasteryAfter.clear();
+
+    try {
+      await MasteryService.instance.reset();
+    } catch (e) {
+      debugPrint('Mastery reset failed: $e');
+    }
+    try {
+      await QuestionSelectionService.instance.reset();
+    } catch (e) {
+      debugPrint('Exposure reset failed: $e');
+    }
+
     await _initProgress();
   }
 
-  // Get adaptive questions based on user's performance
-  List<Question> getAdaptiveQuestions({
+  // ---------------------------------------------------------------------------
+  // QUESTION DELIVERY
+  //
+  // Every method below is async because questions now live in Supabase (with an
+  // offline snapshot) instead of in a compiled-in Dart file. None of them
+  // contains, or falls back to, any question content.
+  // ---------------------------------------------------------------------------
+
+  /// Builds an adaptive set for [subjectId].
+  ///
+  /// The difficulty is chosen from the BKT model (see [_determineTargetDifficulty]),
+  /// then `QuestionSelectionService` picks the items: unseen first, weighted
+  /// toward the topics with the lowest p(known).
+  ///
+  /// Passing [specificTopic] turns this into a targeted repeat of that one
+  /// topic with questions the learner has not already answered -- panel note 3.
+  Future<List<Question>> getAdaptiveQuestions({
     required String subjectId,
     int count = 10,
     String? specificTopic,
-  }) {
-    List<Question> availableQuestions;
+  }) async {
+    final subjectProgress = _userProgress.subjectProgress[subjectId];
+    final targetDifficulty =
+        _determineTargetDifficulty(subjectId, subjectProgress);
 
-    if (specificTopic != null) {
-      availableQuestions = QuestionsDatabase.getByTopic(subjectId, specificTopic);
-    } else {
-      availableQuestions = QuestionsDatabase.getBySubject(subjectId);
+    if (specificTopic != null && specificTopic.trim().isNotEmpty) {
+      return QuestionSelectionService.instance.buildRemediationSet(
+        subjectId: subjectId,
+        difficulty: targetDifficulty,
+        count: count,
+        topics: [specificTopic.trim()],
+      );
     }
 
-    if (availableQuestions.isEmpty) return [];
-
-    // Get user's progress for this subject
-    final subjectProgress = _userProgress.subjectProgress[subjectId];
-    Difficulty targetDifficulty = _determineTargetDifficulty(subjectProgress);
-
-    // Prioritize questions based on adaptive algorithm
-    List<Question> selectedQuestions = _selectAdaptiveQuestions(
-      availableQuestions,
-      targetDifficulty,
-      subjectProgress,
-      count,
+    return QuestionSelectionService.instance.buildQuizSet(
+      subjectId: subjectId,
+      difficulty: targetDifficulty,
+      count: count,
     );
-
-    return selectedQuestions;
   }
 
-  Difficulty _determineTargetDifficulty(SubjectProgress? progress) {
+  /// Chooses the difficulty tier to practise next.
+  ///
+  /// The old implementation was a hardcoded ladder over raw accuracy
+  /// (`>= 0.8 hard, >= 0.6 medium, else easy`) with no theoretical basis --
+  /// exactly what panel note 4 flagged. It is replaced by two grounded inputs:
+  ///
+  ///  * **Readiness** comes from the mean BKT p(known) for the subject. Because
+  ///    p(known) discounts lucky guesses and forgives careless slips, it is a
+  ///    far better "is this student ready to move up" signal than accuracy.
+  ///    The thresholds reuse the model's own published constants
+  ///    ([TopicMastery.masteryThreshold] / [TopicMastery.remediationThreshold])
+  ///    rather than inventing new magic numbers.
+  ///  * **Unlocking** stays with the existing segment gate: a tier the student
+  ///    has not unlocked is never offered, so this can only ever recommend a
+  ///    level at or below the one the difficulty sheet already allows.
+  Difficulty _determineTargetDifficulty(
+    String subjectId,
+    SubjectProgress? progress,
+  ) {
+    // Too little evidence for the model to say anything: start at the bottom,
+    // which is also what the old implementation did for new users.
     if (progress == null || progress.totalQuestionsAnswered < 5) {
-      return Difficulty.easy; // Start with easy for new users
-    }
-
-    double accuracy = progress.overallAccuracy;
-
-    // Adaptive difficulty adjustment
-    if (accuracy >= 0.8) {
-      return Difficulty.hard;
-    } else if (accuracy >= 0.6) {
-      return Difficulty.medium;
-    } else {
       return Difficulty.easy;
     }
-  }
 
-  List<Question> _selectAdaptiveQuestions(
-    List<Question> available,
-    Difficulty targetDifficulty,
-    SubjectProgress? progress,
-    int count,
-  ) {
-    List<Question> selected = [];
-    
-    // Group by difficulty
-    final easyQuestions = available.where((q) => q.difficulty == Difficulty.easy).toList();
-    final mediumQuestions = available.where((q) => q.difficulty == Difficulty.medium).toList();
-    final hardQuestions = available.where((q) => q.difficulty == Difficulty.hard).toList();
+    final double mastery = MasteryService.instance.subjectMastery(subjectId);
 
-    // 2026 PRC TOS Distribution: 30% Easy, 50% Moderate, 20% Hard
-    // Adaptive adjustment based on user performance
-    int easyCount, mediumCount, hardCount;
-    
-    switch (targetDifficulty) {
-      case Difficulty.easy:
-        // Struggling user: more easy questions
-        easyCount = (count * 0.5).round();
-        mediumCount = (count * 0.4).round();
-        hardCount = count - easyCount - mediumCount;
-        break;
-      case Difficulty.medium:
-        // Average user: PRC standard distribution
-        easyCount = (count * 0.3).round();
-        mediumCount = (count * 0.5).round();
-        hardCount = count - easyCount - mediumCount;
-        break;
-      case Difficulty.hard:
-        // Advanced user: more challenging
-        easyCount = (count * 0.2).round();
-        mediumCount = (count * 0.4).round();
-        hardCount = count - easyCount - mediumCount;
-        break;
-    }
-
-    // Add questions, prioritizing weak topics if progress exists
-    _addQuestionsWithPriority(selected, easyQuestions, easyCount, progress);
-    _addQuestionsWithPriority(selected, mediumQuestions, mediumCount, progress);
-    _addQuestionsWithPriority(selected, hardQuestions, hardCount, progress);
-
-    // Fill remaining slots if needed
-    while (selected.length < count && selected.length < available.length) {
-      final remaining = available.where((q) => !selected.contains(q)).toList();
-      if (remaining.isEmpty) break;
-      selected.add(remaining[_random.nextInt(remaining.length)]);
-    }
-
-    // Shuffle for variety
-    selected.shuffle(_random);
-    
-    return selected;
-  }
-
-  void _addQuestionsWithPriority(
-    List<Question> selected,
-    List<Question> pool,
-    int count,
-    SubjectProgress? progress,
-  ) {
-    if (pool.isEmpty || count <= 0) return;
-
-    List<Question> prioritized;
-
-    if (progress != null) {
-      // Prioritize topics where user is weak
-      prioritized = pool.where((q) {
-        final topicProgress = progress.topicProgress[q.topic];
-        if (topicProgress == null) return true; // New topic = priority
-        return topicProgress.accuracy < 0.6; // Weak topic = priority
-      }).toList();
+    final Difficulty desired;
+    if (mastery >= TopicMastery.masteryThreshold) {
+      desired = Difficulty.hard;
+    } else if (mastery >= TopicMastery.remediationThreshold) {
+      desired = Difficulty.medium;
     } else {
-      prioritized = pool;
+      desired = Difficulty.easy;
     }
 
-    // Add prioritized questions first
-    prioritized.shuffle(_random);
-    for (var q in prioritized.take(count)) {
-      if (!selected.contains(q)) {
-        selected.add(q);
-      }
-    }
+    // Never recommend past the level the segment gate has unlocked.
+    final Difficulty ceiling = progress.mediumPassed
+        ? Difficulty.hard
+        : progress.easyPassed
+            ? Difficulty.medium
+            : Difficulty.easy;
 
-    // Fill remaining from pool
-    pool.shuffle(_random);
-    for (var q in pool) {
-      if (selected.length >= count) break;
-      if (!selected.contains(q)) {
-        selected.add(q);
-      }
-    }
+    return Difficulty.values[min(desired.index, ceiling.index)];
   }
 
   // Record quiz result and update progress
@@ -447,24 +470,27 @@ class AdaptiveLearningService extends ChangeNotifier {
 
     // Update streak
     _updateStreak();
-    
+
     // Check achievements
     await _checkAchievements();
 
     // Save progress locally
     await _storageService.saveProgress(_userProgress);
-    
+
     // Sync to cloud or queue for retry if needed
     if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
       final totalQuizzes = CriminologySubjects.all.fold<int>(
         0,
         (sum, subject) =>
-            sum + (_userProgress.subjectProgress[subject.id]?.totalQuizzesTaken ?? 0),
+            sum +
+            (_userProgress.subjectProgress[subject.id]?.totalQuizzesTaken ?? 0),
       );
       final totalCorrect = CriminologySubjects.all.fold<int>(
         0,
         (sum, subject) =>
-            sum + (_userProgress.subjectProgress[subject.id]?.totalCorrectAnswers ?? 0),
+            sum +
+            (_userProgress.subjectProgress[subject.id]?.totalCorrectAnswers ??
+                0),
       );
 
       await OfflineSyncService.instance.saveSubjectProgressOrQueue(
@@ -477,9 +503,12 @@ class AdaptiveLearningService extends ChangeNotifier {
         mediumTotal: subjectProgress.mediumTotal,
         hardCorrect: subjectProgress.hardCorrect,
         hardTotal: subjectProgress.hardTotal,
-        easySegments: subjectProgress.easySegments.map((s) => s.toJson()).toList(),
-        mediumSegments: subjectProgress.mediumSegments.map((s) => s.toJson()).toList(),
-        hardSegments: subjectProgress.hardSegments.map((s) => s.toJson()).toList(),
+        easySegments:
+            subjectProgress.easySegments.map((s) => s.toJson()).toList(),
+        mediumSegments:
+            subjectProgress.mediumSegments.map((s) => s.toJson()).toList(),
+        hardSegments:
+            subjectProgress.hardSegments.map((s) => s.toJson()).toList(),
       );
 
       await OfflineSyncService.instance.syncProfileUpdateOrQueue(
@@ -490,21 +519,26 @@ class AdaptiveLearningService extends ChangeNotifier {
         bestStreak: _userProgress.longestStreak,
       );
     }
-    
+
     notifyListeners();
   }
-  
+
   Future<void> _checkAchievements() async {
     final totalQuizzes = CriminologySubjects.all.fold<int>(
-      0, (sum, s) => sum + (_userProgress.subjectProgress[s.id]?.totalQuizzesTaken ?? 0),
+      0,
+      (sum, s) =>
+          sum + (_userProgress.subjectProgress[s.id]?.totalQuizzesTaken ?? 0),
     );
     final totalQuestions = CriminologySubjects.all.fold<int>(
-      0, (sum, s) => sum + (_userProgress.subjectProgress[s.id]?.totalQuestionsAnswered ?? 0),
+      0,
+      (sum, s) =>
+          sum +
+          (_userProgress.subjectProgress[s.id]?.totalQuestionsAnswered ?? 0),
     );
-    
+
     for (final achievement in Achievements.all) {
       if (_userProgress.unlockedAchievements.contains(achievement.id)) continue;
-      
+
       bool unlocked = false;
       switch (achievement.type) {
         case AchievementType.quizzes:
@@ -522,7 +556,7 @@ class AdaptiveLearningService extends ChangeNotifier {
         case AchievementType.accuracy:
           break;
       }
-      
+
       if (unlocked) {
         _userProgress.unlockedAchievements.add(achievement.id);
         await _syncAchievementToCloud(achievement.id);
@@ -535,40 +569,43 @@ class AdaptiveLearningService extends ChangeNotifier {
       await OfflineSyncService.instance.unlockAchievementOrQueue(achievementId);
     }
   }
-  
+
   List<Achievement> getUnlockedAchievements() {
-    return Achievements.all.where((a) => _userProgress.unlockedAchievements.contains(a.id)).toList();
+    return Achievements.all
+        .where((a) => _userProgress.unlockedAchievements.contains(a.id))
+        .toList();
   }
-  
+
   List<Achievement> getLockedAchievements() {
-    return Achievements.all.where((a) => !_userProgress.unlockedAchievements.contains(a.id)).toList();
+    return Achievements.all
+        .where((a) => !_userProgress.unlockedAchievements.contains(a.id))
+        .toList();
   }
 
   void _adjustTopicDifficulty(TopicProgress topicProgress) {
     if (topicProgress.recentAttempts.length < 5) return;
 
     // Check last 5 attempts
-    final recentCorrect = topicProgress.recentAttempts
-        .reversed
+    final recentCorrect = topicProgress.recentAttempts.reversed
         .take(5)
         .where((a) => a.isCorrect)
         .length;
 
-    if (recentCorrect >= 4 && topicProgress.currentDifficulty != Difficulty.hard) {
-      topicProgress.currentDifficulty = Difficulty.values[
-        (topicProgress.currentDifficulty.index + 1).clamp(0, 2)
-      ];
-    } else if (recentCorrect <= 1 && topicProgress.currentDifficulty != Difficulty.easy) {
-      topicProgress.currentDifficulty = Difficulty.values[
-        (topicProgress.currentDifficulty.index - 1).clamp(0, 2)
-      ];
+    if (recentCorrect >= 4 &&
+        topicProgress.currentDifficulty != Difficulty.hard) {
+      topicProgress.currentDifficulty = Difficulty
+          .values[(topicProgress.currentDifficulty.index + 1).clamp(0, 2)];
+    } else if (recentCorrect <= 1 &&
+        topicProgress.currentDifficulty != Difficulty.easy) {
+      topicProgress.currentDifficulty = Difficulty
+          .values[(topicProgress.currentDifficulty.index - 1).clamp(0, 2)];
     }
   }
 
   void _updateStreak() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     if (_userProgress.lastActiveDate == null) {
       _userProgress.currentStreak = 1;
     } else {
@@ -577,9 +614,9 @@ class AdaptiveLearningService extends ChangeNotifier {
         _userProgress.lastActiveDate!.month,
         _userProgress.lastActiveDate!.day,
       );
-      
+
       final difference = today.difference(lastActive).inDays;
-      
+
       if (difference == 0) {
         // Same day, no change
       } else if (difference == 1) {
@@ -590,7 +627,7 @@ class AdaptiveLearningService extends ChangeNotifier {
     }
 
     _userProgress.lastActiveDate = now;
-    
+
     if (_userProgress.currentStreak > _userProgress.longestStreak) {
       _userProgress.longestStreak = _userProgress.currentStreak;
     }
@@ -611,9 +648,12 @@ class AdaptiveLearningService extends ChangeNotifier {
   }
 
   void _syncDifficultyPassFlags(SubjectProgress subjectProgress) {
-    subjectProgress.easyPassed = subjectProgress.isDifficultyPassed(Difficulty.easy);
-    subjectProgress.mediumPassed = subjectProgress.isDifficultyPassed(Difficulty.medium);
-    subjectProgress.hardPassed = subjectProgress.isDifficultyPassed(Difficulty.hard);
+    subjectProgress.easyPassed =
+        subjectProgress.isDifficultyPassed(Difficulty.easy);
+    subjectProgress.mediumPassed =
+        subjectProgress.isDifficultyPassed(Difficulty.medium);
+    subjectProgress.hardPassed =
+        subjectProgress.isDifficultyPassed(Difficulty.hard);
   }
 
   void _updateSegmentProgress({
@@ -664,74 +704,30 @@ class AdaptiveLearningService extends ChangeNotifier {
     );
   }
 
-  List<Question> getQuestionsForCurrentSegment({
+  /// Builds the quiz set for one EXPLICITLY chosen difficulty -- the Easy /
+  /// Medium / Hard buttons on the subject screen, as opposed to
+  /// [getAdaptiveQuestions]'s model-chosen difficulty.
+  ///
+  /// This used to slice a compiled-in question list with a stable
+  /// `sublist(segmentIndex * 10, ...)`, so retrying a failed segment served
+  /// the exact same ten items in the exact same order (panel note 3
+  /// violation) -- and it read from `QuestionsDatabase`, the hardcoded bank
+  /// panel note 7 rules out. Both are gone: item selection now goes through
+  /// `QuestionSelectionService`, which guarantees unseen-first delivery and
+  /// only recycles least-seen items once every question at this
+  /// subject/difficulty has already been shown once.
+  Future<List<Question>> getQuestionsForSegment({
     required String subjectId,
     required Difficulty difficulty,
   }) {
-    final filteredQuestions = QuestionsDatabase.getBySubject(subjectId)
-        .where((question) => question.difficulty == difficulty)
-        .toList();
-    if (filteredQuestions.isEmpty) return [];
-
     final segmentIndex =
         getCurrentSegmentIndex(subjectId: subjectId, difficulty: difficulty);
-    final start = segmentIndex * SegmentProgress.questionsPerSegment;
-    if (start >= filteredQuestions.length) return [];
-
-    final end = min(
-      start + SegmentProgress.questionsPerSegment,
-      filteredQuestions.length,
+    return QuestionSelectionService.instance.buildQuizSet(
+      subjectId: subjectId,
+      difficulty: difficulty,
+      count: SegmentProgress.questionsPerSegment,
+      segmentIndex: segmentIndex,
     );
-    return filteredQuestions.sublist(start, end);
-  }
-
-  // Get questions by specific difficulty level - prioritizes unanswered questions
-  List<Question> getQuestionsByDifficulty({
-    required String subjectId,
-    required Difficulty difficulty,
-    int count = 40,
-  }) {
-    final availableQuestions = QuestionsDatabase.getBySubject(subjectId);
-    if (availableQuestions.isEmpty) return [];
-
-    // Filter by difficulty
-    final filteredQuestions = availableQuestions
-        .where((q) => q.difficulty == difficulty)
-        .toList();
-
-    if (filteredQuestions.isEmpty) return [];
-
-    // Get answered question IDs for this subject
-    final subjectProgress = _userProgress.subjectProgress[subjectId];
-    final answeredIds = <String>{};
-    if (subjectProgress != null) {
-      for (var topic in subjectProgress.topicProgress.values) {
-        for (var attempt in topic.recentAttempts) {
-          answeredIds.add(attempt.questionId);
-        }
-      }
-    }
-
-    // Separate into unanswered and answered
-    final unanswered = filteredQuestions.where((q) => !answeredIds.contains(q.id)).toList();
-    final answered = filteredQuestions.where((q) => answeredIds.contains(q.id)).toList();
-
-    // Shuffle both lists
-    unanswered.shuffle(_random);
-    answered.shuffle(_random);
-
-    // Prioritize unanswered questions, then fill with answered if needed
-    List<Question> selected = [];
-    selected.addAll(unanswered.take(count));
-    
-    // If we need more questions, add from answered pool
-    if (selected.length < count) {
-      selected.addAll(answered.take(count - selected.length));
-    }
-
-    // Final shuffle to mix them up
-    selected.shuffle(_random);
-    return selected.take(count).toList();
   }
 
   // Mark a difficulty level as passed for a subject
@@ -773,12 +769,12 @@ class AdaptiveLearningService extends ChangeNotifier {
   // Get subject stats
   Map<String, double> getSubjectAccuracies() {
     Map<String, double> accuracies = {};
-    
+
     for (var subject in CriminologySubjects.all) {
       final progress = _userProgress.subjectProgress[subject.id];
       accuracies[subject.id] = progress?.overallAccuracy ?? 0.0;
     }
-    
+
     return accuracies;
   }
 
@@ -816,7 +812,7 @@ class AdaptiveLearningService extends ChangeNotifier {
     for (var subject in CriminologySubjects.all) {
       final progress = _userProgress.subjectProgress[subject.id];
       if (progress == null) continue;
-      
+
       final readiness = progress.boardExamReadiness;
       if (readiness > 0) {
         totalReadiness += readiness;

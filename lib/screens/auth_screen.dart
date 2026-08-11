@@ -6,10 +6,12 @@ import '../services/theme_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/offline_sync_service.dart';
+import '../services/admin_service.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import '../widgets/password_strength_indicator.dart';
 import 'home_screen.dart';
+import 'admin/admin_shell_screen.dart';
 import 'email_verification_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -273,10 +275,16 @@ class _AuthScreenState extends State<AuthScreen> {
           bestStreak: localProgress.longestStreak,
         );
         
+        // Explicitly refreshed (not just left to the reactive listener) so
+        // routing here can never race the network call it depends on --
+        // this is the moment a role check must be certain, not eventual.
+        final isAdmin = await AdminService.instance.refreshRole();
+        if (!mounted) return;
+
         setState(() => _isLoading = false);
-        
+
         Navigator.of(context).pushReplacement(
-          ScalePageRoute(page: const HomeScreen()),
+          ScalePageRoute(page: isAdmin ? const AdminShellScreen() : const HomeScreen()),
         );
       } else if (mounted) {
         setState(() {

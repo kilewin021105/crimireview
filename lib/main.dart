@@ -12,6 +12,9 @@ import 'services/adaptive_ml_service.dart';
 import 'services/supabase_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_sync_service.dart';
+import 'services/admin_service.dart';
+import 'services/mastery_service.dart';
+import 'services/question_selection_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -49,7 +52,27 @@ void main() {
     } catch (e) {
       debugPrint('Supabase init failed: $e');
     }
-    
+
+    try {
+      // Resolves whether the signed-in user is an admin (panel note 7) and
+      // keeps it in sync with sign-in/sign-out. Never blocks app start-up --
+      // a failed check just leaves the Admin Panel tile hidden.
+      await AdminService.instance.init();
+    } catch (e) {
+      debugPrint('AdminService init failed: $e');
+    }
+
+    try {
+      // Loads the Bayesian Knowledge Tracing model (panel notes 2 & 4) and
+      // the unseen-first question-selection ledger (panel note 3) so both
+      // are warm before the first quiz question renders, instead of paying
+      // their (fast, local) init cost inline on the first answer.
+      await MasteryService.instance.init();
+      await QuestionSelectionService.instance.init();
+    } catch (e) {
+      debugPrint('Adaptive learning init failed: $e');
+    }
+
     try {
       await NotificationService.instance.initialize();
       await NotificationService.instance.setupScheduledNotifications();

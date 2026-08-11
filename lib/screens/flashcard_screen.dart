@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../models/question.dart';
 import '../models/subject.dart';
-import '../data/questions_database.dart';
+import '../services/question_repository.dart';
 import '../services/theme_service.dart';
 import '../services/feedback_service.dart';
 
@@ -24,6 +24,7 @@ class FlashcardScreen extends StatefulWidget {
 
 class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProviderStateMixin {
   List<Question> _questions = [];
+  bool _isLoading = true;
   int _currentIndex = 0;
   bool _isFlipped = false;
   late AnimationController _flipController;
@@ -55,10 +56,15 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   String get _effectiveSubjectId => widget.subject?.id ?? widget.subjectId ?? '';
   String get _effectiveSubjectName => widget.subject?.name ?? widget.subjectName ?? '';
 
-  void _loadQuestions() {
-
-    final questions = QuestionsDatabase.getBySubject(_effectiveSubjectId);
-    _questions = questions..shuffle();
+  /// Panel note 7: cards come from `QuestionRepository` (Supabase-backed),
+  /// never a compiled-in file.
+  Future<void> _loadQuestions() async {
+    final questions = await QuestionRepository.instance.bySubject(_effectiveSubjectId);
+    if (!mounted) return;
+    setState(() {
+      _questions = questions..shuffle();
+      _isLoading = false;
+    });
   }
 
   void _flipCard() {
@@ -226,7 +232,14 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     if (_questions.isEmpty) {
       return Scaffold(
         backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,

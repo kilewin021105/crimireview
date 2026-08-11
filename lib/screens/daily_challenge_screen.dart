@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
-import '../data/questions_database.dart';
+import '../services/question_repository.dart';
 import '../services/storage_service.dart';
 import '../services/theme_service.dart';
 import '../services/supabase_service.dart';
@@ -66,27 +66,34 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
       });
       return;
     }
-    
-    _loadDailyQuestions();
+
+    await _loadDailyQuestions();
+    if (!mounted) return;
     setState(() => _isLoading = false);
-    _startTimer();
+    if (_questions.isNotEmpty) _startTimer();
   }
 
-  void _loadDailyQuestions() {
+  /// Panel note 7: questions come from `QuestionRepository` (Supabase-backed,
+  /// admin-authored or auto-generated), never from a compiled-in file. The
+  /// pool is still shuffled with a date-seeded [Random], so every student
+  /// gets the SAME ten questions on a given day -- that "everyone gets the
+  /// same daily puzzle" property only depends on the seed, not the source.
+  Future<void> _loadDailyQuestions() async {
     final today = DateTime.now();
     final seed = today.year * 10000 + today.month * 100 + today.day;
     final random = Random(seed);
-    
-    final allQuestions = List<Question>.from(QuestionsDatabase.allQuestions);
-    allQuestions.shuffle(random);
-    
-    _questions = allQuestions.take(_totalQuestions).toList();
-    
+
+    final allQuestions = await QuestionRepository.instance.all();
+    if (!mounted) return;
+
+    final pool = List<Question>.from(allQuestions)..shuffle(random);
+    _questions = pool.take(_totalQuestions).toList();
+
     // Shuffle options for each question
     _shuffledOptions = [];
     _shuffledCorrectIndices = [];
-    _userAnswers = List.filled(_totalQuestions, null);
-    
+    _userAnswers = List.filled(_questions.length, null);
+
     for (final question in _questions) {
       final indices = List.generate(question.options.length, (i) => i);
       indices.shuffle(random);
@@ -235,6 +242,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
       return _buildAlreadyCompletedScreen(isDark);
     }
 
+    if (_questions.isEmpty) {
+      return _buildEmptyState(isDark);
+    }
+
     final question = _questions[_currentIndex];
 
     return Scaffold(
@@ -267,6 +278,59 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
             ),
             if (_selectedAnswer != null)
               _buildNextButton(isDark),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shown when `QuestionRepository` has nothing to serve yet -- an empty or
+  /// still-syncing question bank -- instead of crashing on an empty list.
+  /// There is no hardcoded fallback content anywhere in this app (panel note
+  /// 7), so an empty bank is a real, expected state, not just a theoretical one.
+  Widget _buildEmptyState(bool isDark) {
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(isDark),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.cloud_off_rounded,
+                        size: 48,
+                        color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No questions available right now',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Connect to the internet and try again in a moment.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -25,6 +25,7 @@ dependencies:
   lottie: ^3.1.0
   cached_network_image: ^3.3.1
   image_picker: ^1.2.2
+  file_picker: ^8.1.6
   share_plus: ^12.0.2
   url_launcher: ^6.3.2
   supabase_flutter: ^2.12.4

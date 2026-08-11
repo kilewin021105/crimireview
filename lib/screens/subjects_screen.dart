@@ -4,6 +4,7 @@ import '../models/question.dart';
 import '../models/subject.dart';
 import '../models/user_progress.dart';
 import '../services/adaptive_learning_service.dart';
+import '../services/question_repository.dart';
 import '../services/theme_service.dart';
 import '../utils/page_transitions.dart';
 import 'study_notes_screen.dart';
@@ -16,50 +17,102 @@ class SubjectsScreen extends StatefulWidget {
 }
 
 class _SubjectsScreenState extends State<SubjectsScreen> {
+  /// Questions now come from Supabase (+ the offline snapshot) instead of a
+  /// compiled-in list, so building a quiz set is asynchronous. This guards the
+  /// tap and drives the brief loading overlay.
+  bool _isPreparingQuiz = false;
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Quiz',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                    ),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quiz',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Choose a subject to start',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Choose a subject to start',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                    ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    itemCount: CriminologySubjects.all.length,
+                    itemBuilder: (context, index) {
+                      return _buildSubjectCard(context, CriminologySubjects.all[index], isDark);
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                itemCount: CriminologySubjects.all.length,
-                itemBuilder: (context, index) {
-                  return _buildSubjectCard(context, CriminologySubjects.all[index], isDark);
-                },
-              ),
+          ),
+          if (_isPreparingQuiz) _buildPreparingOverlay(isDark),
+        ],
+      ),
+    );
+  }
+
+  /// Brief blocking indicator shown while the quiz set is pulled from the
+  /// question repository (cache hit is instant; a cold start may need a fetch).
+  Widget _buildPreparingOverlay(bool isDark) {
+    return Positioned.fill(
+      child: AbsorbPointer(
+        child: Container(
+          color: Colors.black.withValues(alpha: isDark ? 0.55 : 0.35),
+          alignment: Alignment.center,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : AppColors.lightCard,
+              borderRadius: BorderRadius.circular(16),
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Preparing your questions...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -146,10 +199,10 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     return AppColors.error;
   }
 
-  void _showQuizOptions(BuildContext context, Subject subject, bool isDark) {
+  void _showQuizOptions(BuildContext screenContext, Subject subject, bool isDark) {
     final icon = AppTheme.subjectIcons[subject.id] ?? Icons.book_rounded;
     const accentColor = AppColors.accent;
-    final service = Provider.of<AdaptiveLearningService>(context, listen: false);
+    final service = Provider.of<AdaptiveLearningService>(screenContext, listen: false);
     final progress = service.userProgress.subjectProgress[subject.id];
     
     // Determine if all segments are passed for each difficulty
@@ -237,7 +290,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                   ),
               onTap: () {
                 Navigator.pop(context);
-                _startQuizWithDifficulty(context, subject, Difficulty.easy);
+                _startQuizWithDifficulty(screenContext, subject, Difficulty.easy);
               },
             ),
             const SizedBox(height: 12),
@@ -259,7 +312,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               segments: mediumUnlocked ? progress?.mediumSegments : null,
               onTap: mediumUnlocked ? () {
                 Navigator.pop(context);
-                _startQuizWithDifficulty(context, subject, Difficulty.medium);
+                _startQuizWithDifficulty(screenContext, subject, Difficulty.medium);
               } : null,
             ),
             const SizedBox(height: 12),
@@ -281,7 +334,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               segments: hardUnlocked ? progress?.hardSegments : null,
               onTap: hardUnlocked ? () {
                 Navigator.pop(context);
-                _startQuizWithDifficulty(context, subject, Difficulty.hard);
+                _startQuizWithDifficulty(screenContext, subject, Difficulty.hard);
               } : null,
             ),
             
@@ -464,16 +517,26 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     );
   }
 
-  void _startQuizWithDifficulty(BuildContext context, Subject subject, Difficulty difficulty) {
+  Future<void> _startQuizWithDifficulty(BuildContext context, Subject subject, Difficulty difficulty) async {
+    if (_isPreparingQuiz) return; // guard against a double tap re-firing the fetch
     final service = Provider.of<AdaptiveLearningService>(context, listen: false);
     final segmentIndex = service.getCurrentSegmentIndex(
       subjectId: subject.id,
       difficulty: difficulty,
     );
-    final questions = service.getQuestionsForCurrentSegment(
-      subjectId: subject.id,
-      difficulty: difficulty,
-    );
+
+    setState(() => _isPreparingQuiz = true);
+    List<Question> questions;
+    try {
+      questions = await service.getQuestionsForSegment(
+        subjectId: subject.id,
+        difficulty: difficulty,
+      );
+    } finally {
+      if (mounted) setState(() => _isPreparingQuiz = false);
+    }
+
+    if (!context.mounted) return;
 
     if (questions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -489,12 +552,11 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
       return;
     }
 
-
     Navigator.push(
-      context, 
+      context,
       SlidePageRoute(
         page: StudyNotesScreen(
-          subject: subject, 
+          subject: subject,
           questions: questions,
           difficulty: difficulty,
           segmentIndex: segmentIndex,

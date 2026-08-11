@@ -4,10 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/theme_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
+import '../services/admin_service.dart';
 import '../utils/responsive.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
 import 'auth_screen.dart';
+import 'admin/admin_shell_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -45,7 +47,12 @@ class _SplashScreenState extends State<SplashScreen>
     if (!hasCompletedOnboarding) {
       nextScreen = const OnboardingScreen();
     } else if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
-      nextScreen = const HomeScreen();
+      // AdminService.init() (main.dart) runs to completion before runApp(),
+      // so isAdmin is already resolved for a restored session by the time
+      // we get here -- no extra await needed.
+      nextScreen = AdminService.instance.isAdmin
+          ? const AdminShellScreen()
+          : const HomeScreen();
     } else {
       nextScreen = const AuthScreen();
     }
