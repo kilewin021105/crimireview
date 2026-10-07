@@ -486,6 +486,27 @@ Fixed every issue found in the system check, plus one more found while fixing th
 
 ---
 
+## 2026-10-07 — Session 36: v1.0.0 published to www.crimireview.app
+
+**Before this, the website's Download button was broken.** www.crimireview.app (a static page on Vercel) links to `github.com/kilewin021105/crimireview/releases/latest/download/app-release.apk`, but the repo had no releases, so every download returned 404. The website itself needed no change; publishing a release fixed the link.
+
+- **Pushed** commit `f19b918` (Sessions 28–35) to `main`. The three `docs/manuscript_*.md` thesis drafts were deliberately left out, since the repo is public.
+- **Built** `app-release.apk`: 56.4 MB, `com.crimireview.crimireview` 1.0.0 (versionCode 1), label "CrimiReview", min Android 7.0 (SDK 24), target SDK 35. Signed with the **debug key**, because there is no `key.properties` yet.
+- **Published** GitHub release **v1.0.0** with `app-release.apk` attached: https://github.com/kilewin021105/crimireview/releases/tag/v1.0.0
+- **Verified** by downloading through the site's own link (HTTP 200, 59,181,254 bytes). The SHA-256 matches the built file: `d02d3ebcca304cb72f49d9b0266b5df05b858617e541831d913b32c20808db8c`.
+
+**Build problems hit on the way (none caused by app code):**
+1. The first build stalled for a long time downloading about 55 MB of Flutter's Android release libraries on a slow connection.
+2. Leftover Gradle and Kotlin daemons then locked `build/url_launcher_android/.../caches-jvm` ("Could not delete").
+3. After that, Gradle's local build cache (`org.gradle.caching=true`) kept restoring an **empty** Kotlin result for `url_launcher_android`, so Java couldn't find `WebViewOptions`, even after `flutter clean`. Confirmed by compiling that task with `--no-build-cache`; fixed by deleting `~/.gradle/caches/build-cache-1`. If "cannot find symbol" appears for a plugin's Kotlin class again, that is the fix.
+
+**Known follow-ups:**
+- The website says "Requires Android 5.0 or higher". The app actually needs **Android 7.0+**; the site source isn't in this repo.
+- If a release key is created later for the Play Store, phones with this debug-signed v1.0.0 must uninstall before installing the newly signed build.
+- For the next update: bump `version:` in `pubspec.yaml` (e.g. `1.0.1+2`), build, and publish a new release with the asset named exactly `app-release.apk`.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
