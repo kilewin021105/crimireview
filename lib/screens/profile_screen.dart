@@ -35,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final email = await _storage.getUserEmail();
     final imagePath = await _storage.getProfileImage();
     
-    _nameController.text = name ?? '';
+    _nameController.text = name;
     _schoolController.text = school ?? '';
     _emailController.text = email ?? '';
     

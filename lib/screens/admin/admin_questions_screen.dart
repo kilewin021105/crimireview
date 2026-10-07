@@ -7,8 +7,8 @@ import '../../services/admin_service.dart';
 import '../../services/theme_service.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
-import 'admin_document_generation_screen.dart';
 import 'admin_question_editor_screen.dart';
+import 'admin_template_generation_screen.dart';
 
 /// The question bank the admin actually edits.
 ///
@@ -22,14 +22,14 @@ class AdminQuestionsScreen extends StatefulWidget {
   /// previous route to pop back to).
   final bool showBackButton;
 
-  /// Pre-seeds the source filter -- set by `AdminDocumentGenerationScreen`'s
-  /// "Review N questions" button to `QuestionSource.generated` so the admin
+  /// Pre-seeds the source filter -- set by `AdminTemplateGenerationScreen`
+  /// after a successful run to `QuestionSource.generated` so the admin
   /// lands directly on the AIG output instead of the full bank.
   final QuestionSource? initialSource;
 
-  /// Pre-seeds the template filter, scoping the list to one upload's batch
-  /// (`template_id` on `public.questions` = the `document_uploads.id` that
-  /// produced it -- see `supabase_document_generation.sql`). Unlike
+  /// Pre-seeds the template filter, scoping the list to one template's batch
+  /// (`template_id` on `public.questions` = the `question_templates.id` that
+  /// produced it -- see `supabase_template_generation.sql`). Unlike
   /// [initialSource], this isn't user-togglable from the filter row: it's a
   /// deep link into one specific review batch.
   final String? initialTemplateId;
@@ -284,17 +284,17 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
       ),
       centerTitle: true,
       // Only on the tab-root instance -- a screen already deep-linked into
-      // one upload's review batch (widget.showBackButton == true) doesn't
-      // need a second way to start another upload.
+      // one template's review batch (widget.showBackButton == true) doesn't
+      // need a second way to start another generation run.
       actions: widget.showBackButton
           ? null
           : [
               IconButton(
-                tooltip: 'Generate from Document',
-                icon: Icon(Icons.auto_awesome_rounded, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
+                tooltip: 'Generate from Templates',
+                icon: Icon(Icons.auto_fix_high_rounded, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
                 onPressed: () => Navigator.push(
                   context,
-                  SlidePageRoute(page: const AdminDocumentGenerationScreen()),
+                  SlidePageRoute(page: const AdminTemplateGenerationScreen()),
                 ),
               ),
             ],

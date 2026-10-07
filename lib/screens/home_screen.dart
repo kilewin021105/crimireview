@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../services/adaptive_learning_service.dart';
 import '../services/storage_service.dart';
@@ -12,8 +11,6 @@ import '../services/offline_sync_service.dart';
 import '../models/subject.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
-import '../widgets/animated_widgets.dart';
-import '../widgets/streak_widget.dart';
 import 'subjects_screen.dart';
 import 'flashcards_home_screen.dart';
 import 'progress_screen.dart';
@@ -35,7 +32,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _userName = 'Student';
   String? _profileImagePath;
   String? _avatarUrl;
-  int _dailyStreak = 0;
 
   @override
   void initState() {
@@ -59,13 +55,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _loadUserData() async {
     final storage = StorageService();
     final name = await storage.getUserName();
-    final streak = await storage.getDailyStreak();
     final imagePath = await storage.getProfileImage();
     final avatarUrl = await storage.getAvatarUrl();
     if (mounted) {
       setState(() {
         _userName = name;
-        _dailyStreak = streak;
         _profileImagePath = imagePath;
         _avatarUrl = avatarUrl;
       });
@@ -852,58 +846,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildInsightCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

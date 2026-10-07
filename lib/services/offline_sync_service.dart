@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import 'connectivity_service.dart';
 import 'storage_service.dart';
 import 'supabase_service.dart';
@@ -23,6 +24,13 @@ class SyncOperation {
   final SyncOperationType type;
   final Map<String, dynamic> data;
   final DateTime createdAt;
+
+  /// The account that produced this operation. Only synced while that same
+  /// account is signed in, so one student's offline results can never be
+  /// uploaded under another student's account on a shared phone. Null only
+  /// for operations queued by an older app version (treated as belonging to
+  /// whoever is signed in, which was the old behaviour).
+  final String? userId;
   int retryCount;
 
   SyncOperation({
@@ -30,6 +38,7 @@ class SyncOperation {
     required this.type,
     required this.data,
     required this.createdAt,
+    this.userId,
     this.retryCount = 0,
   });
 
@@ -38,6 +47,7 @@ class SyncOperation {
         'type': type.index,
         'data': data,
         'createdAt': createdAt.toIso8601String(),
+        'userId': userId,
         'retryCount': retryCount,
       };
 
@@ -46,6 +56,7 @@ class SyncOperation {
         type: SyncOperationType.values[json['type']],
         data: Map<String, dynamic>.from(json['data']),
         createdAt: DateTime.parse(json['createdAt']),
+        userId: json['userId'] as String?,
         retryCount: json['retryCount'] ?? 0,
       );
 }
@@ -57,8 +68,15 @@ class OfflineSyncService extends ChangeNotifier {
   OfflineSyncService._();
 
   static const String _queueKey = 'offline_sync_queue';
-  static const int _maxRetries = 3;
+  static const String _droppedKey = 'offline_sync_dropped_count';
+
+  /// First retry waits this long; each further failure doubles the wait, up
+  /// to [_maxRetryDelay]. Network/server failures are retried forever (an
+  /// offline result is never thrown away just because the phone stayed
+  /// offline for a while); only errors that retrying can never fix are
+  /// dropped -- see [_isPermanentFailure].
   static const Duration _retryDelay = Duration(seconds: 10);
+  static const Duration _maxRetryDelay = Duration(minutes: 5);
 
   SharedPreferences? _prefs;
   List<SyncOperation> _pendingOperations = [];
@@ -66,15 +84,33 @@ class OfflineSyncService extends ChangeNotifier {
   StreamSubscription? _connectivitySubscription;
   Timer? _retryTimer;
   bool _isListening = false;
+  int _droppedCount = 0;
 
   bool get isSyncing => _isSyncing;
-  int get pendingCount => _pendingOperations.length;
-  bool get hasPendingSync => _pendingOperations.isNotEmpty;
+
+  /// Pending operations that belong to the account signed in right now.
+  List<SyncOperation> get _currentUserOperations {
+    final currentUserId =
+        SupabaseService.isInitialized ? SupabaseService.instance.userId : null;
+    return _pendingOperations
+        .where((op) => op.userId == null || op.userId == currentUserId)
+        .toList();
+  }
+
+  int get pendingCount => _currentUserOperations.length;
+  bool get hasPendingSync => _currentUserOperations.isNotEmpty;
+
+  /// How many queued items were discarded because the server rejected them
+  /// permanently. Shown by [SyncStatusIndicator] until acknowledged, so a
+  /// lost result is never silent.
+  int get droppedCount => _droppedCount;
+
   bool get _hasAuthenticatedSession =>
       SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    _droppedCount = _prefs?.getInt(_droppedKey) ?? 0;
     await _loadQueue();
     _startListening();
     await syncPendingOperations();
@@ -107,10 +143,45 @@ class OfflineSyncService extends ChangeNotifier {
       return;
     }
 
+    // Exponential backoff keyed off the most-retried item: 10 s, 20 s,
+    // 40 s ... capped at 5 minutes, so a long outage doesn't mean a network
+    // call every 10 seconds for hours.
+    final attempts = _currentUserOperations
+        .map((op) => op.retryCount)
+        .fold<int>(0, (a, b) => a > b ? a : b);
+    final factor = 1 << (attempts.clamp(1, 16) - 1);
+    var delay = _retryDelay * factor;
+    if (delay > _maxRetryDelay) delay = _maxRetryDelay;
+
     _retryTimer?.cancel();
-    _retryTimer = Timer(_retryDelay, () {
+    _retryTimer = Timer(delay, () {
       unawaited(syncPendingOperations());
     });
+  }
+
+  /// True for failures that will fail the same way on every retry: the
+  /// server refused the data itself (constraint or permission error), or
+  /// the operation's own data is unusable (e.g. the avatar file was deleted
+  /// from the phone). Anything else -- no connection, timeouts, server
+  /// errors -- is temporary and kept in the queue.
+  bool _isPermanentFailure(Object error) {
+    if (error is PostgrestException) {
+      final code = error.code ?? '';
+      // 22xxx = invalid data, 23xxx = constraint violation,
+      // 42xxx = permission / undefined object (RLS rejects are 42501).
+      return code.startsWith('22') ||
+          code.startsWith('23') ||
+          code.startsWith('42');
+    }
+    if (!kIsWeb && error is FileSystemException) return true;
+    return error is FormatException || error is TypeError;
+  }
+
+  /// Clears the "N items could not be saved" warning once the user has seen it.
+  Future<void> acknowledgeDropped() async {
+    _droppedCount = 0;
+    await _prefs?.remove(_droppedKey);
+    notifyListeners();
   }
 
   Future<void> _loadQueue() async {
@@ -136,6 +207,9 @@ class OfflineSyncService extends ChangeNotifier {
 
   String _generateId() =>
       '${DateTime.now().millisecondsSinceEpoch}_${_pendingOperations.length}';
+
+  String? get _currentUserId =>
+      SupabaseService.isInitialized ? SupabaseService.instance.userId : null;
 
   /// Queue a quiz result for sync
   Future<void> queueQuizResult({
@@ -176,6 +250,9 @@ class OfflineSyncService extends ChangeNotifier {
         'score': score,
         'correctAnswers': correctAnswers,
         'totalQuestions': totalQuestions,
+        // Recorded now, not at sync time: a challenge finished offline on
+        // Monday and synced on Tuesday must still count as Monday's.
+        'challengeDate': DateTime.now().toIso8601String().split('T')[0],
       },
       createdAt: DateTime.now(),
     );
@@ -307,7 +384,13 @@ class OfflineSyncService extends ChangeNotifier {
   }
 
   Future<void> _addOperation(SyncOperation operation) async {
-    _pendingOperations.add(operation);
+    _pendingOperations.add(SyncOperation(
+      id: operation.id,
+      type: operation.type,
+      data: operation.data,
+      createdAt: operation.createdAt,
+      userId: _currentUserId,
+    ));
     await _saveQueue();
     notifyListeners();
 
@@ -558,34 +641,48 @@ class OfflineSyncService extends ChangeNotifier {
 
   /// Sync all pending operations to the cloud
   Future<void> syncPendingOperations() async {
-    if (_isSyncing || _pendingOperations.isEmpty) return;
-    if (!await _canSyncNow()) return;
+    if (_isSyncing || !hasPendingSync) return;
+    if (!await _canSyncNow()) {
+      _scheduleRetryIfNeeded();
+      return;
+    }
 
     _isSyncing = true;
     _retryTimer?.cancel();
     notifyListeners();
 
     final List<SyncOperation> completed = [];
-    final List<SyncOperation> failed = [];
+    final List<SyncOperation> dropped = [];
 
-    for (final operation in List.from(_pendingOperations)) {
+    // Oldest first, and only the signed-in account's own items.
+    for (final operation in _currentUserOperations) {
       try {
         await _executeOperation(operation);
         completed.add(operation);
       } catch (e) {
-        operation.retryCount++;
-        if (operation.retryCount >= _maxRetries) {
-          // Max retries reached, remove from queue
-          failed.add(operation);
-          print('Sync operation ${operation.id} failed after $_maxRetries retries: $e');
+        if (_isPermanentFailure(e)) {
+          dropped.add(operation);
+          debugPrint('Sync operation ${operation.id} (${operation.type.name}) '
+              'rejected permanently, removed from queue: $e');
+        } else {
+          operation.retryCount++;
+          debugPrint('Sync operation ${operation.id} (${operation.type.name}) '
+              'failed (attempt ${operation.retryCount}), will retry: $e');
+          // The connection is likely down; stop here instead of failing
+          // every remaining item one by one. Order is preserved.
+          break;
         }
       }
     }
 
-    // Remove completed and failed operations
     _pendingOperations.removeWhere(
-        (op) => completed.contains(op) || failed.contains(op));
+        (op) => completed.contains(op) || dropped.contains(op));
     await _saveQueue();
+
+    if (dropped.isNotEmpty) {
+      _droppedCount += dropped.length;
+      await _prefs?.setInt(_droppedKey, _droppedCount);
+    }
 
     _isSyncing = false;
     notifyListeners();
@@ -593,7 +690,7 @@ class OfflineSyncService extends ChangeNotifier {
     _scheduleRetryIfNeeded();
 
     if (completed.isNotEmpty) {
-      print('Synced ${completed.length} operations to cloud');
+      debugPrint('Synced ${completed.length} operations to cloud');
     }
   }
 
@@ -617,6 +714,7 @@ class OfflineSyncService extends ChangeNotifier {
           score: operation.data['score'],
           correctAnswers: operation.data['correctAnswers'],
           totalQuestions: operation.data['totalQuestions'],
+          challengeDate: operation.data['challengeDate'],
         );
         break;
 

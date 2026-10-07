@@ -58,8 +58,14 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
 
     final today = DateTime.now().toIso8601String().split('T')[0];
     final lastCompleted = await _storage.getLastDailyChallengeDate();
-    
-    if (lastCompleted == today) {
+
+    // The phone's own record only knows about this phone. The server is
+    // checked too, so reinstalling the app or switching to another phone
+    // can't be used to play today's challenge a second time.
+    final completed = lastCompleted == today || await _completedOnServer(today);
+    if (!mounted) return;
+
+    if (completed) {
       setState(() {
         _alreadyCompleted = true;
         _isLoading = false;
@@ -185,7 +191,6 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
       _confettiController.play();
     }
     
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     
 
     if (mounted) {
@@ -207,6 +212,24 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
           ),
         ),
       );
+    }
+  }
+
+  /// True when the server already has today's score for this account.
+  /// Offline, logged out, or any error counts as "not completed" so the
+  /// challenge still works without internet; a duplicate made that way is
+  /// rejected when it syncs (see `SupabaseService.saveDailyChallengeScore`).
+  Future<bool> _completedOnServer(String today) async {
+    if (!SupabaseService.isInitialized || !SupabaseService.instance.isLoggedIn) return false;
+    try {
+      final done = await SupabaseService.instance
+          .hasCompletedDailyChallenge()
+          .timeout(const Duration(seconds: 5));
+      if (done) await _storage.setLastDailyChallengeDate(today);
+      return done;
+    } catch (e) {
+      debugPrint('Daily challenge server check skipped: $e');
+      return false;
     }
   }
 
@@ -270,7 +293,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
                         child: _buildOptionCard(index, isDark),
                       ),
                     ),
-                    if (_showExplanation && question.explanation != null)
+                    if (_showExplanation && question.explanation.isNotEmpty)
                       _buildExplanationCard(question, isDark),
                   ],
                 ),
@@ -1051,7 +1074,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
           ),
           const SizedBox(height: 12),
           Text(
-            question.explanation!,
+            question.explanation,
             style: GoogleFonts.poppins(
               fontSize: 14,
               color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
@@ -1577,7 +1600,6 @@ class _ChallengeResultsScreenState extends State<_ChallengeResultsScreen>
           ),
           const SizedBox(height: 16),
           ...List.generate(widget.questions.length, (index) {
-            final question = widget.questions[index];
             final userAnswer = widget.userAnswers[index];
             final correctIndex = widget.shuffledCorrectIndices[index];
             final isCorrect = userAnswer == correctIndex;

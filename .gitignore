@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Generated build output and Supabase CLI cache
+/android/build/
+supabase/.temp/

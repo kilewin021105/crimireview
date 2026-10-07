@@ -156,6 +156,8 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
 3. **`supabase_security_fixes.sql`** — locks `email_verifications` and `password_resets` down to zero direct client access, and moves code generation/verification/emailing entirely server-side. **Read this file's own header before running it** — it requires rotating the Resend API key and storing the new one in Supabase Vault first. Skipping this file leaves both tables readable by anyone with the app's public anon key.
 4. `supabase_schema_v2.sql` — the question bank (`public.questions`), the admin role + `is_admin()`, Automatic Item Generation tables, Bayesian Knowledge Tracing state (`topic_mastery`), question exposure tracking, and the admin audit log. Section 13 of this file explains how to promote your account to admin.
 5. `supabase_seed_questions.sql` *(optional)* — 759 questions migrated out of the old hardcoded Dart files, ready to seed the bank so it isn't empty on first run. Regenerate with `dart run tools/export_questions_to_sql.dart` if the source files still existed — they don't anymore, so this script is now historical.
+6. `supabase_admin_management.sql` — lets an existing admin promote/demote another user from inside the app (Admin Panel → Students → "⋮") instead of needing SQL Editor access every time.
+7. `supabase_template_generation.sql` — the free, no-API-key "Generate from Templates" path (the only question generator in the app): one Postgres function that turns the `question_templates`/`concept_bank` data from step 4 into real questions. Works immediately after this file runs, no further setup.
 
 Core tables used by the app:
 
@@ -163,6 +165,12 @@ Core tables used by the app:
 - `quiz_results`, `user_progress`, `daily_challenge_scores`, `user_achievements`
 - `password_resets`, `email_verifications` (server-side access only, see step 3 above)
 - `questions`, `question_templates`, `concept_bank`, `topic_mastery`, `question_exposure`, `admin_audit_log`
+
+## Question generation
+
+Questions are generated only through **Admin Panel → Questions → Generate from Templates** (step 7 above). It runs entirely inside the database — no API key, no upload, no cost — and every generated item lands inactive until an admin reviews and restores it.
+
+The old "Generate from Document" (PDF → AI) path has been removed from the app. If it was ever set up on your Supabase project, `supabase_remove_document_generation.sql` cleans up what it left behind there — see that file's header.
 
 ### Security notes
 
@@ -193,3 +201,22 @@ APK output:
 ```text
 build/app/outputs/flutter-apk/app-release.apk
 ```
+
+### Release signing
+
+Without a release key, `flutter build apk --release` still works, but the build prints a warning and signs with the **debug** key. That's fine for sharing an APK for testing. The **Google Play Store rejects debug-signed apps**, so before publishing there, create your own key once:
+
+1. Create the keystore. Run this from the project folder; it asks for a password and your name:
+   ```bash
+   keytool -genkey -v -keystore android/app/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+   ```
+2. Create `android/key.properties` with:
+   ```properties
+   storePassword=the password you chose
+   keyPassword=the password you chose
+   keyAlias=upload
+   storeFile=upload-keystore.jks
+   ```
+3. Build again. The warning disappears and the APK/AAB is signed with your key.
+
+Both files are already listed in `android/.gitignore`, so they are never committed. **Back them up somewhere safe.** If you lose the keystore, you can never publish an update to the same Play Store listing.

@@ -106,9 +106,9 @@ class AdminService extends ChangeNotifier {
   /// needs that flag to know whether "toggle" means deactivate or restore.
   ///
   /// [source] / [templateId] scope the list to one Automatic Item Generation
-  /// batch -- e.g. `source: QuestionSource.generated, templateId: <upload
-  /// id>` is exactly the "review this document's output" view opened from
-  /// `AdminDocumentGenerationScreen`. Both are optional and independent of
+  /// batch -- e.g. `source: QuestionSource.generated, templateId: <template
+  /// id>` is exactly the "review this template's output" view opened from
+  /// `AdminTemplateGenerationScreen`. Both are optional and independent of
   /// [includeInactive]: a pending-review batch is inactive by definition,
   /// so callers that want to see it must also pass `includeInactive: true`.
   Future<List<AdminQuestionEntry>> listQuestions({

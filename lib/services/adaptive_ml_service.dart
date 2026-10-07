@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ml_service.dart';
 import '../models/subject.dart';
@@ -36,8 +35,6 @@ class AdaptiveMLService {
   static const String _keyPersonalBias = 'ml_personal_bias';
   static const String _keySubjectBias = 'ml_subject_bias';
   static const String _keyHistory = 'ml_prediction_history';
-  static const String _keyTotalPredictions = 'ml_total_predictions';
-  static const String _keyAccuracySum = 'ml_accuracy_sum';
 
   AdaptiveMLService._();
 

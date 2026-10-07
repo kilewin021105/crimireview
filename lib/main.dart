@@ -16,17 +16,17 @@ import 'services/admin_service.dart';
 import 'services/mastery_service.dart';
 import 'services/question_selection_service.dart';
 import 'screens/splash_screen.dart';
-import 'screens/home_screen.dart';
+//import 'screens/home_screen.dart';
 
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    
+
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
       debugPrint('Flutter error: ${details.exception}');
     };
-    
+
     try {
       SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(
@@ -39,14 +39,14 @@ void main() {
     } catch (e) {
       debugPrint('System chrome failed: $e');
     }
-    
+
     final storageService = StorageService();
     try {
       await storageService.init();
     } catch (e) {
       debugPrint('Storage init failed: $e');
     }
-    
+
     try {
       await SupabaseService.initialize();
     } catch (e) {
@@ -79,19 +79,19 @@ void main() {
     } catch (e) {
       debugPrint('Notifications init failed: $e');
     }
-    
+
     try {
       await FeedbackService.instance.initialize();
     } catch (e) {
       debugPrint('Feedback init failed: $e');
     }
-    
+
     try {
       await AdaptiveMLService.instance.initialize();
     } catch (e) {
       debugPrint('ML init failed: $e');
     }
-    
+
     // Initialize connectivity monitoring and offline sync
     try {
       ConnectivityService.instance.startMonitoring();
@@ -99,7 +99,7 @@ void main() {
     } catch (e) {
       debugPrint('Connectivity/Sync init failed: $e');
     }
-    
+
     runApp(
       MultiProvider(
         providers: [
@@ -135,7 +135,7 @@ class CrimiReviewApp extends StatelessWidget {
       builder: (context, themeService, child) {
         ThemeData lightTheme;
         ThemeData darkTheme;
-        
+
         try {
           lightTheme = AppTheme.lightTheme.copyWith(
             textTheme: GoogleFonts.poppinsTextTheme().apply(
@@ -154,7 +154,7 @@ class CrimiReviewApp extends StatelessWidget {
           lightTheme = AppTheme.lightTheme;
           darkTheme = AppTheme.darkTheme;
         }
-        
+
         return MaterialApp(
           title: 'CrimiReview',
           debugShowCheckedModeBanner: false,
@@ -171,7 +171,8 @@ class CrimiReviewApp extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 64),
+                      const Icon(Icons.error_outline,
+                          color: Colors.red, size: 64),
                       const SizedBox(height: 16),
                       const Text(
                         'Something went wrong',
@@ -180,7 +181,8 @@ class CrimiReviewApp extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         details.exception.toString(),
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
                         textAlign: TextAlign.center,
                       ),
                     ],

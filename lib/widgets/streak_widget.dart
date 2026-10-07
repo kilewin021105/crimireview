@@ -179,7 +179,6 @@ class DailyStreakWidget extends StatelessWidget {
         final dayNumber = index + 1;
         final isCompleted = dayNumber < currentWeekday; // Days before today are "completed"
         final isToday = dayNumber == currentWeekday;
-        final isFuture = dayNumber > currentWeekday;
         
         return Column(
           children: [

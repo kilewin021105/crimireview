@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
@@ -13,6 +14,10 @@ class SupabaseService {
   SupabaseService._();
 
   static bool get isInitialized => _isInitialized;
+
+  /// The project's base URL, used by `ConnectivityService` to test whether
+  /// this app's own backend is reachable.
+  static String get projectUrl => _supabaseUrl;
   
   SupabaseClient get client {
     if (!_isInitialized) {
@@ -375,23 +380,40 @@ class SupabaseService {
     }
   }
 
+  /// Records one daily challenge attempt. Only the FIRST attempt of a day
+  /// counts: a plain insert (not an upsert) means a retake from a second
+  /// phone or a reinstall hits the `UNIQUE (user_id, challenge_date)`
+  /// constraint and is ignored -- it neither replaces the first score nor
+  /// awards the points a second time.
+  ///
+  /// [challengeDate] is the day the challenge was actually played
+  /// (YYYY-MM-DD); pass it when syncing an attempt queued offline.
   Future<void> saveDailyChallengeScore({
     required int score,
     required int correctAnswers,
     int totalQuestions = 10,
+    String? challengeDate,
   }) async {
     if (!isLoggedIn) return;
-    
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    
-    await client.from('daily_challenge_scores').upsert({
-      'user_id': userId,
-      'challenge_date': today,
-      'score': score,
-      'correct_answers': correctAnswers,
-      'total_questions': totalQuestions,
-    }, onConflict: 'user_id,challenge_date');
-    
+
+    final date = challengeDate ?? DateTime.now().toIso8601String().split('T')[0];
+
+    try {
+      await client.from('daily_challenge_scores').insert({
+        'user_id': userId,
+        'challenge_date': date,
+        'score': score,
+        'correct_answers': correctAnswers,
+        'total_questions': totalQuestions,
+      });
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        debugPrint('Daily challenge for $date already recorded; keeping the first score.');
+        return;
+      }
+      rethrow;
+    }
+
     await updatePoints(score);
   }
 

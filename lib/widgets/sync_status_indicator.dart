@@ -23,14 +23,41 @@ class SyncStatusIndicator extends StatelessWidget {
         final hasPending = syncService.hasPendingSync;
         final isSyncing = syncService.isSyncing;
         final pendingCount = syncService.pendingCount;
-        
+        final droppedCount = syncService.droppedCount;
+
+        // Items the server rejected for good. Shown until tapped, so a lost
+        // result is never silent.
+        if (droppedCount > 0) {
+          return GestureDetector(
+            onTap: () => _showDroppedDialog(context, syncService, droppedCount),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: showLabel ? 12 : 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline_rounded, size: size, color: Colors.red),
+                  if (showLabel) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '$droppedCount not saved',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.red),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
+
         // Don't show anything if online and no pending items
         if (isOnline && !hasPending && !isSyncing) {
           return const SizedBox.shrink();
         }
-        
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        
+
         Color bgColor;
         Color iconColor;
         IconData icon;
@@ -96,6 +123,33 @@ class SyncStatusIndicator extends StatelessWidget {
         );
       },
     );
+  }
+
+  static Future<void> _showDroppedDialog(
+    BuildContext context,
+    OfflineSyncService syncService,
+    int droppedCount,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Some progress was not saved'),
+        content: Text(
+          '$droppedCount item${droppedCount == 1 ? '' : 's'} saved while offline '
+          'could not be uploaded because the server rejected '
+          '${droppedCount == 1 ? 'it' : 'them'}. Your progress on this phone '
+          'is unchanged; only the online copy is missing '
+          '${droppedCount == 1 ? 'this item' : 'these items'}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    await syncService.acknowledgeDropped();
   }
 }
 

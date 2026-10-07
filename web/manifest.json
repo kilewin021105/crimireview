@@ -1,11 +1,11 @@
 {
-    "name": "crimireview",
-    "short_name": "crimireview",
+    "name": "CrimiReview",
+    "short_name": "CrimiReview",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "CrimiReview: adaptive quiz reviewer for the Criminologist Licensure Examination.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
