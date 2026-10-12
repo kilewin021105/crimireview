@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import '../models/question.dart';
 import '../models/subject.dart';
 import '../services/question_repository.dart';
-import '../services/theme_service.dart';
+import '../widgets/ui/ui.dart';
 import '../services/feedback_service.dart';
 
 class FlashcardScreen extends StatefulWidget {
@@ -103,123 +103,85 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   }
 
   void _showResults() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final total = _questions.length;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.celebration_rounded, color: AppColors.accent),
-            const SizedBox(width: 10),
-            Text(
-              'Session Complete!',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildResultStat(
-              icon: Icons.check_circle_rounded,
-              label: 'Known',
-              value: _knownCount,
-              color: AppColors.success,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 12),
-            _buildResultStat(
-              icon: Icons.refresh_rounded,
-              label: 'Need Review',
-              value: _reviewCount,
-              color: AppColors.warning,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 12),
-            _buildResultStat(
-              icon: Icons.style_rounded,
-              label: 'Total Cards',
-              value: _questions.length,
-              color: AppColors.accent,
-              isDark: isDark,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: Text(
-              'Done',
-              style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _currentIndex = 0;
-                _knownCount = 0;
-                _reviewCount = 0;
-                _isFlipped = false;
-              });
-              _flipController.reset();
-              _loadQuestions();
-            },
-            child: Text(
-              'Study Again',
-              style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResultStat({
-    required IconData icon,
-    required String label,
-    required int value,
-    required Color color,
-    required bool isDark,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+      builder: (dialogContext) {
+        final p = dialogContext.palette;
+        final text = dialogContext.textStyles;
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconBadge(icon: Icons.celebration_rounded, color: p.gold, size: 60, radius: 20),
+                const SizedBox(height: 16),
+                Text('Session complete!', style: text.titleLarge),
+                const SizedBox(height: 4),
+                Text('You went through all $total cards.', style: text.bodyMedium),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: StatTile(
+                        icon: Icons.check_circle_rounded,
+                        value: '$_knownCount',
+                        label: 'Known',
+                        color: p.success,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: StatTile(
+                        icon: Icons.refresh_rounded,
+                        value: '$_reviewCount',
+                        label: 'To review',
+                        color: p.warning,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        label: 'Done',
+                        height: 48,
+                        onPressed: () {
+                          Navigator.pop(dialogContext);
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'Study again',
+                        height: 48,
+                        onPressed: () {
+                          Navigator.pop(dialogContext);
+                          setState(() {
+                            _currentIndex = 0;
+                            _knownCount = 0;
+                            _reviewCount = 0;
+                            _isFlipped = false;
+                          });
+                          _flipController.reset();
+                          _loadQuestions();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-        Text(
-          '$value',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -229,182 +191,200 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
     super.dispose();
   }
 
+  Color get _subjectColor => AppColors.subjectColor(_effectiveSubjectId);
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
+    final text = context.textStyles;
 
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-        body: const Center(child: CircularProgressIndicator()),
+        appBar: AppTopBar(title: 'Flashcards', subtitle: _effectiveSubjectName),
+        body: const LoadingView(label: 'Shuffling your deck...'),
       );
     }
 
     if (_questions.isEmpty) {
       return Scaffold(
-        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
+        appBar: AppTopBar(title: 'Flashcards', subtitle: _effectiveSubjectName),
         body: Center(
-          child: Text(
-            'No questions available',
-            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
+          child: EmptyState(
+            icon: Icons.style_rounded,
+            title: 'No cards yet',
+            message: 'There are no questions for this subject yet. Check back after your next sync.',
+            actionLabel: 'Go back',
+            onAction: () => Navigator.pop(context),
           ),
         ),
       );
     }
 
     final question = _questions[_currentIndex];
+    final swipe = (_dragX / 110).clamp(-1.0, 1.0);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(isDark),
-            _buildProgressBar(isDark),
-            const SizedBox(height: 20),
-            Expanded(
-              child: GestureDetector(
-                onTap: _flipCard,
-                onPanUpdate: (details) {
-                  setState(() {
-                    _dragX += details.delta.dx;
-                    _dragY += details.delta.dy;
-                    _rotation = _dragX / 300;
-                  });
-                },
-                onPanEnd: (details) {
-                  if (_dragX > 100) {
-
-                    _nextCard(known: true);
-                  } else if (_dragX < -100) {
-
-                    _nextCard(known: false);
-                  } else {
-
-                    setState(() {
-                      _dragX = 0;
-                      _dragY = 0;
-                      _rotation = 0;
-                    });
-                  }
-                },
-                child: AnimatedBuilder(
-                  animation: _flipAnimation,
-                  builder: (context, child) {
-                    return Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()
-                        ..translate(_dragX, _dragY)
-                        ..rotateZ(_rotation * 0.3)
-                        ..setEntry(3, 2, 0.001)
-                        ..rotateY(math.pi * _flipAnimation.value),
-                      child: _flipAnimation.value < 0.5
-                          ? _buildCardFront(question, isDark)
-                          : Transform(
-                              alignment: Alignment.center,
-                              transform: Matrix4.rotationY(math.pi),
-                              child: _buildCardBack(question, isDark),
-                            ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildSwipeHints(isDark),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.arrow_back_ios_rounded,
-                color: isDark ? Colors.white70 : Colors.black54,
-                size: 20,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Flashcards',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                  ),
-                ),
-                Text(
-                  _effectiveSubjectName,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '${_currentIndex + 1}/${_questions.length}',
-              style: TextStyle(
-                color: AppColors.accent,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+      appBar: AppTopBar(
+        title: 'Flashcards',
+        subtitle: _effectiveSubjectName,
+        actions: [
+          Pill(label: '${_currentIndex + 1} / ${_questions.length}', color: _subjectColor),
         ],
       ),
-    );
-  }
-
-  Widget _buildProgressBar(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: LinearProgressIndicator(
-          value: (_currentIndex + 1) / _questions.length,
-          backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-          minHeight: 6,
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          maxWidth: 560,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: Column(
+                  children: [
+                    AppProgressBar(
+                      value: (_currentIndex + 1) / _questions.length,
+                      color: _subjectColor,
+                      height: 6,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Pill(label: '$_reviewCount to review', icon: Icons.refresh_rounded, color: p.warning),
+                        const Spacer(),
+                        Pill(label: '$_knownCount known', icon: Icons.check_rounded, color: p.success),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _flipCard,
+                  onPanUpdate: (details) {
+                    setState(() {
+                      _dragX += details.delta.dx;
+                      _dragY += details.delta.dy;
+                      _rotation = _dragX / 300;
+                    });
+                  },
+                  onPanEnd: (details) {
+                    if (_dragX > 100) {
+                      _nextCard(known: true);
+                    } else if (_dragX < -100) {
+                      _nextCard(known: false);
+                    } else {
+                      setState(() {
+                        _dragX = 0;
+                        _dragY = 0;
+                        _rotation = 0;
+                      });
+                    }
+                  },
+                  child: AnimatedBuilder(
+                    animation: _flipAnimation,
+                    builder: (context, child) {
+                      return Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..translateByDouble(_dragX, _dragY, 0, 1)
+                          ..rotateZ(_rotation * 0.3)
+                          ..setEntry(3, 2, 0.001)
+                          ..rotateY(math.pi * _flipAnimation.value),
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: _flipAnimation.value < 0.5
+                                  ? _buildCardFront(question)
+                                  : Transform(
+                                      alignment: Alignment.center,
+                                      transform: Matrix4.rotationY(math.pi),
+                                      child: _buildCardBack(question),
+                                    ),
+                            ),
+                            if (swipe.abs() > 0.05)
+                              Positioned(
+                                top: 18,
+                                left: swipe > 0 ? 38 : null,
+                                right: swipe < 0 ? 38 : null,
+                                child: Opacity(
+                                  opacity: swipe.abs(),
+                                  child: Transform.rotate(
+                                    angle: swipe > 0 ? -0.2 : 0.2,
+                                    child: _swipeStamp(
+                                      swipe > 0 ? 'KNOW IT' : 'REVIEW',
+                                      swipe > 0 ? p.success : p.warning,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        label: 'Review again',
+                        icon: Icons.refresh_rounded,
+                        color: p.warning,
+                        onPressed: () => _nextCard(known: false),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'I know it',
+                        icon: Icons.check_rounded,
+                        color: p.success,
+                        onPressed: () => _nextCard(known: true),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text('or swipe the card left / right', style: text.bodySmall),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCardFront(Question question, bool isDark) {
+  Widget _swipeStamp(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color, width: 2.5),
+        color: context.palette.surface.withValues(alpha: 0.9),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: kAppFontFamily,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.2,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardFront(Question question) {
+    final text = context.textStyles;
+    final color = _subjectColor;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(24),
@@ -413,289 +393,151 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.accent,
-            AppColors.accent.withValues(alpha: 0.85),
+            Color.lerp(color, Colors.white, 0.08)!,
+            Color.lerp(color, Colors.black, 0.32)!,
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppSpace.radiusXl),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accent.withValues(alpha: 0.25),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: color.withValues(alpha: 0.3),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Column(
         children: [
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Question ${_currentIndex + 1}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.8),
+          Row(
+            children: [
+              Pill(
+                label: 'Question ${_currentIndex + 1}',
+                color: Colors.white,
+                background: Colors.white.withValues(alpha: 0.16),
               ),
-            ),
+              const Spacer(),
+              Icon(Icons.style_rounded, color: Colors.white.withValues(alpha: 0.6), size: 20),
+            ],
           ),
           const SizedBox(height: 20),
-
           Expanded(
             child: Center(
               child: SingleChildScrollView(
                 child: Text(
                   question.questionText,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                  style: text.titleLarge?.copyWith(
                     color: Colors.white,
-                    height: 1.5,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 16),
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.touch_app_rounded,
-                  color: Colors.white.withValues(alpha: 0.7),
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Tap to flip',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.touch_app_rounded, color: Colors.white.withValues(alpha: 0.75), size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'Tap to see the answer',
+                style: text.labelMedium?.copyWith(color: Colors.white.withValues(alpha: 0.75)),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCardBack(Question question, bool isDark) {
+  Widget _buildCardBack(Question question) {
+    final p = context.palette;
+    final text = context.textStyles;
     final correctAnswer = question.options[question.correctAnswerIndex];
     final hasExplanation = question.explanation.isNotEmpty;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.success.withValues(alpha: 0.3),
-          width: 2,
-        ),
+        color: p.surface,
+        borderRadius: BorderRadius.circular(AppSpace.radiusXl),
+        border: Border.all(color: p.border),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
+          BoxShadow(color: p.shadow, blurRadius: 24, offset: const Offset(0, 12)),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-
           Container(
-            width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.success.withValues(alpha: 0.2),
-              ),
+              color: p.successSoft,
+              borderRadius: BorderRadius.circular(AppSpace.radiusMd + 2),
             ),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.check_circle_rounded,
-                      color: AppColors.success,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Correct Answer',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.success,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Icon(Icons.check_circle_rounded, color: p.success, size: 17),
+                    const SizedBox(width: 6),
+                    Text('ANSWER', style: text.labelSmall?.copyWith(color: p.success)),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   correctAnswer,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.success,
-                    height: 1.4,
-                  ),
+                  style: text.titleMedium?.copyWith(color: p.textPrimary, height: 1.4),
                 ),
               ],
             ),
           ),
-
-          if (hasExplanation) ...[
-            const SizedBox(height: 14),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_outline_rounded,
-                          size: 16,
-                          color: AppColors.warning,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Explanation',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          const SizedBox(height: 16),
+          Expanded(
+            child: hasExplanation
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.lightbulb_outline_rounded, size: 17, color: p.gold),
+                          const SizedBox(width: 6),
+                          Text('Why', style: text.titleSmall),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Text(
+                            question.explanation,
+                            style: text.bodyMedium?.copyWith(color: p.textPrimary.withValues(alpha: 0.82)),
                           ),
                         ),
+                      ),
+                    ],
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.psychology_rounded, size: 40, color: p.textTertiary),
+                        const SizedBox(height: 8),
+                        Text('Remember this answer!', style: text.bodyMedium),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Text(
-                          question.explanation,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                            height: 1.6,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ] else ...[
-
-            const SizedBox(height: 14),
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.school_rounded,
-                      size: 48,
-                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Remember this answer!',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Swipe left or right',
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
-              ),
-            ),
+                  ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text('Tap to flip back', style: text.bodySmall),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildSwipeHints(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.arrow_back_rounded, color: AppColors.warning, size: 20),
-              const SizedBox(width: 6),
-              Text(
-                'Review',
-                style: TextStyle(
-                  color: AppColors.warning,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Text(
-                'Known',
-                style: TextStyle(
-                  color: AppColors.success,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(Icons.arrow_forward_rounded, color: AppColors.success, size: 20),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
 }

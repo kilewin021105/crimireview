@@ -1,9 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/adaptive_learning_service.dart';
 import '../services/storage_service.dart';
-import '../services/theme_service.dart';
 import '../services/ml_service.dart';
 import '../services/adaptive_ml_service.dart';
 import '../services/connectivity_service.dart';
@@ -11,6 +10,7 @@ import '../services/offline_sync_service.dart';
 import '../models/subject.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
+import '../widgets/ui/ui.dart';
 import 'subjects_screen.dart';
 import 'flashcards_home_screen.dart';
 import 'progress_screen.dart';
@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _handleProfileChanged() {
     _loadUserData();
   }
-  
+
   @override
   void dispose() {
     StorageService.profileChangeNotifier.removeListener(_handleProfileChanged);
@@ -66,182 +66,113 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildAvatarContent() {
-    // Priority: local file > cloud URL > initials
-    if (_profileImagePath != null && _profileImagePath!.isNotEmpty) {
-      final file = File(_profileImagePath!);
-      if (file.existsSync()) {
-        return Image.file(
-          file,
-          fit: BoxFit.cover,
-          width: 48,
-          height: 48,
-        );
-      }
-    }
-    
-    if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
-      return Image.network(
-        _avatarUrl!,
-        fit: BoxFit.cover,
-        width: 48,
-        height: 48,
-        errorBuilder: (context, error, stackTrace) => _buildInitials(),
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildInitials();
-        },
-      );
-    }
-    
-    return _buildInitials();
+  void _selectTab(int index) {
+    if (index == _currentIndex) return;
+    HapticFeedback.selectionClick();
+    setState(() => _currentIndex = index);
   }
 
-  Widget _buildInitials() {
-    return Center(
-      child: Text(
-        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: AppColors.accent,
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final tabs = IndexedStack(
+      index: _currentIndex,
+      children: [
+        _buildHomeContent(context),
+        const SubjectsScreen(),
+        const FlashcardsHomeScreen(),
+        const ProgressScreen(),
+        SettingsScreen(key: ValueKey('settings_$_currentIndex')),
+      ],
+    );
+    return Scaffold(
+      body: ListenableBuilder(
+        listenable: Listenable.merge([ConnectivityService.instance, OfflineSyncService.instance]),
+        child: tabs,
+        builder: (context, child) => Column(
+          children: [
+            _ConnectionBanner(topInset: MediaQuery.of(context).padding.top),
+            Expanded(
+              child: MediaQuery.removePadding(
+                context: context,
+                // The banner already sits under the status bar when shown.
+                removeTop: _bannerVisible,
+                child: child!,
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: p.border)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: _selectTab,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.quiz_outlined),
+              selectedIcon: Icon(Icons.quiz_rounded),
+              label: 'Quiz',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.style_outlined),
+              selectedIcon: Icon(Icons.style_rounded),
+              label: 'Cards',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.insights_outlined),
+              selectedIcon: Icon(Icons.insights_rounded),
+              label: 'Progress',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings_rounded),
+              label: 'Settings',
+            ),
+          ],
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      body: Column(
-        children: [
-          ListenableBuilder(
-            listenable: Listenable.merge([ConnectivityService.instance, OfflineSyncService.instance]),
-            builder: (context, _) {
-              final isOnline = ConnectivityService.instance.isOnline;
-              final syncService = OfflineSyncService.instance;
-              final hasPending = syncService.hasPendingSync;
-              final isSyncing = syncService.isSyncing;
-              final pendingCount = syncService.pendingCount;
-              
-              // Show syncing indicator when online and syncing
-              if (isOnline && isSyncing) {
-                return Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 8,
-                    bottom: 8,
-                    left: 16,
-                    right: 16,
-                  ),
-                  color: Colors.blue.shade600,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Syncing $pendingCount items...',
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              // Show offline indicator
-              if (!isOnline) {
-                return Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 8,
-                    bottom: 8,
-                    left: 16,
-                    right: 16,
-                  ),
-                  color: Colors.orange.shade700,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        hasPending 
-                            ? 'Offline - $pendingCount items will sync when online'
-                            : 'You\'re offline. Progress is saved locally!',
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              return const SizedBox.shrink();
-            },
-          ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeInOut,
-                  ),
-                  child: child,
-                );
-              },
-              child: IndexedStack(
-                index: _currentIndex,
-                children: [
-                  _buildHomeContent(context),
-                  const SubjectsScreen(),
-                  const FlashcardsHomeScreen(),
-                  const ProgressScreen(),
-                  SettingsScreen(key: ValueKey('settings_$_currentIndex')),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomNav(isDark),
-    );
+  bool get _bannerVisible {
+    final online = ConnectivityService.instance.isOnline;
+    final sync = OfflineSyncService.instance;
+    return !online || sync.isSyncing || sync.droppedCount > 0;
   }
 
-  Widget _buildBottomNav(bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+  Widget _buildHomeContent(BuildContext context) {
+    final service = Provider.of<AdaptiveLearningService>(context);
+    final progress = service.userProgress;
+    final padding = Responsive.horizontalPadding(context);
+    final isSmall = Responsive.isSmallPhone(context);
+    final gap = isSmall ? 22.0 : AppSpace.section;
+
+    return SafeArea(
+      bottom: false,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(padding, 12, padding, 28),
+        child: ContentWidth(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildNavItem(0, Icons.home_rounded, 'Home', isDark),
-              _buildNavItem(1, Icons.quiz_rounded, 'Quiz', isDark),
-              _buildNavItem(2, Icons.style_rounded, 'Cards', isDark),
-              _buildNavItem(3, Icons.bar_chart_rounded, 'Progress', isDark),
-              _buildNavItem(4, Icons.settings_rounded, 'Settings', isDark),
+              Appear(index: 0, child: _buildHeader(progress)),
+              const SizedBox(height: 22),
+              Appear(index: 1, child: _buildDailyChallenge()),
+              const SizedBox(height: 14),
+              Appear(index: 2, child: _buildQuickStats(progress)),
+              SizedBox(height: gap),
+              Appear(index: 3, child: _buildPracticeShortcuts()),
+              SizedBox(height: gap),
+              Appear(index: 4, child: _buildMLInsights(service)),
+              Appear(index: 5, child: _buildStudySubjects(progress)),
             ],
           ),
         ),
@@ -249,180 +180,72 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label, bool isDark) {
-    final isSelected = _currentIndex == index;
-    final color = isSelected 
-        ? AppColors.accent
-        : (isDark ? Colors.white54 : Colors.grey.shade500);
-    
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? AppColors.accent.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 26),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHomeContent(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final service = Provider.of<AdaptiveLearningService>(context);
-    final progress = service.userProgress;
-    final padding = Responsive.horizontalPadding(context);
-    final isSmall = Responsive.isSmallPhone(context);
-    final spacing = isSmall ? 20.0 : 24.0;
-    
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(padding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(isDark, progress),
-            SizedBox(height: spacing),
-            _buildDailyChallenge(isDark),
-            SizedBox(height: spacing),
-            _buildQuickStats(isDark, progress),
-            SizedBox(height: spacing),
-            _buildStartQuizCard(isDark),
-            SizedBox(height: spacing),
-            _buildStudySubjects(isDark),
-            SizedBox(height: spacing),
-            _buildMLInsights(isDark, service),
-            SizedBox(height: spacing),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(bool isDark, dynamic progress) {
+  Widget _buildHeader(dynamic progress) {
+    final p = context.palette;
+    final text = context.textStyles;
+    final firstName = _userName.trim().split(RegExp(r'\s+')).first;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-
         GestureDetector(
           onTap: () async {
             await Navigator.push(context, SlidePageRoute(page: const ProfileScreen()));
             _loadUserData();
           },
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: _buildAvatarContent(),
+          child: UserAvatar(
+            name: _userName,
+            imagePath: _profileImagePath,
+            imageUrl: _avatarUrl,
+            size: 48,
+            ring: true,
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(_getGreeting(), style: text.bodySmall),
+              const SizedBox(height: 1),
               Text(
-                _getGreeting(),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _userName,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                ),
+                firstName.isEmpty ? 'Student' : firstName,
+                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
-        Row(
-          children: [
-
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  SlidePageRoute(page: const LeaderboardScreen()),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.leaderboard_rounded,
-                  color: CrimiColors.gold,
-                  size: 22,
-                ),
-              ),
+        ToolbarIconButton(
+          icon: Icons.emoji_events_rounded,
+          color: p.gold,
+          tooltip: 'Leaderboard',
+          onPressed: () => Navigator.push(
+            context,
+            SlidePageRoute(page: const LeaderboardScreen()),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: 'Day streak',
+          child: Container(
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: p.streakSoft,
+              borderRadius: BorderRadius.circular(AppSpace.radiusMd),
             ),
-            const SizedBox(width: 10),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.orange.shade600,
-                    Colors.deepOrange.shade500,
-                  ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.local_fire_department_rounded, color: p.streak, size: 20),
+                const SizedBox(width: 4),
+                Text(
+                  '${progress.currentStreak}',
+                  style: text.titleMedium?.copyWith(color: p.streak, fontWeight: FontWeight.w800),
                 ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.orange.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${progress.currentStreak}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ],
     );
@@ -430,12 +253,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
-  Widget _buildQuickStats(bool isDark, dynamic progress) {
+  Widget _buildQuickStats(dynamic progress) {
+    final p = context.palette;
     final totalQuestions = CriminologySubjects.all.fold<int>(
       0, (sum, s) => sum + ((progress.subjectProgress[s.id]?.totalQuestionsAnswered ?? 0) as int),
     );
@@ -443,14 +267,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       0, (sum, s) => sum + ((progress.subjectProgress[s.id]?.totalCorrectAnswers ?? 0) as int),
     );
     final accuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0;
-    
+
     return Row(
       children: [
-        Expanded(child: _buildStatCard('Answered', '$totalQuestions', Icons.quiz_rounded, isDark)),
-        const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Accuracy', '${accuracy.toStringAsFixed(0)}%', Icons.check_circle_rounded, isDark)),
-        const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Quizzes', '${_getTotalQuizzes(progress)}', Icons.assignment_rounded, isDark)),
+        Expanded(
+          child: StatTile(
+            icon: Icons.task_alt_rounded,
+            value: '$totalQuestions',
+            label: 'Answered',
+            color: p.primary,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: StatTile(
+            icon: Icons.track_changes_rounded,
+            value: '${accuracy.toStringAsFixed(0)}%',
+            label: 'Accuracy',
+            color: totalQuestions == 0 ? p.textTertiary : p.forScore(accuracy),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: StatTile(
+            icon: Icons.assignment_turned_in_rounded,
+            value: '${_getTotalQuizzes(progress)}',
+            label: 'Quizzes',
+            color: p.info,
+          ),
+        ),
       ],
     );
   }
@@ -463,10 +308,116 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return total;
   }
 
-  Widget _buildMLInsights(bool isDark, AdaptiveLearningService service) {
+  Widget _buildDailyChallenge() {
+    final text = context.textStyles;
+    return GradientCard(
+      onTap: () {
+        Navigator.push(context, SlidePageRoute(page: const DailyChallengeScreen()));
+      },
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Pill(
+                  label: '1.5x bonus points',
+                  icon: Icons.bolt_rounded,
+                  color: Colors.white,
+                  background: Colors.white.withValues(alpha: 0.18),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Daily Challenge',
+                  style: text.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'A fresh mixed set every day. Keep your streak going.',
+                  style: text.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.78)),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppSpace.radiusSm + 2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Play now',
+                        style: text.labelLarge?.copyWith(color: const Color(0xFF13286E)),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward_rounded, size: 18, color: Color(0xFF13286E)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+            ),
+            child: const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFFC266), size: 40),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPracticeShortcuts() {
+    final p = context.palette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'Keep practicing'),
+        const SizedBox(height: 12),
+        LayoutBuilder(builder: (context, c) {
+          final quiz = _ShortcutCard(
+            icon: Icons.quiz_rounded,
+            color: p.primary,
+            title: 'Take a quiz',
+            subtitle: 'Pick a subject',
+            onTap: () => _selectTab(1),
+          );
+          final cards = _ShortcutCard(
+            icon: Icons.style_rounded,
+            color: const Color(0xFF7C4DDB),
+            title: 'Flashcards',
+            subtitle: 'Quick recall',
+            onTap: () => _selectTab(2),
+          );
+          // Side by side when there's room; stacked on the smallest phones
+          // so the labels never get cut off.
+          if (c.maxWidth < 340) {
+            return Column(children: [quiz, const SizedBox(height: 10), cards]);
+          }
+          return Row(
+            children: [
+              Expanded(child: quiz),
+              const SizedBox(width: 10),
+              Expanded(child: cards),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildMLInsights(AdaptiveLearningService service) {
+    final p = context.palette;
+    final text = context.textStyles;
     final mlService = AdaptiveMLService.instance;
     if (!mlService.isLoaded) return const SizedBox.shrink();
-
 
     final subjectPerformance = <String, SubjectPerformance>{};
     for (final subject in CriminologySubjects.all) {
@@ -490,663 +441,470 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       return const SizedBox.shrink();
     }
 
-
     final boardExamReadiness = service.getOverallBoardExamReadiness();
     final diffCompletion = service.getDifficultyCompletionCounts();
     final totalSubjects = diffCompletion['totalSubjects'] ?? 6;
-    
+
     final recommendedDiff = mlService.recommendDifficulty(
       subjectPerformance: subjectPerformance,
     );
-    
+
     final weakAreas = mlService.detectWeakAreas(
       subjectPerformance: subjectPerformance,
     );
-    
 
     final weakSubjects = weakAreas.where((w) => w.isWeak).take(2).toList();
     final strongSubjects = weakAreas.where((w) => !w.isWeak && w.accuracy > 0.7).take(2).toList();
-    
 
     final isReady = boardExamReadiness >= 75;
     final needsWork = boardExamReadiness < 60;
+    final tone = isReady ? p.success : (needsWork ? p.danger : p.warning);
+    final status = isReady
+        ? "You're ready to pass!"
+        : needsWork
+            ? 'Needs more practice'
+            : 'Almost there!';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-
-        Row(
-          children: [
-            Icon(Icons.school_rounded, color: AppColors.accent, size: 22),
-            const SizedBox(width: 8),
-            Text(
-              'Board Exam Readiness',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        
-
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : AppColors.lightCard,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isReady 
-                  ? AppColors.success.withOpacity(0.3)
-                  : needsWork 
-                      ? AppColors.error.withOpacity(0.3)
-                      : AppColors.warning.withOpacity(0.3),
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpace.section),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(
+            title: 'Board exam readiness',
+            subtitle: 'Based on your accuracy across all difficulties',
           ),
-          child: Column(
-            children: [
-              Text(
-                'Board Exam Readiness',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${boardExamReadiness.toStringAsFixed(0)}%',
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w800,
-                  color: isReady 
-                      ? AppColors.success 
-                      : needsWork 
-                          ? AppColors.error 
-                          : AppColors.warning,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: (isReady 
-                      ? AppColors.success 
-                      : needsWork 
-                          ? AppColors.error 
-                          : AppColors.warning).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  isReady 
-                      ? 'You\'re ready to pass!' 
-                      : needsWork 
-                          ? 'Needs more practice' 
-                          : 'Almost there!',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isReady 
-                        ? AppColors.success 
-                        : needsWork 
-                            ? AppColors.error 
-                            : AppColors.warning,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-
-              // Difficulty completion progress
-              _buildDifficultyProgressBar(
-                'Easy', 
-                diffCompletion['easy'] ?? 0, 
-                totalSubjects, 
-                AppColors.success, 
-                isDark,
-              ),
-              const SizedBox(height: 8),
-              _buildDifficultyProgressBar(
-                'Medium', 
-                diffCompletion['medium'] ?? 0, 
-                totalSubjects, 
-                AppColors.warning, 
-                isDark,
-              ),
-              const SizedBox(height: 8),
-              _buildDifficultyProgressBar(
-                'Hard', 
-                diffCompletion['hard'] ?? 0, 
-                totalSubjects, 
-                AppColors.error, 
-                isDark,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Complete all difficulties for best prediction',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : AppColors.lightCard,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _getDifficultyColor(recommendedDiff).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.speed_rounded, 
-                  color: _getDifficultyColor(recommendedDiff), 
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Recommended Difficulty',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                      ),
-                    ),
-                    Text(
-                      'Practice ${mlService.getDifficultyName(recommendedDiff)} questions',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-
-        if (weakSubjects.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.error.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.error.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Focus on These Subjects',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ...weakSubjects.map((weak) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Icon(Icons.circle, size: 6, color: AppColors.error),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${weak.subjectName} (${(weak.accuracy * 100).toStringAsFixed(0)}%)',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark ? Colors.white70 : Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
-                const SizedBox(height: 4),
-                Text(
-                  weakSubjects.first.recommendation,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        
-
-        if (strongSubjects.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.success.withValues(alpha: 0.2),
-              ),
-            ),
+          AppCard(
+            padding: const EdgeInsets.all(18),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.check_circle_rounded, color: AppColors.success, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Your Strong Subjects',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.success,
+                    RingProgress(
+                      value: boardExamReadiness / 100,
+                      size: 96,
+                      stroke: 10,
+                      color: tone,
+                      center: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${boardExamReadiness.toStringAsFixed(0)}%',
+                            style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          Text('ready', style: text.labelSmall),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Pill(label: status, color: tone),
+                          const SizedBox(height: 12),
+                          _buildDifficultyProgressBar('Easy', diffCompletion['easy'] ?? 0, totalSubjects, p.success),
+                          const SizedBox(height: 8),
+                          _buildDifficultyProgressBar('Medium', diffCompletion['medium'] ?? 0, totalSubjects, p.warning),
+                          const SizedBox(height: 8),
+                          _buildDifficultyProgressBar('Hard', diffCompletion['hard'] ?? 0, totalSubjects, p.danger),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                ...strongSubjects.map((strong) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Icon(Icons.circle, size: 6, color: AppColors.success),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${strong.subjectName} (${(strong.accuracy * 100).toStringAsFixed(0)}%)',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark ? Colors.white70 : Colors.grey.shade700,
+                const SizedBox(height: 16),
+                Divider(color: p.border, height: 1),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    IconBadge(
+                      icon: Icons.speed_rounded,
+                      color: p.forDifficulty(recommendedDiff),
+                      size: 36,
+                      iconSize: 19,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Recommended next', style: text.bodySmall),
+                          Text(
+                            'Practice ${mlService.getDifficultyName(recommendedDiff)} questions',
+                            style: text.titleSmall,
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                if (weakSubjects.isNotEmpty || strongSubjects.isNotEmpty) const SizedBox(height: 14),
+                if (weakSubjects.isNotEmpty)
+                  _insightList(
+                    title: 'Focus on these',
+                    icon: Icons.flag_rounded,
+                    color: p.danger,
+                    soft: p.dangerSoft,
+                    items: weakSubjects
+                        .map((w) => '${w.subjectName} · ${(w.accuracy * 100).toStringAsFixed(0)}%')
+                        .toList(),
+                    note: weakSubjects.first.recommendation,
                   ),
-                )),
+                if (weakSubjects.isNotEmpty && strongSubjects.isNotEmpty) const SizedBox(height: 10),
+                if (strongSubjects.isNotEmpty)
+                  _insightList(
+                    title: 'Your strong subjects',
+                    icon: Icons.verified_rounded,
+                    color: p.success,
+                    soft: p.successSoft,
+                    items: strongSubjects
+                        .map((s) => '${s.subjectName} · ${(s.accuracy * 100).toStringAsFixed(0)}%')
+                        .toList(),
+                  ),
               ],
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 
-  Widget _buildDifficultyProgressBar(
-    String label,
-    int completed,
-    int total,
-    Color color,
-    bool isDark,
-  ) {
+  Widget _insightList({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Color soft,
+    required List<String> items,
+    String? note,
+  }) {
+    final text = context.textStyles;
+    final p = context.palette;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: soft,
+        borderRadius: BorderRadius.circular(AppSpace.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 17),
+              const SizedBox(width: 6),
+              Text(title, style: text.titleSmall?.copyWith(color: color)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(item, style: text.bodySmall?.copyWith(color: p.textPrimary)),
+                  ),
+                ],
+              ),
+            ),
+          if (note != null) ...[
+            const SizedBox(height: 4),
+            Text(note, style: text.bodySmall),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDifficultyProgressBar(String label, int completed, int total, Color color) {
+    final text = context.textStyles;
     final progress = total > 0 ? completed / total : 0.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Expanded(child: Text(label, style: text.labelMedium)),
             Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-              ),
-            ),
-            Text(
-              '$completed/$total subjects',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
+              '$completed/$total',
+              style: text.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w700),
             ),
           ],
         ),
         const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: progress,
-            backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
-          ),
-        ),
+        AppProgressBar(value: progress, color: color, height: 6),
       ],
     );
   }
 
-  Color _getDifficultyColor(int level) {
-    switch (level) {
-      case 0:
-        return AppColors.success;
-      case 1:
-        return AppColors.warning;
-      case 2:
-        return AppColors.error;
-      default:
-        return AppColors.accent;
-    }
-  }
-
-  Widget _buildDailyChallenge(bool isDark) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(context, SlidePageRoute(page: const DailyChallengeScreen()));
-      },
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF764ba2).withValues(alpha: 0.4),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.local_fire_department_rounded,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Daily Challenge',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      '🔥 1.5x BONUS POINTS',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: const Text(
-                'PLAY',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF764ba2),
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.accent, size: 24),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStartQuizCard(bool isDark) {
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = 1),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Ready to Study?',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Start a quiz and prepare for your board exam',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Start Now',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.menu_book_rounded, size: 40, color: Colors.white),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStudySubjects(bool isDark) {
+  Widget _buildStudySubjects(dynamic progress) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.menu_book_rounded, color: AppColors.accent, size: 22),
-            const SizedBox(width: 8),
-            Text(
-              'Study Modules',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              ),
+        const SectionHeader(
+          title: 'Study modules',
+          subtitle: 'Notes and topics for each board subject',
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(builder: (context, c) {
+          final columns = c.maxWidth >= 560 ? 3 : 2;
+          return GridView.builder(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              mainAxisExtent: 150,
             ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.6,
-          ),
-          itemCount: CriminologySubjects.all.length,
-          itemBuilder: (context, index) {
-            final subject = CriminologySubjects.all[index];
-            return _buildStudySubjectCard(subject, isDark);
-          },
-        ),
+            itemCount: CriminologySubjects.all.length,
+            itemBuilder: (context, index) {
+              final subject = CriminologySubjects.all[index];
+              final sp = progress.subjectProgress[subject.id];
+              final answered = (sp?.totalQuestionsAnswered ?? 0) as int;
+              final correct = (sp?.totalCorrectAnswers ?? 0) as int;
+              return _buildStudySubjectCard(subject, answered, correct);
+            },
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildStudySubjectCard(Subject subject, bool isDark) {
+  Widget _buildStudySubjectCard(Subject subject, int answered, int correct) {
+    final p = context.palette;
+    final text = context.textStyles;
     final icon = AppTheme.subjectIcons[subject.id] ?? Icons.book_rounded;
-    final colors = [
-      const Color(0xFF6C5CE7),
-      const Color(0xFF00B894),
-      const Color(0xFFE17055),
-      const Color(0xFF0984E3),
-      const Color(0xFFFDAA4B),
-      const Color(0xFFE84393),
-    ];
-    final color = colors[CriminologySubjects.all.indexOf(subject) % colors.length];
-    
-    return GestureDetector(
+    final color = AppColors.subjectColor(subject.id);
+    final accuracy = answered > 0 ? correct / answered : 0.0;
+
+    return AppCard(
+      padding: const EdgeInsets.all(14),
       onTap: () {
         Navigator.push(
           context,
           SlidePageRoute(page: ModulesScreen(subject: subject)),
         );
       },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: color.withValues(alpha: 0.2),
-            width: 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconBadge(icon: icon, color: color, size: 38, iconSize: 20),
+              const Spacer(),
+              Text('${subject.weight}%', style: text.labelSmall?.copyWith(color: p.textSecondary)),
+            ],
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              subject.shortName,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+          const Spacer(),
+          Text(
+            subject.shortName,
+            style: text.titleSmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            answered > 0 ? '${(accuracy * 100).round()}% accuracy' : '${subject.topics.length} topics',
+            style: text.bodySmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 10),
+          AppProgressBar(
+            value: accuracy,
+            color: color,
+            height: 5,
+          ),
+        ],
       ),
     );
+  }
+}
+
+class _ShortcutCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _ShortcutCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.textStyles;
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          IconBadge(icon: icon, color: color, size: 40, iconSize: 21),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(subtitle, style: text.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Slim status strip shown above every tab while offline or syncing.
+class _ConnectionBanner extends StatelessWidget {
+  final double topInset;
+
+  const _ConnectionBanner({required this.topInset});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([ConnectivityService.instance, OfflineSyncService.instance]),
+      builder: (context, _) {
+        final p = context.palette;
+        final text = context.textStyles;
+        final isOnline = ConnectivityService.instance.isOnline;
+        final syncService = OfflineSyncService.instance;
+        final hasPending = syncService.hasPendingSync;
+        final isSyncing = syncService.isSyncing;
+        final pendingCount = syncService.pendingCount;
+
+        final droppedCount = syncService.droppedCount;
+
+        Widget? content;
+        Color? bg;
+        if (droppedCount > 0) {
+          // Items the server rejected for good. Shown until acknowledged, so
+          // a lost result is never silent.
+          bg = p.dangerSoft;
+          content = InkWell(
+            onTap: () => _explainDropped(context, syncService, droppedCount),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline_rounded, color: p.danger, size: 16),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '$droppedCount result${droppedCount == 1 ? '' : 's'} couldn\'t be saved online · Tap for details',
+                    style: text.labelMedium?.copyWith(color: p.danger),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else if (isOnline && isSyncing) {
+          bg = p.infoSoft;
+          content = Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2, color: p.info),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Syncing $pendingCount items...',
+                style: text.labelMedium?.copyWith(color: p.info),
+              ),
+            ],
+          );
+        } else if (!isOnline) {
+          bg = p.warningSoft;
+          content = Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.cloud_off_rounded, color: p.warning, size: 16),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  hasPending
+                      ? 'Offline · $pendingCount items will sync when online'
+                      : "You're offline. Progress is saved on this phone.",
+                  style: text.labelMedium?.copyWith(color: p.warning),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          );
+        }
+
+        return AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          child: content == null
+              ? const SizedBox(width: double.infinity)
+              : Container(
+                  width: double.infinity,
+                  color: bg,
+                  padding: EdgeInsets.fromLTRB(16, topInset + 6, 16, 8),
+                  child: content,
+                ),
+        );
+      },
+    );
+  }
+
+  static Future<void> _explainDropped(
+    BuildContext context,
+    OfflineSyncService syncService,
+    int droppedCount,
+  ) async {
+    final one = droppedCount == 1;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        final text = ctx.textStyles;
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconBadge(icon: Icons.cloud_off_rounded, color: ctx.palette.danger, size: 46),
+                const SizedBox(height: 16),
+                Text('Some progress was not saved online', style: text.titleLarge),
+                const SizedBox(height: 6),
+                Text(
+                  '$droppedCount item${one ? '' : 's'} saved while offline could not be uploaded because '
+                  'the server rejected ${one ? 'it' : 'them'}. Your progress on this phone is unchanged; '
+                  'only the online copy is missing ${one ? 'this item' : 'these items'}.',
+                  style: text.bodyMedium,
+                ),
+                const SizedBox(height: 22),
+                PrimaryButton(label: 'Got it', height: 48, onPressed: () => Navigator.pop(ctx)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    await syncService.acknowledgeDropped();
   }
 }

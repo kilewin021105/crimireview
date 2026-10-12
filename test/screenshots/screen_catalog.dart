@@ -1,0 +1,227 @@
+// The screens captured by screens_screenshot_test.dart.
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:crimireview/models/question.dart';
+import 'package:crimireview/models/subject.dart';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:crimireview/screens/achievements_screen.dart';
+import 'package:crimireview/screens/admin/admin_question_editor_screen.dart';
+import 'package:crimireview/screens/admin/admin_questions_screen.dart';
+import 'package:crimireview/screens/admin/admin_shell_screen.dart';
+import 'package:crimireview/screens/admin/admin_students_screen.dart';
+import 'package:crimireview/screens/admin/admin_template_generation_screen.dart';
+import 'package:crimireview/screens/auth_screen.dart';
+import 'package:crimireview/screens/change_password_screen.dart';
+import 'package:crimireview/screens/daily_challenge_screen.dart';
+import 'package:crimireview/screens/flashcard_screen.dart';
+import 'package:crimireview/screens/leaderboard_screen.dart';
+import 'package:crimireview/screens/modules_screen.dart';
+import 'package:crimireview/screens/profile_screen.dart';
+import 'package:crimireview/services/question_repository.dart';
+import 'package:crimireview/widgets/ui/ui.dart';
+
+import 'admin_fakes.dart';
+import 'package:crimireview/screens/quiz_screen.dart';
+import 'package:crimireview/screens/results_screen.dart';
+import 'package:crimireview/screens/study_notes_screen.dart';
+import 'package:crimireview/screens/email_verification_screen.dart';
+import 'package:crimireview/screens/forgot_password_screen.dart';
+import 'package:crimireview/screens/home_screen.dart';
+import 'package:crimireview/screens/onboarding_screen.dart';
+import 'package:crimireview/screens/splash_screen.dart';
+
+class Shot {
+  final String name;
+  final WidgetBuilder builder;
+  final Size size;
+  final bool dark;
+  final bool seeded;
+  final Map<String, Object> prefs;
+  final Future<void> Function(WidgetTester tester)? act;
+
+  /// How many 250 ms frames to let pass before capturing.
+  final int pumps;
+
+  const Shot(
+    this.name,
+    this.builder, {
+    this.size = const Size(390, 844),
+    this.dark = true,
+    this.seeded = true,
+    this.prefs = const {},
+    this.act,
+    this.pumps = 12,
+  });
+}
+
+Future<void> tapText(WidgetTester tester, String text) async {
+  final finder = find.text(text);
+  if (finder.evaluate().isNotEmpty) {
+    await tester.tap(finder.first, warnIfMissed: false);
+  }
+}
+
+final _subject = CriminologySubjects.all.first;
+
+List<Question> sampleQuestions() => [
+      Question(
+        id: 'sample-1',
+        subject: _subject.id,
+        topic: 'Justifying Circumstances',
+        questionText:
+            'Which of the following is a justifying circumstance under Article 11 of the Revised Penal Code?',
+        options: const [
+          'Insanity',
+          'Self-defense',
+          'Minority',
+          'Uncontrollable fear',
+        ],
+        correctAnswerIndex: 1,
+        difficulty: Difficulty.easy,
+        explanation: 'Self-defense is listed in Article 11; the others are exempting circumstances.',
+        legalBasis: 'RPC Art. 11',
+      ),
+      for (var i = 2; i <= 10; i++)
+        Question(
+          id: 'sample-$i',
+          subject: _subject.id,
+          topic: 'Criminal Law Book I',
+          questionText: 'Sample question $i about the general provisions of the Revised Penal Code?',
+          options: const ['Option one', 'Option two', 'Option three', 'Option four'],
+          correctAnswerIndex: 0,
+          difficulty: Difficulty.easy,
+        ),
+    ];
+
+/// Seeds QuestionRepository's offline snapshot so screens that read the
+/// question bank (flashcards, Daily Challenge) have something to show.
+Map<String, Object> questionBankPrefs() => {
+      QuestionRepository.cacheKey: jsonEncode([
+        for (var i = 0; i < 12; i++)
+          sampleAdminQuestion(i, CriminologySubjects.all[i % 2 == 0 ? 0 : 1].id).toJson(),
+      ]),
+      QuestionRepository.cacheTimestampKey: DateTime.now().toIso8601String(),
+    };
+
+List<Shot> screenCatalog() => [
+      Shot('splash', (_) => const SplashScreen(), seeded: false, pumps: 6),
+      Shot('onboarding', (_) => const OnboardingScreen(), seeded: false),
+      Shot('auth_login', (_) => const AuthScreen(), seeded: false),
+      Shot('auth_login_small', (_) => const AuthScreen(),
+          seeded: false, dark: false, size: const Size(320, 568)),
+      Shot('auth_signup', (_) => const AuthScreen(),
+          seeded: false, act: (t) => tapText(t, 'Create account')),
+      Shot('forgot_password', (_) => const ForgotPasswordScreen(), seeded: false),
+      Shot(
+        'email_verification',
+        (_) => const EmailVerificationScreen(
+          email: 'juan.delacruz@example.com',
+          password: 'Password1',
+          displayName: 'Juan Dela Cruz',
+        ),
+        seeded: false,
+      ),
+      Shot('home', (_) => const HomeScreen()),
+      Shot('home_small', (_) => const HomeScreen(), dark: false, size: const Size(320, 640)),
+      Shot('tab_quiz', (_) => const HomeScreen(), act: (t) => tapText(t, 'Quiz')),
+      Shot('tab_cards', (_) => const HomeScreen(), act: (t) => tapText(t, 'Cards')),
+      Shot('tab_progress', (_) => const HomeScreen(), act: (t) => tapText(t, 'Progress')),
+      Shot('tab_settings', (_) => const HomeScreen(), act: (t) => tapText(t, 'Settings')),
+      Shot(
+        'study_notes',
+        (_) => StudyNotesScreen(
+          subject: _subject,
+          difficulty: Difficulty.easy,
+          questions: sampleQuestions(),
+          segmentIndex: 0,
+        ),
+      ),
+      Shot(
+        'quiz',
+        (_) => QuizScreen(
+          subject: _subject,
+          questions: sampleQuestions(),
+          difficulty: Difficulty.easy,
+          segmentIndex: 0,
+        ),
+      ),
+      Shot(
+        'quiz_answered',
+        (_) => QuizScreen(
+          subject: _subject,
+          questions: sampleQuestions(),
+          difficulty: Difficulty.easy,
+          segmentIndex: 0,
+        ),
+        dark: false,
+        act: (t) async {
+          // The options are shuffled; pick whichever shows the right answer.
+          await tapText(t, 'Self-defense');
+          await t.pump(const Duration(milliseconds: 300));
+          await tapText(t, 'Check answer');
+        },
+      ),
+      Shot(
+        'results',
+        (_) => ResultsScreen(
+          subject: _subject,
+          questions: sampleQuestions(),
+          results: const [true, true, true, false, true, true, true, true, false, true],
+          responseTimes: const [8000, 6500, 12000, 9000, 7000, 5000, 11000, 6000, 15000, 7000],
+          difficulty: Difficulty.easy,
+          segmentIndex: 0,
+        ),
+      ),
+      Shot('flashcards', (_) => FlashcardScreen(subject: _subject), dark: false, prefs: questionBankPrefs()),
+      Shot('modules', (_) => ModulesScreen(subject: _subject)),
+      Shot(
+        'module_reader',
+        (_) => ModuleReaderScreen(
+          moduleData: jsonDecode(File('assets/modules/criminal_jurisprudence_module.json').readAsStringSync())
+              as Map<String, dynamic>,
+          accent: AppColors.subjectColor(_subject.id),
+        ),
+      ),
+      Shot('achievements', (_) => const AchievementsScreen()),
+      Shot(
+        'leaderboard',
+        (_) => Scaffold(
+          appBar: const AppTopBar(title: 'Leaderboard', subtitle: 'Compete with fellow reviewers'),
+          body: LeaderboardView(
+            entries: [
+              for (final (i, n, s, r) in [
+                (1, 'Maria Santos', 2480, 'Master'),
+                (2, 'Paolo Reyes', 2210, 'Expert'),
+                (3, 'Ana Villanueva', 1985, 'Expert'),
+                (4, 'Juan Dela Cruz', 1240, 'Advanced'),
+                (5, 'Carlo Mendoza', 990, 'Intermediate'),
+                (6, 'Bea Ramos', 640, 'Rookie'),
+              ])
+                LeaderboardEntry(
+                  id: 'u$i',
+                  name: n,
+                  score: s,
+                  rank: r,
+                  position: i,
+                  isCurrentUser: i == 4,
+                ),
+            ],
+            userRank: 4,
+            onRefresh: () async {},
+          ),
+        ),
+      ),
+      Shot('profile', (_) => const ProfileScreen()),
+      Shot('change_password', (_) => const ChangePasswordScreen(), dark: false),
+      Shot('daily_challenge', (_) => const DailyChallengeScreen(), prefs: questionBankPrefs()),
+      Shot('admin_shell', (_) => const AdminShellScreen()),
+      Shot('admin_shell_wide', (_) => const AdminShellScreen(), size: const Size(1280, 800)),
+      Shot('admin_questions', (_) => const AdminQuestionsScreen(showBackButton: false)),
+      Shot('admin_editor', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(0, _subject.id))),
+      Shot('admin_students', (_) => const AdminStudentsScreen(showBackButton: false)),
+      Shot('admin_templates', (_) => const AdminTemplateGenerationScreen(), dark: false),
+    ];

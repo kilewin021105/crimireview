@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/question.dart';
 import '../../models/subject.dart';
 import '../../services/admin_service.dart';
-import '../../services/theme_service.dart';
+import '../../utils/error_messages.dart';
+import '../../widgets/ui/ui.dart';
 import '../../utils/responsive.dart';
 
 /// Create/edit form for one `public.questions` row.
@@ -107,8 +107,14 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
     setState(() {
       _options[index].dispose();
       _options.removeAt(index);
-      if (_correctIndex >= _options.length) _correctIndex = 0;
-      if (_correctIndex == index) _correctIndex = 0;
+      // Keep the SAME option marked correct: removing one above it shifts
+      // it up by one (this used to leave the index where it was, silently
+      // marking a different option as the answer).
+      if (index == _correctIndex) {
+        _correctIndex = 0;
+      } else if (index < _correctIndex) {
+        _correctIndex--;
+      }
     });
   }
 
@@ -167,271 +173,308 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      _showSnack('Save failed: $e', isError: true);
+      _showSnack(friendlyError(e, fallback: 'Could not save the question. Please try again.'), isError: true);
     }
   }
 
   void _showSnack(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? AppColors.error : AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    showAppSnack(context, message, tone: isError ? BannerTone.danger : BannerTone.success);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
     final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: _buildAppBar(isDark),
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(padding, 8, padding, 40),
-          children: [
-            if (_isEditing) _buildReadOnlyId(isDark),
-            _buildSectionLabel('Subject', isDark),
-            _buildSubjectDropdown(isDark),
-            const SizedBox(height: 16),
-            _buildSectionLabel('Topic', isDark),
-            _buildTextField(_topicController, isDark, hint: 'e.g. Justifying Circumstances'),
-            const SizedBox(height: 16),
-            _buildSectionLabel('Difficulty', isDark),
-            _buildDifficultySelector(isDark),
-            const SizedBox(height: 16),
-            _buildSectionLabel('Question', isDark),
-            _buildTextField(_questionController, isDark, maxLines: 4, hint: 'The stem shown to the student'),
-            const SizedBox(height: 20),
-            _buildSectionLabel('Answer Options', isDark),
-            Text(
-              'Pick the correct option, and write a rationale for as many as you can -- that rationale is what the app shows a student who picks that wrong answer.',
-              style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade500 : Colors.grey.shade600),
-            ),
-            const SizedBox(height: 10),
-            for (var i = 0; i < _options.length; i++) _buildOptionCard(i, isDark),
-            if (_options.length < _maxOptions)
-              TextButton.icon(
-                onPressed: _addOption,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add option'),
-                style: TextButton.styleFrom(foregroundColor: AppColors.accent),
-              ),
-            const SizedBox(height: 16),
-            _buildSectionLabel('Overall Explanation', isDark),
-            _buildTextField(_explanationController, isDark, maxLines: 3, hint: 'Shown alongside the rationale, optional'),
-            const SizedBox(height: 16),
-            _buildSectionLabel('Legal Basis (optional)', isDark),
-            _buildTextField(_legalBasisController, isDark, hint: 'e.g. RPC Art. 11(1)'),
-            const SizedBox(height: 16),
-            _buildSectionLabel('Remediation Hint (optional)', isDark),
-            _buildTextField(_remediationController, isDark, maxLines: 2, hint: 'What to re-read before retrying this topic'),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _saving ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text(
-                        _isEditing ? 'Save Changes' : 'Create Question',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
-                      ),
-              ),
-            ),
-          ],
-        ),
+      appBar: AppTopBar(
+        title: _isEditing ? 'Edit question' : 'New question',
+        subtitle: _isEditing ? 'ID ${_idController.text}' : 'Goes live for students when saved',
+        backIcon: Icons.close_rounded,
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(bool isDark) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: IconButton(
-        onPressed: () => Navigator.pop(context),
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
-          ),
-          child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-        ),
-      ),
-      title: Text(
-        _isEditing ? 'Edit Question' : 'New Question',
-        style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-      ),
-      centerTitle: true,
-    );
-  }
-
-  Widget _buildReadOnlyId(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        'ID: ${_idController.text}',
-        style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade600 : Colors.grey.shade500),
-      ),
-    );
-  }
-
-  Widget _buildSectionLabel(String text, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.grey.shade400 : Colors.grey.shade700),
-      ),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, bool isDark, {int maxLines = 1, String? hint}) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      style: TextStyle(fontSize: 14, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400, fontSize: 13),
-        filled: true,
-        fillColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      ),
-    );
-  }
-
-  Widget _buildSubjectDropdown(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(color: isDark ? AppColors.darkCard : AppColors.lightCard, borderRadius: BorderRadius.circular(12)),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _subjectId,
-          isExpanded: true,
-          items: [
-            for (final s in CriminologySubjects.all) DropdownMenuItem(value: s.id, child: Text(s.name)),
-          ],
-          onChanged: (v) => setState(() => _subjectId = v ?? _subjectId),
-          style: TextStyle(fontSize: 14, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-          dropdownColor: isDark ? AppColors.darkCard : Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDifficultySelector(bool isDark) {
-    return Row(
-      children: [
-        for (final d in Difficulty.values) ...[
+      body: Column(
+        children: [
           Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _difficulty = d),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                margin: EdgeInsets.only(right: d != Difficulty.values.last ? 8 : 0),
-                decoration: BoxDecoration(
-                  color: _difficulty == d ? AppColors.accent : (isDark ? AppColors.darkCard : AppColors.lightCard),
-                  borderRadius: BorderRadius.circular(12),
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(padding, 4, padding, 32),
+              children: [
+                ContentWidth(
+                  maxWidth: 760,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _sectionCard(
+                        icon: Icons.tune_rounded,
+                        title: 'Basics',
+                        children: [
+                          _label('Subject'),
+                          DropdownButtonFormField<String>(
+                            initialValue: _subjectId,
+                            isExpanded: true,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                            borderRadius: BorderRadius.circular(AppSpace.radiusMd),
+                            items: [
+                              for (final s in CriminologySubjects.all)
+                                DropdownMenuItem(
+                                  value: s.id,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        AppTheme.subjectIcons[s.id] ?? s.icon,
+                                        size: 18,
+                                        color: AppColors.subjectColor(s.id),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Flexible(child: Text(s.name, overflow: TextOverflow.ellipsis)),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                            onChanged: (v) => setState(() => _subjectId = v ?? _subjectId),
+                          ),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            controller: _topicController,
+                            label: 'Topic',
+                            hint: 'e.g. Justifying Circumstances',
+                          ),
+                          const SizedBox(height: 16),
+                          _label('Difficulty'),
+                          PillTabs(
+                            labels: const ['Easy', 'Medium', 'Hard'],
+                            index: Difficulty.values.indexOf(_difficulty),
+                            activeColors: [p.success, p.warning, p.danger],
+                            onChanged: (i) => setState(() => _difficulty = Difficulty.values[i]),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _sectionCard(
+                        icon: Icons.help_outline_rounded,
+                        title: 'Question',
+                        children: [
+                          AppTextField(
+                            controller: _questionController,
+                            label: 'Question text',
+                            hint: 'The stem shown to the student',
+                            maxLines: 4,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _sectionCard(
+                        icon: Icons.checklist_rounded,
+                        title: 'Answer options',
+                        subtitle:
+                            'Tap a letter to mark the correct option. The rationale is what a student sees when they pick that option.',
+                        children: [
+                          for (var i = 0; i < _options.length; i++) _buildOptionCard(i),
+                          if (_options.length < _maxOptions)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: _addOption,
+                                icon: const Icon(Icons.add_rounded),
+                                label: Text('Add option (${_options.length}/$_maxOptions)'),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _sectionCard(
+                        icon: Icons.menu_book_rounded,
+                        title: 'Explanation & references',
+                        children: [
+                          AppTextField(
+                            controller: _explanationController,
+                            label: 'Overall explanation (optional)',
+                            hint: 'Shown alongside the rationale',
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            controller: _legalBasisController,
+                            label: 'Legal basis (optional)',
+                            hint: 'e.g. RPC Art. 11(1)',
+                            icon: Icons.gavel_rounded,
+                          ),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            controller: _remediationController,
+                            label: 'Remediation hint (optional)',
+                            hint: 'What to re-read before retrying this topic',
+                            maxLines: 2,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                child: Text(
-                  d.name[0].toUpperCase() + d.name.substring(1),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _difficulty == d ? Colors.white : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+              ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: p.surface,
+              border: Border(top: BorderSide(color: p.border)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: ContentWidth(
+                  maxWidth: 760,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Cancel',
+                          onPressed: _saving ? null : () => Navigator.pop(context),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: PrimaryButton(
+                          label: _isEditing ? 'Save changes' : 'Create question',
+                          icon: Icons.check_rounded,
+                          loading: _saving,
+                          onPressed: _save,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 
-  Widget _buildOptionCard(int index, bool isDark) {
+  Widget _label(String label) => Padding(
+        padding: const EdgeInsets.only(left: 2, bottom: 7),
+        child: Text(label, style: context.textStyles.labelMedium?.copyWith(color: context.palette.textPrimary)),
+      );
+
+  Widget _sectionCard({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required List<Widget> children,
+  }) {
+    final text = context.textStyles;
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              IconBadge(icon: icon, size: 32, iconSize: 17),
+              const SizedBox(width: 10),
+              Text(title, style: text.titleMedium),
+            ],
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 8),
+            Text(subtitle, style: text.bodySmall),
+          ],
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionCard(int index) {
+    final p = context.palette;
+    final text = context.textStyles;
     final isCorrect = _correctIndex == index;
     final letter = String.fromCharCode(65 + index); // A, B, C, ...
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isCorrect ? AppColors.success : Colors.transparent, width: 1.5),
+        color: isCorrect ? p.successSoft : p.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppSpace.radiusMd),
+        border: Border.all(color: isCorrect ? p.success : Colors.transparent, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () => setState(() => _correctIndex = index),
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isCorrect ? AppColors.success : Colors.transparent,
-                    border: Border.all(color: isCorrect ? AppColors.success : Colors.grey.shade400, width: 1.5),
+              Tooltip(
+                message: 'Mark as correct',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => setState(() => _correctIndex = index),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: isCorrect ? p.success : p.surface,
+                      border: Border.all(color: isCorrect ? p.success : p.border, width: 1.5),
+                    ),
+                    child: isCorrect
+                        ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
+                        : Text(letter, style: text.labelLarge?.copyWith(color: p.textSecondary)),
                   ),
-                  child: isCorrect
-                      ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
-                      : Text(letter, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600)),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: TextField(
                   controller: _options[index].text,
-                  style: TextStyle(fontSize: 14, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
+                  style: text.titleSmall,
                   decoration: InputDecoration(
-                    hintText: 'Option $letter text',
-                    hintStyle: TextStyle(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400, fontSize: 13),
+                    hintText: 'Option $letter',
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
                     isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),
               ),
+              if (isCorrect)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Pill(label: 'Correct', color: p.success, fontSize: 10.5),
+                ),
               if (_options.length > _minOptions)
                 IconButton(
-                  icon: Icon(Icons.close_rounded, size: 18, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                  tooltip: 'Remove option',
+                  icon: Icon(Icons.close_rounded, size: 18, color: p.textTertiary),
                   onPressed: () => _removeOption(index),
                 ),
             ],
           ),
-          const SizedBox(height: 6),
           Padding(
-            padding: const EdgeInsets.only(left: 38),
+            padding: const EdgeInsets.only(left: 42, right: 10),
             child: TextField(
               controller: _options[index].rationale,
               maxLines: 2,
-              style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade300 : Colors.grey.shade700),
+              minLines: 1,
+              style: text.bodySmall?.copyWith(color: p.textPrimary),
               decoration: InputDecoration(
                 hintText: isCorrect ? 'Why this option is correct (optional)' : 'Why this option is wrong (optional)',
-                hintStyle: TextStyle(color: isDark ? Colors.grey.shade600 : Colors.grey.shade400, fontSize: 12),
+                hintStyle: text.bodySmall?.copyWith(color: p.textTertiary),
+                prefixIcon: Icon(Icons.subdirectory_arrow_right_rounded, size: 16, color: p.textTertiary),
+                prefixIconConstraints: const BoxConstraints(minWidth: 24),
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
                 isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 6),
               ),
             ),
           ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/admin_service.dart';
 import '../../services/supabase_service.dart';
-import '../../services/theme_service.dart';
+import '../../utils/error_messages.dart';
+import '../../widgets/ui/ui.dart';
 import '../../utils/responsive.dart';
 
 enum _SortBy { points, mastery, remediation, recent }
@@ -71,7 +71,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyError(e, fallback: 'Please check your connection and try again.');
         _loading = false;
       });
     }
@@ -83,34 +83,17 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     final targetRole = currentRole == 'admin' ? 'student' : 'admin';
     final name = (row['display_name'] ?? email).toString();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(targetRole == 'admin' ? 'Grant admin access?' : 'Remove admin access?'),
-        content: Text(
-          targetRole == 'admin'
-              ? '$name will be able to manage questions and view every student\'s progress.'
-              : '$name will lose access to the Admin Panel.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: targetRole == 'admin' ? AppColors.accent : AppColors.error,
-            ),
-            child: Text(
-              targetRole == 'admin' ? 'Make Admin' : 'Remove Admin',
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: targetRole == 'admin' ? 'Grant admin access?' : 'Remove admin access?',
+      message: targetRole == 'admin'
+          ? "$name will be able to manage questions and view every student's progress."
+          : '$name will lose access to the Admin Panel.',
+      confirmLabel: targetRole == 'admin' ? 'Make admin' : 'Remove admin',
+      destructive: targetRole != 'admin',
+      icon: targetRole == 'admin' ? Icons.admin_panel_settings_rounded : Icons.remove_moderator_rounded,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     final result = await AdminService.instance.setUserRole(email, targetRole);
     if (!mounted) return;
@@ -123,14 +106,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
   }
 
   void _showSnack(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? AppColors.error : AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    showAppSnack(context, message, tone: isError ? BannerTone.danger : BannerTone.success);
   }
 
   void _applySort() {
@@ -157,86 +133,103 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: _buildAppBar(isDark),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(padding, 8, padding, 0),
-              child: _buildFilters(isDark),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? _buildError(isDark)
-                      : _students.isEmpty
-                          ? _buildEmpty(isDark)
-                          : RefreshIndicator(
-                              onRefresh: _load,
-                              color: AppColors.accent,
-                              child: ListView.builder(
-                                padding: EdgeInsets.fromLTRB(padding, 0, padding, 32),
-                                itemCount: _students.length,
-                                itemBuilder: (context, i) => _buildStudentCard(_students[i], isDark),
-                              ),
+      appBar: AppTopBar(
+        title: 'Students',
+        subtitle: _loading ? 'Loading...' : '${_students.length} student${_students.length == 1 ? '' : 's'}',
+        showBack: widget.showBackButton,
+        actions: [
+          ToolbarIconButton(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Refresh',
+            size: 40,
+            onPressed: _loading ? null : _load,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(padding, 4, padding, 0),
+            child: ContentWidth(maxWidth: 1000, child: _buildFilters()),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: _loading
+                ? const LoadingView(label: 'Loading students...')
+                : _error != null
+                    ? Center(
+                        child: EmptyState(
+                          icon: Icons.error_outline_rounded,
+                          title: "Couldn't load students",
+                          message: _error,
+                          actionLabel: 'Try again',
+                          onAction: _load,
+                          color: context.palette.danger,
+                        ),
+                      )
+                    : _students.isEmpty
+                        ? const Center(
+                            child: EmptyState(
+                              icon: Icons.person_search_rounded,
+                              title: 'No students found',
+                              message: 'Try a different name or email.',
                             ),
-            ),
-          ],
-        ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _load,
+                            child: LayoutBuilder(builder: (context, c) {
+                              final columns = c.maxWidth >= 900 ? 2 : 1;
+                              if (columns == 1) {
+                                return ListView.builder(
+                                  padding: EdgeInsets.fromLTRB(padding, 0, padding, 32),
+                                  itemCount: _students.length,
+                                  itemBuilder: (context, i) => ContentWidth(
+                                    maxWidth: 1000,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(bottom: 10),
+                                      child: _buildStudentCard(_students[i]),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return GridView.builder(
+                                padding: EdgeInsets.fromLTRB(padding, 0, padding, 32),
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                  mainAxisExtent: 196,
+                                ),
+                                itemCount: _students.length,
+                                itemBuilder: (context, i) => _buildStudentCard(_students[i]),
+                              );
+                            }),
+                          ),
+          ),
+        ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(bool isDark) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      leading: widget.showBackButton
-          ? IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
-                ),
-                child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-              ),
-            )
-          : null,
-      title: Text(
-        'Students',
-        style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-      ),
-      centerTitle: true,
-    );
-  }
-
-  Widget _buildFilters(bool isDark) {
+  Widget _buildFilters() {
     return Column(
       children: [
         TextField(
           controller: _searchController,
           onSubmitted: (_) => _load(),
-          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
+          textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             hintText: 'Search name or email',
-            hintStyle: TextStyle(color: isDark ? Colors.grey.shade500 : Colors.grey.shade500),
             prefixIcon: const Icon(Icons.search_rounded),
-            filled: true,
-            fillColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-            contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            suffixIcon: IconButton(
+              tooltip: 'Search',
+              icon: const Icon(Icons.arrow_forward_rounded),
+              onPressed: _load,
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
           ),
         ),
         const SizedBox(height: 10),
@@ -244,28 +237,26 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text('Sort by', style: context.textStyles.labelMedium),
+              ),
               for (final entry in const {
                 _SortBy.points: 'Points',
                 _SortBy.mastery: 'Mastery',
-                _SortBy.remediation: 'Needs Review',
-                _SortBy.recent: 'Recently Active',
+                _SortBy.remediation: 'Needs review',
+                _SortBy.recent: 'Recently active',
               }.entries)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
                     label: Text(entry.value),
                     selected: _sortBy == entry.key,
+                    showCheckmark: false,
                     onSelected: (_) {
                       setState(() => _sortBy = entry.key);
                       _applySort();
                     },
-                    selectedColor: AppColors.accent.withValues(alpha: 0.18),
-                    backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      color: _sortBy == entry.key ? AppColors.accent : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
-                    ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide.none),
                   ),
                 ),
             ],
@@ -275,38 +266,9 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     );
   }
 
-  Widget _buildError(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
-            const SizedBox(height: 12),
-            Text('Could not load students.\n$_error', textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _load,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
-              child: const Text('Retry', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmpty(bool isDark) {
-    return Center(
-      child: Text(
-        'No students found.',
-        style: TextStyle(color: isDark ? Colors.grey.shade500 : Colors.grey.shade600),
-      ),
-    );
-  }
-
-  Widget _buildStudentCard(Map<String, dynamic> row, bool isDark) {
+  Widget _buildStudentCard(Map<String, dynamic> row) {
+    final p = context.palette;
+    final text = context.textStyles;
     final name = (row['display_name'] ?? 'Student').toString();
     final email = (row['email'] ?? '').toString();
     final points = _num(row['total_points']).toInt();
@@ -319,26 +281,14 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     final isSelf = email.isNotEmpty &&
         email.toLowerCase() == (SupabaseService.instance.currentUser?.email ?? '').toLowerCase();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 4, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700),
-                ),
-              ),
+              UserAvatar(name: name, size: 42, color: role == 'admin' ? p.primary : const Color(0xFF0E9F9A)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -347,86 +297,111 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
                     Row(
                       children: [
                         Flexible(
-                          child: Text(
-                            name,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-                          ),
+                          child: Text(name, overflow: TextOverflow.ellipsis, style: text.titleSmall),
                         ),
                         if (role == 'admin') ...[
                           const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                            child: Text('admin', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.accent)),
-                          ),
+                          Pill(label: 'Admin', icon: Icons.shield_rounded, color: p.primary, fontSize: 10),
+                        ],
+                        if (isSelf) ...[
+                          const SizedBox(width: 6),
+                          Pill(label: 'You', color: p.textSecondary, background: p.surfaceAlt, fontSize: 10),
                         ],
                       ],
                     ),
-                    Text(
-                      email,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade500 : Colors.grey.shade600),
-                    ),
+                    Text(email, overflow: TextOverflow.ellipsis, style: text.bodySmall),
                   ],
                 ),
               ),
-              Text(
-                '$points pts',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.accent),
-              ),
+              Pill(label: '$points pts', icon: Icons.stars_rounded, color: p.gold),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded, size: 18, color: isDark ? Colors.grey.shade500 : Colors.grey.shade500),
+                icon: Icon(Icons.more_horiz_rounded, size: 22, color: p.textSecondary),
                 tooltip: 'Manage access',
                 onSelected: (_) => _toggleRole(row),
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     value: 'toggle',
                     enabled: !(isSelf && role == 'admin'),
-                    child: Text(
-                      role == 'admin' ? 'Remove admin access' : 'Make admin',
-                      style: TextStyle(color: role == 'admin' ? AppColors.error : null),
+                    child: ListTile(
+                      dense: true,
+                      leading: Icon(
+                        role == 'admin' ? Icons.remove_moderator_rounded : Icons.admin_panel_settings_rounded,
+                        color: role == 'admin' ? p.danger : null,
+                      ),
+                      title: Text(
+                        role == 'admin' ? 'Remove admin access' : 'Make admin',
+                        style: TextStyle(color: role == 'admin' ? p.danger : null),
+                      ),
                     ),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildMetric('${(avgP * 100).round()}%', 'Avg. Mastery', isDark),
-              _buildMetric('$mastered', 'Mastered', isDark, color: AppColors.success),
-              _buildMetric('$remediation', 'Needs Review', isDark, color: remediation > 0 ? AppColors.error : null),
-              _buildMetric('$tracked', 'Topics Tracked', isDark),
-            ],
-          ),
-          if (lastPracticed != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Last active ${_timeAgo(lastPracticed)}',
-              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade600 : Colors.grey.shade500),
+          Padding(
+            padding: const EdgeInsets.only(right: 10, top: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Avg. mastery', style: text.labelMedium),
+                    const Spacer(),
+                    Text(
+                      '${(avgP * 100).round()}%',
+                      style: text.labelMedium?.copyWith(
+                        color: tracked == 0 ? p.textTertiary : p.forScore(avgP * 100),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                AppProgressBar(
+                  value: avgP,
+                  color: tracked == 0 ? p.textTertiary : p.forScore(avgP * 100),
+                  height: 6,
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: p.surfaceAlt,
+                    borderRadius: BorderRadius.circular(AppSpace.radiusSm),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildMetric('$mastered', 'Mastered', color: mastered > 0 ? p.success : null),
+                      _buildMetric('$remediation', 'Needs review', color: remediation > 0 ? p.danger : null),
+                      _buildMetric('$tracked', 'Tracked'),
+                      _buildMetric(
+                        lastPracticed == null ? '—' : _timeAgo(lastPracticed),
+                        'Last active',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMetric(String value, String label, bool isDark, {Color? color}) {
+  Widget _buildMetric(String value, String label, {Color? color}) {
+    final text = context.textStyles;
     return Expanded(
       child: Column(
         children: [
           Text(
             value,
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color ?? (isDark ? Colors.white : const Color(0xFF1A1A2E))),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.titleSmall?.copyWith(color: color ?? context.palette.textPrimary, fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10, color: isDark ? Colors.grey.shade500 : Colors.grey.shade600),
-          ),
+          const SizedBox(height: 1),
+          Text(label, textAlign: TextAlign.center, style: text.labelSmall?.copyWith(letterSpacing: 0)),
         ],
       ),
     );
@@ -434,7 +409,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
 
   String _timeAgo(DateTime at) {
     final diff = DateTime.now().difference(at);
-    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 1) return 'now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 30) return '${diff.inDays}d ago';

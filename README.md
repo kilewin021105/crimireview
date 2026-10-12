@@ -24,14 +24,15 @@ App start
 
 ### Main Navigation
 
-Five bottom tabs:
+Five bottom tabs (students):
 
-- **Home:** daily challenge card, study modules, profile shortcut, leaderboard shortcut.
+- **Home:** greeting with avatar and streak, Daily Challenge hero card, quick stats, practice shortcuts, board-exam readiness, study modules, leaderboard shortcut.
 - **Quiz:** subjects → difficulty lock/unlock → study notes → quiz → results. Item selection goes through `QuestionSelectionService` (unseen-first, weighted toward weak topics per the BKT model in `MasteryService`) so a retry never repeats the same set.
 - **Cards:** `FlashcardsHomeScreen` (subject picker) → `FlashcardScreen` (swipe-to-review deck for that subject), both reading from `QuestionRepository`.
 - **Progress:** stats, streak, subject breakdown, achievements entry.
-- **Settings:** theme, notifications/sound/haptics, profile, password, sign in/out, and (for admins only) the **Admin Panel**.
-- **Admin Panel** *(visible only when the signed-in account has `role = 'admin'`)*: dashboard of content/student stats, question bank CRUD, and a read-only student mastery monitor. See `supabase_schema_v2.sql` section 13 for how to promote an account.
+- **Settings:** theme, notifications/sound/haptics, profile, password, sign in/out.
+
+**Admin Panel** *(an account with `role = 'admin'` lands here instead of the student tabs)*: its own shell — a bottom bar on phones, a side navigation rail on tablets/desktop/web — with a dashboard of content and student stats, question bank CRUD and template generation, and a read-only student mastery monitor. See `supabase_schema_v2.sql` section 13 for how to promote an account.
 
 ## Architecture Overview
 
@@ -57,6 +58,16 @@ Layer summary:
   - `AdminService` — question CRUD, student mastery overview, audit log; gated by the same `is_admin()` function the database's row-level security uses.
 - **Data:** local persistence in SharedPreferences and cloud persistence in Supabase (Postgres + Auth + Storage + Vault for secrets).
 - **Sync:** offline operations are queued locally and flushed when connectivity is restored.
+
+## Design system
+
+The whole UI (student app and admin panel) is built from one design system, introduced in the 2026-10 redesign:
+
+- **Brand:** the app icon's navy and gold. Royal blue is the interactive colour (buttons, links, selection), deep navy anchors the hero cards, gold marks points, ranks and achievements. Each board subject has its own accent colour (`AppColors.subjectColors`).
+- **Tokens:** `lib/services/theme_service.dart` defines `AppPalette` (light and dark colour sets), spacing/radii (`AppSpace`) and the full Material 3 theme. Screens read colours with `context.palette` instead of hard-coding them, so dark mode comes from one place.
+- **Typeface:** Plus Jakarta Sans, bundled in `assets/fonts/` (SIL Open Font License), so text renders correctly even on a first launch offline.
+- **Components:** `lib/widgets/ui/` — import `widgets/ui/ui.dart` to get `AppCard`, `GradientCard`, `StatTile`, `PageHeader`/`SectionHeader`/`AppTopBar`, `PrimaryButton`/`SecondaryButton`, `AppTextField`, `CodeInput`, `PillTabs`, `Pill`, `IconBadge`, `InlineBanner`, `AppListGroup`, `RingProgress`, `AppProgressBar`, `EmptyState`, `LoadingView`, `UserAvatar`, `showConfirmDialog` and `showAppSnack`.
+- **Logo:** `lib/widgets/app_logo.dart` renders the real logo (`assets/images/logo_mark.png`, cropped from the app icon) and the "CrimiReview" wordmark.
 
 ## Setup on New Laptop (Windows)
 
@@ -118,8 +129,13 @@ flutter run
 Optional:
 
 ```bash
-# Run tests
+# Run tests (includes layout checks of the pre-login screens at 3 phone sizes, light and dark)
 flutter test
+
+# Render every screen to PNG for a design review (no phone needed)
+flutter test test/screenshots --dart-define=SHOTS=build/screenshots
+# ...or only some screens:
+flutter test test/screenshots --dart-define=SHOTS=build/screenshots --dart-define=ONLY=home,quiz
 
 # Run in release mode on connected device
 flutter run --release
@@ -137,6 +153,11 @@ lib/
 │                            # learning (BKT), admin, auth, sync, ML
 ├── utils/                  # Utilities
 └── widgets/                # Reusable widgets
+    └── ui/                 # Design-system components (see "Design system")
+assets/
+├── fonts/                  # Plus Jakarta Sans (bundled typeface)
+├── images/                 # In-app logo
+└── ...                     # icon, ml, modules, sounds
 ```
 
 There is no `lib/data/` anymore — question content used to be compiled into the app there (`questions_database.dart`, 6045 lines; `question_bank.dart`, 968 lines), which is exactly what panel note 7 flagged ("do NOT put your questions in your code"). Both files were deleted once `daily_challenge_screen.dart` and `flashcard_screen.dart` — the last two screens still reading from them — were migrated to `QuestionRepository`. Every question now lives in `public.questions` in Supabase, authored through the Admin Panel, bulk-imported, or auto-generated (see `supabase_schema_v2.sql` sections 5–6 for the generation templates).

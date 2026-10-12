@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'services/storage_service.dart';
 import 'services/adaptive_learning_service.dart';
 import 'services/theme_service.dart';
@@ -133,56 +132,43 @@ class CrimiReviewApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeService>(
       builder: (context, themeService, child) {
-        ThemeData lightTheme;
-        ThemeData darkTheme;
-
-        try {
-          lightTheme = AppTheme.lightTheme.copyWith(
-            textTheme: GoogleFonts.poppinsTextTheme().apply(
-              bodyColor: AppColors.textDark,
-              displayColor: AppColors.textDark,
-            ),
-          );
-          darkTheme = AppTheme.darkTheme.copyWith(
-            textTheme: GoogleFonts.poppinsTextTheme().apply(
-              bodyColor: AppColors.textLight,
-              displayColor: AppColors.textLight,
-            ),
-          );
-        } catch (e) {
-          debugPrint('GoogleFonts failed: $e');
-          lightTheme = AppTheme.lightTheme;
-          darkTheme = AppTheme.darkTheme;
-        }
-
         return MaterialApp(
           title: 'CrimiReview',
           debugShowCheckedModeBanner: false,
-          theme: lightTheme,
-          darkTheme: darkTheme,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
           themeMode: themeService.themeMode,
           home: const SplashScreen(),
           builder: (context, child) {
             ErrorWidget.builder = (FlutterErrorDetails details) {
+              const palette = AppPalette.dark;
               return Material(
-                child: Container(
-                  color: const Color(0xFF0F0F23),
+                color: palette.background,
+                child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline,
-                          color: Colors.red, size: 64),
+                      Icon(Icons.error_outline_rounded,
+                          color: palette.danger, size: 56),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         'Something went wrong',
-                        style: TextStyle(color: Colors.white, fontSize: 20),
+                        style: TextStyle(
+                          fontFamily: kAppFontFamily,
+                          color: palette.textPrimary,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         details.exception.toString(),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
+                        style: TextStyle(
+                          fontFamily: kAppFontFamily,
+                          color: palette.textSecondary,
+                          fontSize: 12,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -190,7 +176,18 @@ class CrimiReviewApp extends StatelessWidget {
                 ),
               );
             };
-            return child ?? const SizedBox.shrink();
+            // Status-bar icons follow the theme: dark icons on the light
+            // background, light icons in dark mode.
+            final dark = Theme.of(context).brightness == Brightness.dark;
+            final overlay = (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+                .copyWith(
+              statusBarColor: Colors.transparent,
+              systemNavigationBarColor: Colors.transparent,
+            );
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: overlay,
+              child: child ?? const SizedBox.shrink(),
+            );
           },
         );
       },

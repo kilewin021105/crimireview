@@ -595,6 +595,67 @@ Phones still on v1.0.0 will fail at the last step of Forgot Password, and their 
 
 ---
 
+## 2026-10-12 — Session 41: full UI redesign (student app and admin panel)
+
+You asked for a modern redesign of the whole app, from login through every student screen and the admin panel. Every screen's look was rebuilt; the logic behind each screen (sign-in, sync, quiz scoring, BKT mastery, admin CRUD) was kept as it was, except for the bugs listed below.
+
+**Design system (new)**
+- **Brand colours now match the app icon.** The icon is navy and gold, but the app's screens were violet, so the two never matched. New palette: royal blue for anything you can tap, deep navy for hero cards, gold for points, ranks and achievements, plus one fixed colour per board subject. Light and dark mode each have a full set (`AppPalette` in `lib/services/theme_service.dart`); screens read colours from it instead of hard-coding ~200 colours across screens.
+- **New typeface, bundled in the app:** Plus Jakarta Sans (`assets/fonts/`, SIL Open Font License, checksums verified against Google Fonts). Poppins used to be *downloaded* by the `google_fonts` package at runtime, so on a first launch without internet text fell back to the system font. The `google_fonts` dependency is removed.
+- **Component kit** in `lib/widgets/ui/`: cards, gradient hero cards, stat tiles, headers/top bar, buttons, labelled text fields, a 6-box code input (supports pasting the whole code), pill tabs, tags, banners, list groups, progress bars and rings, empty/loading states, avatars, confirm dialog, snackbars. Every screen is built from these, so spacing, corners and colours are the same everywhere.
+- **Real logo in the app:** `assets/images/logo_mark.png` (the app icon artwork, cropped) replaces the hand-drawn "CR" and graduation-cap placeholders. The `assets/icon/` folder was never packaged with the app, hence the separate copy.
+- **Native launch screen** (Android) is now brand navy instead of white, and Android 12+ shows the app icon on navy, so starting the app no longer flashes white before the splash. The web manifest's colours (Flutter's default blue) are now the same navy.
+- **Page transitions** (`lib/utils/page_transitions.dart`): a short slide plus fade instead of a full-screen slide, and a gentle scale instead of the old "bounce" (the curve overshot). Tab switches are instant, like other modern apps.
+
+**Screens rebuilt**
+- Before login: splash, onboarding (illustrated pages, Skip, dots + Next), sign-in / create account (navy header, form sheet, Sign in | Create account switch), forgot password (step progress, code boxes), email verification.
+- Student: home (avatar, streak, Daily Challenge hero, stats, shortcuts, readiness ring, subject cards with accuracy), Quiz tab (subject cards with E/M/H level steps and accuracy ring, difficulty sheet), Flashcards tab (deck tiles), Progress (accuracy hero, streak, **new per-subject accuracy bar chart** with the 75% pass line, gold badges), Settings (grouped lists, standard switches), study notes, quiz (per-question progress strip, answer cards, explanation card with mastery bar), results, flashcard deck (subject-coloured cards, swipe labels, **new "Review again" / "I know it" buttons** so students don't have to know about swiping), study modules + chapter reader (reading progress bar, table of contents), achievements, leaderboard (your-rank card, podium, list), profile, change password, Daily Challenge (countdown ring, results with points card and answer review).
+- Admin: **responsive shell** (bottom bar on phones, side navigation rail on tablets/desktop/web), dashboard (question-bank hero, stat grid, content-by-subject bars, activity feed), question bank (search, filter menus, tagged cards), question editor (sectioned form, difficulty switch, clear correct-option marker), students (mastery bars, metric strip, Admin/You tags), template generation.
+
+**Bugs found and fixed while rebuilding**
+1. **Quiz difficulty sheet:** segments a student hadn't tried yet were drawn as *full red bars*, as if failed. They are now empty.
+2. **Daily Challenge confetti could crash or never play:** one confetti controller was shared by the challenge and results screens and disposed by both; the challenge screen is closed while the results screen still needs it. The results screen now owns its own.
+3. **Daily Challenge timer:** every question added another "time's up" listener to the same timer without removing the old ones. Now added once.
+4. **Admin question editor marked the wrong answer:** deleting an option *above* the correct one left the correct-answer index unchanged, so a different option became "correct". Fixed: the marker moves with its option.
+5. **Lost sync results were silent:** the sync service documents that items the server permanently rejects are shown "until acknowledged", but the widget meant to show them was never placed on any screen. The home screen's status strip now shows "N results couldn't be saved online · Tap for details".
+6. **Settings said "Version 1.0.0"**; the app is 1.0.1.
+7. **Settings and Profile ignored the cloud avatar** (only a photo stored on this phone was shown).
+8. **Profile:** saving updated the screen after it could already be closed; a failed photo pick showed raw exception text.
+9. **Study modules:** the loader updated the screen without checking it was still open.
+10. **Email verification:** navigated after several network calls without checking the screen was still open.
+11. **Quiz:** answer letters came from a fixed A–D list, so a question with 5–6 options (the editor allows up to 6) would have crashed.
+12. **Admin activity feed:** an audit entry with an empty action name crashed the dashboard.
+13. **Admin screens showed raw exception text** on errors; they now show plain messages.
+14. `profile_screen.dart` imported `path_provider` without declaring it; now declared in `pubspec.yaml`.
+
+**Removed:** `lib/widgets/animated_widgets.dart`, `streak_widget.dart`, `sync_status_indicator.dart` (no screen used them; the one useful part, the lost-sync notice, now lives in the home screen) and the Poppins test fonts.
+
+**Verification**
+- `flutter analyze`: 0 errors, 0 warnings.
+- `flutter test`: the layout test now uses the bundled font and checks the pre-login screens at 320, 360 and 412 px wide in **both light and dark mode** (33 checks, all pass).
+- **New screenshot harness** (`test/screenshots/`, skipped in normal test runs): renders every screen to PNG with sample data, including the admin panel through a test-only `AdminService.debugInstance` hook. All 60+ screenshots were reviewed in light and dark; no layout overflows.
+- A debug APK build was started but stopped before finishing (the laptop was low on memory); the release build below is what confirms the Android resources compile.
+- Not tested on a physical phone in this session.
+
+## 2026-10-12 — Session 42: redesign kept on its own branch, APK built
+
+**Branches.** You chose to keep the old design on `main` and put the redesign up as a separate pull request:
+- `main` = commit `83e290a`, the old design plus the Session 37–40 security fixes.
+- `redesign` = commit `33ea539` (on top of `main`), only the Session 41 redesign. Pull request: https://github.com/kilewin021105/crimireview/pull/new/redesign
+- The `docs/manuscript_*.md` drafts stay uncommitted on purpose.
+
+**Release APK of the redesign**, built from the `redesign` branch with `flutter build apk --release`:
+- `build/app/outputs/flutter-apk/app-release.apk`, 57.2 MB, `com.crimireview.crimireview` **1.0.1 (versionCode 2)**, min Android 7.0 (SDK 24), target SDK 35.
+- SHA-256 `A197781BF569BC4E4133E996BDD5C362CAE115106AF64E53FC3642317C7BD61B`.
+- Checked inside the APK: the bundled Plus Jakarta Sans fonts and `logo_mark.png` are packaged, so this is the redesign, not the old UI.
+- Still signed with the **debug key** (no `android/key.properties` yet), the same key as the published v1.0.0, so it installs as an update over v1.0.0 on a phone.
+- Leftover Gradle processes from the stalled build were stopped first; the build then took about 6 minutes (Gradle `assembleRelease` 255 s).
+- Not yet installed on a phone (none was connected).
+
+**Housekeeping:** `android/.kotlin/` (the Kotlin compiler's temporary session files) is now git-ignored; one such file had been committed by mistake and is removed from the repo.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
@@ -607,8 +668,12 @@ Phones still on v1.0.0 will fail at the last step of Forgot Password, and their 
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
 
+Session 41 (redesign): `lib/widgets/ui/` (design-system components), `assets/fonts/` (Plus Jakarta Sans + OFL licence), `assets/images/logo_mark.png`, `test/screenshots/` (screenshot harness), `android/app/src/main/res/values-v31/` and `values-night-v31/` (Android 12+ launch screen).
+
 ## Files this project lost
 
 `lib/data/question_bank.dart`, `lib/data/questions_database.dart` — 7,013 lines of hardcoded quiz content, deleted in Session 4 once nothing referenced them anymore.
 
 `lib/screens/admin/admin_document_generation_screen.dart`, `lib/services/document_generation_service.dart`, `supabase/functions/generate-questions-from-document/`, `supabase_document_generation.sql` — the PDF → AI generation path (added Session 12), removed in Session 28.
+
+Session 41: `lib/widgets/animated_widgets.dart`, `lib/widgets/streak_widget.dart`, `lib/widgets/sync_status_indicator.dart` (unused by any screen), `test/fonts/` (Poppins, replaced by the bundled app font).

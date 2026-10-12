@@ -4,8 +4,9 @@ import '../models/question.dart';
 import '../models/subject.dart';
 import '../models/user_progress.dart';
 import '../services/adaptive_learning_service.dart';
-import '../services/theme_service.dart';
 import '../utils/page_transitions.dart';
+import '../utils/responsive.dart';
+import '../widgets/ui/ui.dart';
 import 'study_notes_screen.dart';
 
 class SubjectsScreen extends StatefulWidget {
@@ -23,53 +24,59 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final padding = Responsive.horizontalPadding(context);
+    const subjects = CriminologySubjects.all;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       body: Stack(
         children: [
           SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quiz',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                        ),
+            bottom: false,
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(padding, 16, padding, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: ContentWidth(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const PageHeader(
+                            title: 'Quiz',
+                            subtitle: 'Choose a subject to start practicing',
+                          ),
+                          const SizedBox(height: 16),
+                          const InlineBanner(
+                            tone: BannerTone.info,
+                            icon: Icons.route_rounded,
+                            message:
+                                'Each subject has Easy, Medium and Hard levels. Pass every segment of a level to unlock the next one.',
+                          ),
+                          const SizedBox(height: 20),
+                          Text('${subjects.length} BOARD SUBJECTS', style: context.textStyles.labelSmall),
+                          const SizedBox(height: 10),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Choose a subject to start',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    itemCount: CriminologySubjects.all.length,
-                    itemBuilder: (context, index) {
-                      return _buildSubjectCard(context, CriminologySubjects.all[index], isDark);
-                    },
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(padding, 0, padding, 28),
+                  sliver: SliverList.separated(
+                    itemCount: subjects.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) => ContentWidth(
+                      child: Appear(
+                        index: index,
+                        child: _buildSubjectCard(context, subjects[index]),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          if (_isPreparingQuiz) _buildPreparingOverlay(isDark),
+          if (_isPreparingQuiz) _buildPreparingOverlay(),
         ],
       ),
     );
@@ -77,276 +84,264 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
 
   /// Brief blocking indicator shown while the quiz set is pulled from the
   /// question repository (cache hit is instant; a cold start may need a fetch).
-  Widget _buildPreparingOverlay(bool isDark) {
+  Widget _buildPreparingOverlay() {
+    final p = context.palette;
     return Positioned.fill(
       child: AbsorbPointer(
         child: Container(
-          color: Colors.black.withValues(alpha: isDark ? 0.55 : 0.35),
+          color: Colors.black.withValues(alpha: context.isDarkMode ? 0.55 : 0.32),
           alignment: Alignment.center,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 22),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-              borderRadius: BorderRadius.circular(16),
+              color: p.surface,
+              borderRadius: BorderRadius.circular(AppSpace.radiusLg),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Preparing your questions...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                  ),
-                ),
-              ],
-            ),
+            child: const LoadingView(label: 'Preparing your questions...'),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSubjectCard(BuildContext context, Subject subject, bool isDark) {
+  Widget _buildSubjectCard(BuildContext context, Subject subject) {
+    final p = context.palette;
+    final text = context.textStyles;
     final service = Provider.of<AdaptiveLearningService>(context);
     final progress = service.userProgress.subjectProgress[subject.id];
     final accuracy = progress?.overallAccuracy ?? 0.0;
     final questionsAnswered = progress?.totalQuestionsAnswered ?? 0;
     final icon = AppTheme.subjectIcons[subject.id] ?? Icons.book_rounded;
-    const accentColor = AppColors.accent;
-    
-    return GestureDetector(
-      onTap: () => _showQuizOptions(context, subject, isDark),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: accentColor, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    subject.name,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    questionsAnswered > 0 ? '$questionsAnswered answered' : 'Start learning',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (questionsAnswered > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getAccuracyColor(accuracy).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+    final color = AppColors.subjectColor(subject.id);
+
+    final easyPassed = progress?.isDifficultyPassed(Difficulty.easy) ?? false;
+    final mediumPassed = progress?.isDifficultyPassed(Difficulty.medium) ?? false;
+    final hardPassed = progress?.isDifficultyPassed(Difficulty.hard) ?? false;
+
+    return AppCard(
+      onTap: () => _showQuizOptions(context, subject),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          IconBadge(icon: icon, color: color, size: 48, iconSize: 24),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subject.name, style: text.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 3),
+                Text(
+                  questionsAnswered > 0
+                      ? '${subject.weight}% of exam · $questionsAnswered answered'
+                      : '${subject.weight}% of exam · Not started',
+                  style: text.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Text(
-                  '${(accuracy * 100).toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _getAccuracyColor(accuracy),
-                  ),
+                const SizedBox(height: 9),
+                Row(
+                  children: [
+                    _levelStep(context, 'E', easyPassed, true, p.success),
+                    _levelStep(context, 'M', mediumPassed, easyPassed, p.warning),
+                    _levelStep(context, 'H', hardPassed, mediumPassed, p.danger),
+                  ],
                 ),
-              )
-            else
-              Icon(Icons.chevron_right_rounded, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (questionsAnswered > 0)
+            RingProgress(
+              value: accuracy,
+              size: 46,
+              stroke: 5,
+              color: _getAccuracyColor(accuracy),
+              center: Text(
+                '${(accuracy * 100).toStringAsFixed(0)}%',
+                style: text.labelSmall?.copyWith(color: p.textPrimary, letterSpacing: 0, fontSize: 10.5),
+              ),
+            )
+          else
+            Icon(Icons.chevron_right_rounded, color: p.textTertiary),
+        ],
+      ),
+    );
+  }
+
+  /// One step of the E · M · H level indicator on a subject card.
+  Widget _levelStep(BuildContext context, String label, bool passed, bool unlocked, Color color) {
+    final p = context.palette;
+    final Color bg;
+    final Color fg;
+    if (passed) {
+      bg = color;
+      fg = Colors.white;
+    } else if (unlocked) {
+      bg = color.withValues(alpha: context.isDarkMode ? 0.2 : 0.12);
+      fg = color;
+    } else {
+      bg = p.surfaceAlt;
+      fg = p.textTertiary;
+    }
+    return Container(
+      margin: const EdgeInsets.only(right: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (passed) ...[
+            Icon(Icons.check_rounded, size: 11, color: fg),
+            const SizedBox(width: 2),
+          ] else if (!unlocked) ...[
+            Icon(Icons.lock_rounded, size: 10, color: fg),
+            const SizedBox(width: 2),
           ],
-        ),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: kAppFontFamily,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              color: fg,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Color _getAccuracyColor(double accuracy) {
-    if (accuracy >= SubjectProgress.levelPassThreshold) return AppColors.success;
-    if (accuracy >= 0.5) return AppColors.primary;
-    return AppColors.error;
+    final p = context.palette;
+    if (accuracy >= SubjectProgress.levelPassThreshold) return p.success;
+    if (accuracy >= 0.5) return p.warning;
+    return p.danger;
   }
 
-  void _showQuizOptions(BuildContext screenContext, Subject subject, bool isDark) {
+  void _showQuizOptions(BuildContext screenContext, Subject subject) {
     final icon = AppTheme.subjectIcons[subject.id] ?? Icons.book_rounded;
-    const accentColor = AppColors.accent;
+    final color = AppColors.subjectColor(subject.id);
     final service = Provider.of<AdaptiveLearningService>(screenContext, listen: false);
     final progress = service.userProgress.subjectProgress[subject.id];
-    
+
     // Determine if all segments are passed for each difficulty
     final easyPassed = progress?.isDifficultyPassed(Difficulty.easy) ?? false;
     final mediumPassed = progress?.isDifficultyPassed(Difficulty.medium) ?? false;
     final hardPassed = progress?.isDifficultyPassed(Difficulty.hard) ?? false;
-    
+
     // Medium is locked if Easy not passed
     final mediumUnlocked = easyPassed;
     // Hard is locked if Medium not passed
     final hardUnlocked = mediumPassed;
-    
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
+      builder: (context) {
+        final p = context.palette;
+        final text = context.textStyles;
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: accentColor, size: 24),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    subject.name,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                Row(
+                  children: [
+                    IconBadge(icon: icon, color: color, size: 48, iconSize: 24),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(subject.name, style: text.titleMedium),
+                          const SizedBox(height: 2),
+                          Text('${subject.weight}% of the board exam', style: text.bodySmall),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  subject.description,
+                  style: text.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 20),
+                Text('CHOOSE DIFFICULTY', style: text.labelSmall),
+                const SizedBox(height: 10),
+                _buildLevelTile(
+                  context: context,
+                  title: 'Easy',
+                  subtitle: easyPassed
+                      ? 'All segments passed'
+                      : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.easy)}',
+                  icon: Icons.signal_cellular_alt_1_bar_rounded,
+                  color: p.success,
+                  isLocked: false,
+                  isPassed: easyPassed,
+                  segments: progress?.easySegments ??
+                      List.generate(
+                        SegmentProgress.segmentCount,
+                        (index) => SegmentProgress(segmentIndex: index),
+                      ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _startQuizWithDifficulty(screenContext, subject, Difficulty.easy);
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildLevelTile(
+                  context: context,
+                  title: 'Medium',
+                  subtitle: !mediumUnlocked
+                      ? 'Pass Easy to unlock'
+                      : mediumPassed
+                          ? 'All segments passed'
+                          : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.medium)}',
+                  icon: Icons.signal_cellular_alt_2_bar_rounded,
+                  color: p.warning,
+                  isLocked: !mediumUnlocked,
+                  isPassed: mediumPassed,
+                  segments: mediumUnlocked ? progress?.mediumSegments : null,
+                  onTap: mediumUnlocked ? () {
+                    Navigator.pop(context);
+                    _startQuizWithDifficulty(screenContext, subject, Difficulty.medium);
+                  } : null,
+                ),
+                const SizedBox(height: 10),
+                _buildLevelTile(
+                  context: context,
+                  title: 'Hard',
+                  subtitle: !hardUnlocked
+                      ? 'Pass Medium to unlock'
+                      : hardPassed
+                          ? 'All segments passed'
+                          : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.hard)}',
+                  icon: Icons.signal_cellular_alt_rounded,
+                  color: p.danger,
+                  isLocked: !hardUnlocked,
+                  isPassed: hardPassed,
+                  segments: hardUnlocked ? progress?.hardSegments : null,
+                  onTap: hardUnlocked ? () {
+                    Navigator.pop(context);
+                    _startQuizWithDifficulty(screenContext, subject, Difficulty.hard);
+                  } : null,
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Quiz Difficulty',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-
-            _buildLevelTile(
-              context: context,
-              isDark: isDark,
-              title: 'Easy',
-              subtitle: easyPassed
-                  ? 'All segments passed'
-                  : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.easy)}',
-              icon: Icons.sentiment_satisfied_rounded,
-              color: const Color(0xFF22C55E),
-              isLocked: false,
-              isPassed: easyPassed,
-              segments: progress?.easySegments ??
-                  List.generate(
-                    SegmentProgress.segmentCount,
-                    (index) => SegmentProgress(segmentIndex: index),
-                  ),
-              onTap: () {
-                Navigator.pop(context);
-                _startQuizWithDifficulty(screenContext, subject, Difficulty.easy);
-              },
-            ),
-            const SizedBox(height: 12),
-            
-
-            _buildLevelTile(
-              context: context,
-              isDark: isDark,
-              title: 'Medium',
-              subtitle: !mediumUnlocked
-                  ? 'Pass Easy to unlock'
-                  : mediumPassed
-                      ? 'All segments passed'
-                      : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.medium)}',
-              icon: Icons.sentiment_neutral_rounded,
-              color: const Color(0xFFF59E0B),
-              isLocked: !mediumUnlocked,
-              isPassed: mediumPassed,
-              segments: mediumUnlocked ? progress?.mediumSegments : null,
-              onTap: mediumUnlocked ? () {
-                Navigator.pop(context);
-                _startQuizWithDifficulty(screenContext, subject, Difficulty.medium);
-              } : null,
-            ),
-            const SizedBox(height: 12),
-            
-
-            _buildLevelTile(
-              context: context,
-              isDark: isDark,
-              title: 'Hard',
-              subtitle: !hardUnlocked
-                  ? 'Pass Medium to unlock'
-                  : hardPassed
-                      ? 'All segments passed'
-                      : 'Questions ${service.getCurrentSegmentRangeLabel(subjectId: subject.id, difficulty: Difficulty.hard)}',
-              icon: Icons.sentiment_very_dissatisfied_rounded,
-              color: const Color(0xFFEF4444),
-              isLocked: !hardUnlocked,
-              isPassed: hardPassed,
-              segments: hardUnlocked ? progress?.hardSegments : null,
-              onTap: hardUnlocked ? () {
-                Navigator.pop(context);
-                _startQuizWithDifficulty(screenContext, subject, Difficulty.hard);
-              } : null,
-            ),
-            
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildLevelTile({
     required BuildContext context,
-    required bool isDark,
     required String title,
     required String subtitle,
     required IconData icon,
@@ -356,6 +351,8 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     List<SegmentProgress>? segments,
     VoidCallback? onTap,
   }) {
+    final p = context.palette;
+    final text = context.textStyles;
     final showProgress = !isLocked && segments != null;
     final currentSegmentIndex = showProgress
         ? segments.indexWhere((segment) => !segment.isPassed)
@@ -364,154 +361,87 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
         ? (segments?.length ?? SegmentProgress.segmentCount) - 1
         : currentSegmentIndex;
 
-    return GestureDetector(
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isLocked 
-            ? (isDark ? Colors.grey.shade900 : Colors.grey.shade100)
-            : color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isLocked 
-              ? (isDark ? Colors.grey.shade800 : Colors.grey.shade300)
-              : color.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: isLocked 
-                      ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
-                      : color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    isLocked ? Icons.lock_rounded : icon,
-                    color: isLocked 
-                      ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
-                      : color,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: isLocked 
-                            ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
-                            : (isDark ? Colors.white : const Color(0xFF1A1A2E)),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isLocked 
-                            ? (isDark ? Colors.grey.shade700 : Colors.grey.shade500)
-                            : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isPassed)
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      color: Color(0xFF22C55E),
-                      size: 20,
-                    ),
-                  )
-                else if (!isLocked)
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
-                  ),
-              ],
-            ),
-            if (showProgress) ...[
-              const SizedBox(height: 14),
-              Row(
-                children: List.generate(segments.length, (index) {
-                  final segment = segments[index];
-                  final barColor = segment.isPassed
-                      ? AppColors.success
-                      : AppColors.error;
-                  final barValue = segment.isAttempted
-                      ? segment.accuracy.clamp(0.0, 1.0)
-                      : 1.0;
-                  final isActiveSegment = index == activeSegmentIndex && !isPassed;
-
-                  return Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: index < segments.length - 1 ? 8 : 0,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(999),
-                              border: isActiveSegment
-                                  ? Border.all(
-                                      color: color.withValues(alpha: 0.35),
-                                    )
-                                  : null,
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(999),
-                              child: LinearProgressIndicator(
-                                minHeight: 8,
-                                value: barValue,
-                                backgroundColor: isDark
-                                    ? Colors.grey.shade800
-                                    : Colors.grey.shade200,
-                                valueColor: AlwaysStoppedAnimation(barColor),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            segment.rangeLabel,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isActiveSegment
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
-                              color: barColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
+      padding: const EdgeInsets.all(14),
+      color: isLocked ? p.surfaceAlt : p.surface,
+      borderColor: isLocked ? Colors.transparent : p.border,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconBadge(
+                icon: isLocked ? Icons.lock_rounded : icon,
+                color: isLocked ? p.textTertiary : color,
+                size: 42,
+                iconSize: 21,
               ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: text.titleSmall?.copyWith(
+                        color: isLocked ? p.textTertiary : p.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(subtitle, style: text.bodySmall),
+                  ],
+                ),
+              ),
+              if (isPassed)
+                Pill(label: 'Passed', icon: Icons.check_rounded, color: p.success)
+              else if (!isLocked)
+                Icon(Icons.chevron_right_rounded, color: p.textTertiary),
             ],
+          ),
+          if (showProgress) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: List.generate(segments.length, (index) {
+                final segment = segments[index];
+                final isActiveSegment = index == activeSegmentIndex && !isPassed;
+                // Untried segments stay empty (they used to show as a full
+                // red bar, which read as "failed").
+                final Color barColor = segment.isPassed
+                    ? p.success
+                    : segment.isAttempted
+                        ? p.danger
+                        : p.textTertiary;
+                final barValue = segment.isPassed
+                    ? 1.0
+                    : segment.isAttempted
+                        ? segment.accuracy.clamp(0.0, 1.0)
+                        : 0.0;
+
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: index < segments.length - 1 ? 8 : 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppProgressBar(value: barValue, color: barColor, height: 6),
+                        const SizedBox(height: 6),
+                        Text(
+                          segment.rangeLabel,
+                          style: text.labelSmall?.copyWith(
+                            letterSpacing: 0,
+                            color: isActiveSegment ? color : barColor,
+                            fontWeight: isActiveSegment ? FontWeight.w800 : FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -538,15 +468,10 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     if (!context.mounted) return;
 
     if (questions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'No ${difficulty.name} questions available for ${SegmentProgress.rangeLabelFor(segmentIndex)}',
-          ),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      showAppSnack(
+        context,
+        'No ${difficulty.name} questions available for ${SegmentProgress.rangeLabelFor(segmentIndex)}',
+        tone: BannerTone.danger,
       );
       return;
     }

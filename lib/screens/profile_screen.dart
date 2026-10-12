@@ -5,7 +5,8 @@ import 'package:path_provider/path_provider.dart';
 import '../services/offline_sync_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
-import '../services/theme_service.dart';
+import '../utils/responsive.dart';
+import '../widgets/ui/ui.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _emailController = TextEditingController();
   final _picker = ImagePicker();
   String? _profileImagePath;
+  String? _avatarUrl;
   bool _isLoading = false;
 
   @override
@@ -34,15 +36,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final school = await _storage.getSchool();
     final email = await _storage.getUserEmail();
     final imagePath = await _storage.getProfileImage();
-    
+    final avatarUrl = await _storage.getAvatarUrl();
+
     _nameController.text = name;
     _schoolController.text = school ?? '';
     _emailController.text = email ?? '';
-    
+
     if (mounted) {
-      setState(() => _profileImagePath = imagePath);
+      setState(() {
+        _profileImagePath = imagePath;
+        _avatarUrl = avatarUrl;
+      });
     }
   }
+
+  bool get _hasPhoto =>
+      (_profileImagePath != null && _profileImagePath!.isNotEmpty) ||
+      (_avatarUrl != null && _avatarUrl!.isNotEmpty);
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -52,200 +62,127 @@ class _ProfileScreenState extends State<ProfileScreen> {
         maxHeight: 512,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
         final directory = await getApplicationDocumentsDirectory();
         final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
         final savedPath = '${directory.path}/$fileName';
-        
+
         await File(image.path).copy(savedPath);
-        
-        if (_profileImagePath != null) {
+
+        if (_profileImagePath != null && _profileImagePath!.isNotEmpty) {
           try {
             await File(_profileImagePath!).delete();
           } catch (_) {}
         }
-        
+
         await _storage.setProfileImage(savedPath);
-        
+
         if (mounted) {
           setState(() => _profileImagePath = savedPath);
         }
-        
+
         if (SupabaseService.instance.isLoggedIn) {
           final avatarUrl = await OfflineSyncService.instance.uploadAvatarOrQueue(savedPath);
           if (avatarUrl != null && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Photo uploaded to cloud'),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            );
+            showAppSnack(context, 'Photo uploaded to the cloud', tone: BannerTone.success);
           }
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to pick image: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        showAppSnack(context, "Couldn't use that photo. Please try another one.", tone: BannerTone.danger);
       }
     }
   }
 
   void _showImagePicker() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+      builder: (sheetContext) {
+        final text = sheetContext.textStyles;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+                  child: Text('Profile photo', style: text.titleLarge),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Change Profile Photo',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildPickerOption(
-                    icon: Icons.camera_alt_rounded,
-                    label: 'Camera',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _pickImage(ImageSource.camera);
-                    },
-                    isDark: isDark,
-                  ),
-                  _buildPickerOption(
-                    icon: Icons.photo_library_rounded,
-                    label: 'Gallery',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _pickImage(ImageSource.gallery);
-                    },
-                    isDark: isDark,
-                  ),
-                  if (_profileImagePath != null)
-                    _buildPickerOption(
-                      icon: Icons.delete_rounded,
-                      label: 'Remove',
-                      onTap: () async {
-                        Navigator.pop(context);
-                        if (_profileImagePath != null) {
-                          try {
-                            await File(_profileImagePath!).delete();
-                          } catch (_) {}
-                        }
-                        await _storage.setProfileImage('');
-                        await _storage.setAvatarUrl(null);
-                        setState(() => _profileImagePath = null);
-                        
-                        if (SupabaseService.instance.isLoggedIn) {
-                          await OfflineSyncService.instance.removeAvatarOrQueue();
-                        }
+                AppListGroup(
+                  children: [
+                    AppListTile(
+                      icon: Icons.photo_camera_rounded,
+                      title: 'Take a photo',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _pickImage(ImageSource.camera);
                       },
-                      isDark: isDark,
-                      isDestructive: true,
                     ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+                    AppListTile(
+                      icon: Icons.photo_library_rounded,
+                      title: 'Choose from gallery',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _pickImage(ImageSource.gallery);
+                      },
+                    ),
+                    if (_hasPhoto)
+                      AppListTile(
+                        icon: Icons.delete_outline_rounded,
+                        title: 'Remove photo',
+                        destructive: true,
+                        showChevron: false,
+                        onTap: () async {
+                          Navigator.pop(sheetContext);
+                          if (_profileImagePath != null && _profileImagePath!.isNotEmpty) {
+                            try {
+                              await File(_profileImagePath!).delete();
+                            } catch (_) {}
+                          }
+                          await _storage.setProfileImage('');
+                          await _storage.setAvatarUrl(null);
+                          if (!mounted) return;
+                          setState(() {
+                            _profileImagePath = null;
+                            _avatarUrl = null;
+                          });
 
-  Widget _buildPickerOption({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required bool isDark,
-    bool isDestructive = false,
-  }) {
-    final color = isDestructive ? AppColors.error : AppColors.accent;
-    
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          if (SupabaseService.instance.isLoggedIn) {
+                            await OfflineSyncService.instance.removeAvatarOrQueue();
+                          }
+                        },
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Future<void> _saveProfile() async {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter your name'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      showAppSnack(context, 'Please enter your name', tone: BannerTone.danger);
       return;
     }
 
     setState(() => _isLoading = true);
-    
+
     final name = _nameController.text.trim();
     final school = _schoolController.text.trim();
     final email = _emailController.text.trim();
-    
+
     // Save to local storage
     await _storage.setUserName(name);
     await _storage.setSchool(school);
     await _storage.setUserEmail(email);
-    
+
     // Sync to Supabase if logged in
     if (SupabaseService.instance.isLoggedIn) {
       await OfflineSyncService.instance.saveProfileDetailsOrQueue(
@@ -253,20 +190,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         school: school.isNotEmpty ? school : null,
       );
     }
-    
+
+    if (!mounted) return;
     setState(() => _isLoading = false);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Profile saved successfully'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      Navigator.pop(context);
-    }
+    showAppSnack(context, 'Profile saved', tone: BannerTone.success);
+    Navigator.pop(context);
   }
 
   @override
@@ -279,204 +207,132 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
+    final text = context.textStyles;
+    final padding = Responsive.horizontalPadding(context);
+    final name = _nameController.text.trim();
+    final school = _schoolController.text.trim();
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Edit Profile',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            
-
-            GestureDetector(
-              onTap: _showImagePicker,
-              child: Stack(
-                children: [
-                  Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(28),
-                      image: _profileImagePath != null && _profileImagePath!.isNotEmpty
-                          ? DecorationImage(
-                              image: FileImage(File(_profileImagePath!)),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: _profileImagePath == null || _profileImagePath!.isEmpty
-                        ? Center(
-                            child: Text(
-                              _nameController.text.isNotEmpty 
-                                  ? _nameController.text[0].toUpperCase() 
-                                  : 'S',
-                              style: TextStyle(
-                                fontSize: 44,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.accent,
-                              ),
+      appBar: const AppTopBar(title: 'Edit profile'),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(padding, 8, padding, 24),
+              child: ContentWidth(
+                maxWidth: 560,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AppCard(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                      child: Column(
+                        children: [
+                          GestureDetector(
+                            onTap: _showImagePicker,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                UserAvatar(
+                                  name: name.isEmpty ? 'Student' : name,
+                                  imagePath: _profileImagePath,
+                                  imageUrl: _avatarUrl,
+                                  size: 104,
+                                  ring: true,
+                                ),
+                                Positioned(
+                                  bottom: 2,
+                                  right: -2,
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: p.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: p.surface, width: 3),
+                                    ),
+                                    child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 17),
+                                  ),
+                                ),
+                              ],
                             ),
-                          )
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accent.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            name.isEmpty ? 'Your name' : name,
+                            style: text.titleLarge,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            school.isEmpty ? 'Add your school below' : school,
+                            style: text.bodySmall,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton.icon(
+                            onPressed: _showImagePicker,
+                            icon: const Icon(Icons.edit_rounded, size: 16),
+                            label: Text(_hasPhoto ? 'Change photo' : 'Add a photo'),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.camera_alt_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    AppTextField(
+                      controller: _nameController,
+                      label: 'Full name',
+                      hint: 'Juan Dela Cruz',
+                      icon: Icons.person_outline_rounded,
+                      maxLength: 60,
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 16),
+                    AppTextField(
+                      controller: _schoolController,
+                      label: 'School / University',
+                      hint: 'Where you studied Criminology',
+                      icon: Icons.school_outlined,
+                      maxLength: 100,
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 16),
+                    AppTextField(
+                      controller: _emailController,
+                      label: 'Email (optional)',
+                      hint: 'you@example.com',
+                      icon: Icons.mail_outline_rounded,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                  ],
+                ),
               ),
             ),
-            
-            const SizedBox(height: 8),
-            Text(
-              'Tap to change photo',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-              ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: p.surface,
+              border: Border(top: BorderSide(color: p.border)),
             ),
-            
-            const SizedBox(height: 32),
-            
-
-            _buildTextField(
-              controller: _nameController,
-              label: 'Full Name',
-              icon: Icons.person_outline_rounded,
-              isDark: isDark,
-              maxLength: 60,
-            ),
-            
-            const SizedBox(height: 16),
-            
-
-            _buildTextField(
-              controller: _schoolController,
-              label: 'School / University',
-              icon: Icons.school_outlined,
-              isDark: isDark,
-              maxLength: 100,
-            ),
-            
-            const SizedBox(height: 16),
-            
-
-            _buildTextField(
-              controller: _emailController,
-              label: 'Email (optional)',
-              icon: Icons.email_outlined,
-              isDark: isDark,
-              keyboardType: TextInputType.emailAddress,
-            ),
-            
-            const SizedBox(height: 40),
-            
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                child: ContentWidth(
+                  maxWidth: 560,
+                  child: PrimaryButton(
+                    label: 'Save profile',
+                    loading: _isLoading,
+                    onPressed: _saveProfile,
                   ),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Text(
-                        'Save Profile',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
               ),
             ),
-            
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required bool isDark,
-    TextInputType keyboardType = TextInputType.text,
-    int? maxLength,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: TextField(
-        controller: controller,
-        maxLength: maxLength,
-        onChanged: (_) => setState(() {}),
-        keyboardType: keyboardType,
-        style: TextStyle(
-          fontSize: 16,
-          color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-        ),
-        decoration: InputDecoration(
-          counterText: '',
-          labelText: label,
-          labelStyle: TextStyle(
-            color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
           ),
-          prefixIcon: Icon(icon, color: AppColors.accent),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        ),
+        ],
       ),
     );
   }

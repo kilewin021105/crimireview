@@ -101,7 +101,7 @@ class OfflineSyncService extends ChangeNotifier {
   bool get hasPendingSync => _currentUserOperations.isNotEmpty;
 
   /// How many queued items were discarded because the server rejected them
-  /// permanently. Shown by [SyncStatusIndicator] until acknowledged, so a
+  /// permanently. Shown in the home screen status strip until acknowledged, so a
   /// lost result is never silent.
   int get droppedCount => _droppedCount;
 
