@@ -138,7 +138,10 @@ class AdminService extends ChangeNotifier {
     if (templateId != null && templateId.isNotEmpty) {
       query = query.eq('template_id', templateId);
     }
-    final term = search?.trim() ?? '';
+    // Commas, brackets, quotes and wildcards are part of PostgREST's filter
+    // syntax; typed into the search box they broke the query ("Could not
+    // load questions"). Treat them as spaces.
+    final term = (search ?? '').replaceAll(RegExp(r'[,()"*%\\]'), ' ').trim();
     if (term.isNotEmpty) {
       query = query.or('question_text.ilike.%$term%,topic.ilike.%$term%');
     }

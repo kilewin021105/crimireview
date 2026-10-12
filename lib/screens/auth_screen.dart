@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/offline_sync_service.dart';
 import '../services/admin_service.dart';
+import '../utils/error_messages.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import '../widgets/password_strength_indicator.dart';
@@ -294,42 +295,10 @@ class _AuthScreenState extends State<AuthScreen> {
         });
       }
     } catch (e) {
-      String errorMsg = e.toString();
-      
-      if (errorMsg.contains('Invalid login')) {
-        errorMsg = 'Invalid email or password';
-      } else if (errorMsg.contains('already registered')) {
-        errorMsg = 'This email is already registered. Try logging in.';
-      } else if (errorMsg.contains('Email not confirmed')) {
-        errorMsg = 'Please check your email and confirm your account.';
-      } else if (errorMsg.contains('SocketException') || 
-                 errorMsg.contains('host lookup') || 
-                 errorMsg.contains('Failed host lookup') ||
-                 errorMsg.contains('ClientException') ||
-                 errorMsg.contains('No address associated')) {
-        errorMsg = 'Unable to connect. Please check your internet connection.';
-      } else if (errorMsg.contains('timeout')) {
-        errorMsg = 'Connection timed out. Please try again.';
-      } else if (errorMsg.contains('email_not_confirmed')) {
-        errorMsg = 'Please confirm your email before signing in.';
-      } else if (errorMsg.contains('user_already_exists')) {
-        errorMsg = 'This email is already registered.';
-      } else if (errorMsg.contains('weak_password')) {
-        errorMsg = 'Password is too weak. Use at least 6 characters.';
-      } else if (errorMsg.contains('invalid_email')) {
-        errorMsg = 'Please enter a valid email address.';
-      } else if (errorMsg.contains('rate limit') || errorMsg.contains('rate_limit')) {
-        errorMsg = 'Too many attempts. Please wait a moment and try again.';
-      } else {
-        errorMsg = errorMsg
-            .replaceAll('Exception: ', '')
-            .replaceAll('AuthException: ', '')
-            .replaceAll('AuthApiException: ', '');
-      }
-      
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = errorMsg;
+        _errorMessage = friendlyError(e, fallback: 'Sign in failed. Please try again.');
       });
     }
   }
@@ -416,7 +385,8 @@ class _AuthScreenState extends State<AuthScreen> {
                             label: 'First Name',
                             icon: Icons.person_outline,
                             isDark: isDark,
-                            validator: (v) => v!.isEmpty ? 'Enter first name' : null,
+                            maxLength: 30,
+                            validator: (v) => (v ?? '').trim().isEmpty ? 'Enter first name' : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -426,7 +396,8 @@ class _AuthScreenState extends State<AuthScreen> {
                             label: 'Last Name',
                             icon: Icons.person_outline,
                             isDark: isDark,
-                            validator: (v) => v!.isEmpty ? 'Enter last name' : null,
+                            maxLength: 30,
+                            validator: (v) => (v ?? '').trim().isEmpty ? 'Enter last name' : null,
                           ),
                         ),
                       ],
@@ -613,9 +584,11 @@ class _AuthScreenState extends State<AuthScreen> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     void Function(String)? onChanged,
+    int? maxLength,
   }) {
     return TextFormField(
       controller: controller,
+      maxLength: maxLength,
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
@@ -625,6 +598,7 @@ class _AuthScreenState extends State<AuthScreen> {
         fontSize: 16,
       ),
       decoration: InputDecoration(
+          counterText: '',
         labelText: label,
         labelStyle: TextStyle(
           color: isDark ? Colors.white60 : AppColors.textMuted,

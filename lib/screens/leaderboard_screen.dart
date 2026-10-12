@@ -51,6 +51,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     });
     
     final isOnline = await ConnectivityService.instance.checkConnectivity();
+    if (!mounted) return;
     if (!isOnline) {
       setState(() {
         _isLoading = false;
@@ -62,7 +63,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     try {
       final data = await _supabase.getLeaderboard(limit: 50);
       final userId = _supabase.userId;
-      
+      if (!mounted) return;
+
       setState(() {
         _leaderboardData = data.map((e) {
           final isMe = e['user_id'] == userId;
@@ -81,6 +83,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _isOffline = true;

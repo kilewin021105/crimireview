@@ -507,6 +507,94 @@ Fixed every issue found in the system check, plus one more found while fixing th
 
 ---
 
+## 2026-10-09 — Session 37: full pre-launch audit (security, flows, layout, slow internet, scale)
+
+Audited the code, all SQL rules, the full git history, and the **live** Supabase project, probing it with only the public key shipped in the APK, which is what any outsider has. Every database fix was tested first on a local copy of the schema (PostgreSQL 18 with a Supabase stand-in), attacking it as an outsider, a student and an admin: **49/49 checks pass**. `flutter analyze`: 0 errors, 0 warnings. `flutter test`: 19/19 pass. Release APK v1.0.1 builds.
+
+**Critical, confirmed live, fixed in code (you must run the SQL — see README steps 8–9):**
+- **All 12 user profiles (emails, names, schools, who is admin) were readable by anyone, even logged out.** `user_profiles` now returns only your own row (admins: all). The leaderboard uses a new `get_leaderboard()` function that returns only name, avatar, points and rank, to signed-in users only. — `supabase_security_fixes_v2.sql`
+- **Password-reset hijack window:** for 15 minutes after a real user verified their reset code, anyone could call `reset_user_password(email, new_password)`. The function now requires the verified code, allows 5 wrong guesses, and enforces 8–72 characters. The old function is dropped, and so is `cleanup_password_resets`, which let anyone cancel anyone's reset. App: `forgot_password_screen.dart`, `supabase_service.dart`, `email_verification_service.dart`.
+- **Unlimited code emails:** anyone could flood any inbox and burn the Resend quota. Now limited to 1 per minute and 5 per hour per address, with a 300-per-hour project-wide backstop. Reset emails are sent only if an account exists, with the same response either way, so no account enumeration.
+- **Email verification could be skipped** by calling Supabase sign-up directly. `supabase_enforce_email_verification.sql` makes the database refuse accounts without a verified code from the last 30 minutes. It is a separate file with a rollback line.
+
+**Critical, needs you, not fixable from code:**
+- **Active Resend API key in public git history.** `re_QjKf…`, committed in dd828ff and 6aaae1e (May), is **still valid with full access** to the Resend account and the verified domain crimireview.app. It must be rotated. (`re_5FEu…` from the same history is already dead.)
+
+**Other fixes:**
+- Daily challenge scores are private and insert-only; a score can't be raised after the fact.
+- The avatars bucket allows only 2 MB images (no SVG).
+- Name/school length limits are enforced in the app (30+30, 60, 100) and in the database (80 / 150).
+- The leftover `document_uploads` table is dropped.
+- **Slow internet:** every Supabase request now times out (25 s; storage 2 min) instead of spinning forever. All errors go through `lib/utils/error_messages.dart`, which gives clear "No internet" or "too slow" messages instead of raw exception text. Login's old matcher missed timeouts, because "TimeoutException" didn't match "timeout".
+- **Change password** now requires the current password, so an unlocked phone can't be used to lock the owner out.
+- **Leaderboard** shows a retry state on failure instead of looking empty. Its rank label now comes from the database, so the old client thresholds (Legend at 5,000 vs 10,000) no longer disagree with the rest of the app.
+- **Sounds never worked:** `correct.mp3` and `wrong.mp3` were saved GitHub web pages, and `tap.mp3` was a 404 page. They are replaced with generated `correct.wav` / `wrong.wav`. Sound loading can no longer break the feedback service's startup.
+- **Layout bugs found by rendering at real phone sizes** (with the real Poppins font; Flutter's square test font reported false overflows):
+  - the email-verification code row overflowed at 360 px, the most common Android width. The cause was a margin arithmetic error (48 px of margins, 40 subtracted).
+  - onboarding was cut off at 320×568.
+  - Both are fixed; `test/responsive_screens_test.dart` covers 6 screens × 3 sizes.
+- **Settings:** "Share App" had no link (now includes www.crimireview.app). The "Rate App" placeholder ("coming soon") is removed. "Send Feedback" silently did nothing on Android 11+, because the manifest had no mailto query and the false result was ignored; both are fixed.
+- **Admin question search:** commas and brackets broke the query; they are now stripped.
+- **Question bank download** (about 117 KB compressed): it was refreshed on every launch and every 10 minutes, roughly 20 GB/month at about 1,000 daily students. It is now refreshed once per hour and not at all when the saved copy is fresh.
+- Version bumped to **1.0.1+2**.
+
+**Known, not fixed (design-level or outside the code):**
+- Leaderboard points are calculated on the phone, so a technical student can inflate their own points. A real fix needs server-side scoring.
+- Questions, including correct answers, are readable without login. This is by design for offline use.
+- Points updates from two devices at once can lose points (read-modify-write).
+- Logged-in screens weren't layout-tested automatically, only scanned. Do a manual pass on a small phone.
+- `support@crimireview.app` cannot receive mail: the domain has **no MX records**.
+- The website still says Android 5.0; the app needs Android 7.0 or newer.
+- The APK is still debug-signed.
+
+**Launch order:**
+1. Rotate the Resend key.
+2. Run `supabase_security_fixes_v2.sql`, then `supabase_enforce_email_verification.sql`.
+3. Publish APK v1.0.1.
+4. Test sign-up, login, forgot password and the leaderboard.
+
+Phones still on v1.0.0 will fail at the last step of Forgot Password, and their leaderboard will show only themselves, until they update.
+
+---
+
+## 2026-10-09 — Session 38: leaked Resend key revoked
+
+- Listed the Resend account's keys. There were three:
+  - **May 24 "CrimiReview"**: the one in public git history.
+  - **Aug 6 "Crismireview"**: last used Oct 7 09:19, matching the app's sign-up and reset emails, so this is the key in Supabase Vault. It is not in any commit.
+  - **Oct 9 "CrimiReview"**: newly created; confirmed valid and sending-only.
+- **Revoked the leaked May 24 key** (id 9afbf4ab…) through the Resend API. Verified afterwards: it returns "API key is invalid". The app's emails were unaffected, because the app uses the Aug 6 key.
+- Its last-used time showed only this session's own checks. Resend shows just the latest use, so for earlier misuse the Emails log (any range) is the record. The 15-day view showed only the app's own emails.
+- Not done, because there is no Supabase access from this machine: switching Vault to the new key is optional. The Aug key was never leaked. If the new key isn't used, delete it in Resend.
+- Still to run by the owner: `supabase_security_fixes_v2.sql`, then `supabase_enforce_email_verification.sql`, then publish v1.0.1.
+
+---
+
+## 2026-10-09 — Session 39: fix "cannot change return type" when running security fixes v2
+
+- Running `supabase_security_fixes_v2.sql` in the SQL Editor failed with `42P13: cannot change return type of existing function` for `get_leaderboard`. The SQL Editor runs the script as one transaction, so **nothing was applied**: checked live, profiles were still readable anonymously.
+- Cause: the live project still has the **original `get_leaderboard(limit_count)`** from the very first commit (`847b1eb:supabase/schema.sql`). It is no longer in any `.sql` file. It is callable **without logging in** (confirmed live: it returns names, avatars and points, but no emails), and no app version calls it.
+- Fix: the file now runs `DROP FUNCTION IF EXISTS public.get_leaderboard(integer)` before creating the new one.
+- Verified locally against a copy that includes the old function. The unfixed file reproduces the exact error (same message, DETAIL and HINT). The fixed file runs cleanly as a single transaction, twice. The attack suite plus the sign-up rule gives **45/45 PASS**.
+- Checked git history for other leftover functions that could clash: only `get_leaderboard` does.
+
+---
+
+## 2026-10-09 — Session 40: security fixes v2 applied to the live project (launch step 1)
+
+- **Before running**, checked the live database read-only for anything that could fail or leave a hole open: both old functions with other signatures (`get_leaderboard(limit_count)`, `reset_user_password(user_email, new_password)`) are dropped by the script first; every helper it calls exists; the only "anyone can read" policies on `user_profiles` / `daily_challenge_scores` were exactly the ones the script removes; sign-up doesn't need logged-out profile access (the `handle_new_user` trigger creates the profile).
+- `document_uploads` held 3 rows: three **failed** Aug 27 attempts of the removed PDF generator (same PDF, missing API key, 0 questions). Dropped with the table. The PDF itself is still in the `document-uploads` storage bucket.
+- The Supabase connector refused to apply the script three times (it declines database changes in this session), so **you ran it in the SQL Editor**: "Success. No rows returned."
+- **Verified from inside the database:** new policies only, `anon` has no access to profiles, challenge scores, `get_leaderboard` or the rate-limit helper; the rate-limit table, avatar limits (2 MB, images only) and name/school length limits exist; `document_uploads` is gone.
+- **Verified as an outsider** with only the APK's public key, 7/7 as expected: profiles → permission denied; challenge scores → permission denied; new leaderboard while logged out → permission denied; old leaderboard, old 2-argument reset and `cleanup_password_resets` → no longer exist; new reset with a wrong code → refused.
+- **Resend key:** the Vault secret was changed by hand on Oct 9 at 11:23 PM (none of our SQL files write to Vault). Checked without revealing it: it is not the revoked leaked key nor the older dead one, and Resend accepts it (a deliberately empty request got "Missing `to` field", which means the key is valid; no email was sent).
+- **Supabase security advisor**, remaining warnings:
+  - Functions anyone can call: the sign-up / reset functions must be (they run before login). `generate_questions_from_template` and `log_admin_action` check `is_admin()` inside. `handle_new_user` / `protect_user_role` are trigger functions and fail if called directly.
+  - **One to fix in step 2:** `cleanup_expired_verifications()` is callable by anyone and deletes **verified** rows too. Once `supabase_enforce_email_verification.sql` requires a verified row at sign-up, someone could call it in a loop and make sign-ups fail. Revoke it from `anon`/`authenticated` alongside step 2.
+  - Minor: 6 trigger/helper functions have no fixed `search_path`; "leaked password protection" is off (a Supabase Auth setting).
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.

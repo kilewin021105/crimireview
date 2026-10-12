@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/error_messages.dart';
+
 /// Signup email-code verification and password-reset-code verification.
 ///
 /// ---------------------------------------------------------------------------
@@ -51,7 +53,9 @@ class EmailVerificationService {
       }
       return {'success': false, 'error': fallbackError};
     } catch (e) {
-      return {'success': false, 'error': fallbackError};
+      // "No internet" / "too slow" are worth saying specifically; anything
+      // else keeps the caller's own message.
+      return {'success': false, 'error': friendlyError(e, fallback: fallbackError)};
     }
   }
 
@@ -99,17 +103,5 @@ class EmailVerificationService {
       {'p_email': email, 'p_code': code},
       'Verification failed. Please try again.',
     );
-  }
-
-  /// Best-effort tidy-up after a successful reset. `public.reset_user_password`
-  /// (supabase_schema.sql) already deletes the matching row itself, so this is
-  /// a harmless no-op in the normal path -- kept so a partial/retried flow
-  /// can never leave a stray record behind.
-  Future<void> cleanupPasswordResets(String email) async {
-    try {
-      await _supabase.rpc('cleanup_password_resets', params: {'p_email': email});
-    } catch (_) {
-      // Diagnostic only -- never worth failing the reset flow over.
-    }
   }
 }

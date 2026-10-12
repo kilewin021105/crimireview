@@ -12,6 +12,9 @@ class FeedbackService {
   bool _soundEnabled = true;
   bool _initialized = false;
   
+  static const String _correctSound = 'sounds/correct.wav';
+  static const String _wrongSound = 'sounds/wrong.wav';
+
   final AudioPlayer _correctPlayer = AudioPlayer();
   final AudioPlayer _wrongPlayer = AudioPlayer();
 
@@ -23,9 +26,13 @@ class FeedbackService {
     _hapticEnabled = await _storage.getHapticFeedbackEnabled();
     _soundEnabled = await _storage.getSoundEffectsEnabled();
     
-    await _correctPlayer.setSource(AssetSource('sounds/correct.mp3'));
-    await _wrongPlayer.setSource(AssetSource('sounds/wrong.mp3'));
-    
+    // A sound that can't be preloaded must never stop the rest of the
+    // feedback settings from loading.
+    try {
+      await _correctPlayer.setSource(AssetSource(_correctSound));
+      await _wrongPlayer.setSource(AssetSource(_wrongSound));
+    } catch (_) {}
+
     _initialized = true;
   }
 
@@ -38,7 +45,7 @@ class FeedbackService {
     if (!_soundEnabled) return;
     try {
       await _correctPlayer.stop();
-      await _correctPlayer.play(AssetSource('sounds/correct.mp3'));
+      await _correctPlayer.play(AssetSource(_correctSound));
     } catch (e) {
       // Ignore audio errors
     }
@@ -48,7 +55,7 @@ class FeedbackService {
     if (!_soundEnabled) return;
     try {
       await _wrongPlayer.stop();
-      await _wrongPlayer.play(AssetSource('sounds/wrong.mp3'));
+      await _wrongPlayer.play(AssetSource(_wrongSound));
     } catch (e) {
       // Ignore audio errors
     }

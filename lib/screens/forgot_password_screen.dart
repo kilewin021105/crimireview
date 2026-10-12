@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/email_verification_service.dart';
 import '../services/supabase_service.dart';
 import '../services/theme_service.dart';
+import '../utils/error_messages.dart';
 import '../widgets/password_strength_indicator.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -153,11 +154,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       // Update password via Supabase RPC function
       await _supabase.resetUserPassword(
         _emailController.text.trim(),
+        _codeController.text.trim(),
         password,
       );
-      
-      // Clean up reset records
-      await _emailService.cleanupPasswordResets(_emailController.text.trim());
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -175,7 +174,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to reset password. Please try again.';
+          _errorMessage = friendlyError(e, fallback: 'Failed to reset password. Please try again.');
         });
       }
     }

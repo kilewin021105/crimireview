@@ -7,6 +7,7 @@ import '../services/email_verification_service.dart';
 import '../services/supabase_service.dart';
 import '../services/storage_service.dart';
 import '../services/offline_sync_service.dart';
+import '../utils/error_messages.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import 'home_screen.dart';
@@ -235,7 +236,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       if (mounted) {
         setState(() {
           _isVerifying = false;
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = friendlyError(e, fallback: 'Could not create your account. Please try again.');
         });
       }
     }
@@ -356,7 +357,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final maxWidth = constraints.maxWidth;
-                        final boxSize = ((maxWidth - 40) / 6).clamp(40.0, 52.0);
+                        // 6 boxes, each with 4 px margin on both sides = 48 px.
+                        final boxSize = ((maxWidth - 48) / 6).clamp(32.0, 52.0);
                         final fontSize = boxSize * 0.45;
                         return Row(
                           mainAxisAlignment: MainAxisAlignment.center,

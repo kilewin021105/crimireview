@@ -86,44 +86,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  static const String _websiteUrl = 'https://www.crimireview.app';
+  static const String _supportEmail = 'support@crimireview.app';
+
   Future<void> _shareApp() async {
     await Share.share(
-      'Check out CrimiReview - the best app for Criminology board exam review! Download now and ace your exams!',
+      'Check out CrimiReview - an adaptive reviewer for the Criminologist Licensure Examination! '
+      'Download it free: $_websiteUrl',
       subject: 'CrimiReview App',
-    );
-  }
-
-  Future<void> _rateApp() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Thank you for your support! Rating feature coming soon.'),
-        backgroundColor: AppColors.accent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
     );
   }
 
   Future<void> _sendFeedback() async {
     final Uri emailUri = Uri(
       scheme: 'mailto',
-      path: 'support@crimireview.app',
+      path: _supportEmail,
       query: 'subject=CrimiReview Feedback',
     );
-    
+
+    bool opened = false;
     try {
-      await launchUrl(emailUri);
+      opened = await launchUrl(emailUri);
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Could not open email app'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
+      opened = false;
+    }
+    // launchUrl returns false (rather than throwing) when no email app is
+    // set up, so the student would otherwise see nothing happen at all.
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No email app found. Send your feedback to $_supportEmail'),
+          backgroundColor: AppColors.accent,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
     }
   }
 
@@ -442,21 +440,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              
-              GestureDetector(
-                onTap: _rateApp,
-                child: _buildSettingTile(
-                  icon: Icons.star_outline_rounded,
-                  title: 'Rate App',
-                  subtitle: 'Leave a review',
-                  isDark: isDark,
-                  trailing: Icon(
-                    Icons.chevron_right_rounded,
-                    color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-                  ),
-                ),
-              ),
+
+              // "Rate App" removed until there is a store listing to rate.
               const SizedBox(height: 12),
               
               GestureDetector(

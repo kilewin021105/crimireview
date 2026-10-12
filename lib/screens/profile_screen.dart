@@ -384,6 +384,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               label: 'Full Name',
               icon: Icons.person_outline_rounded,
               isDark: isDark,
+              maxLength: 60,
             ),
             
             const SizedBox(height: 16),
@@ -394,6 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               label: 'School / University',
               icon: Icons.school_outlined,
               isDark: isDark,
+              maxLength: 100,
             ),
             
             const SizedBox(height: 16),
@@ -449,6 +451,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required IconData icon,
     required bool isDark,
     TextInputType keyboardType = TextInputType.text,
+    int? maxLength,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -457,6 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: TextField(
         controller: controller,
+        maxLength: maxLength,
         onChanged: (_) => setState(() {}),
         keyboardType: keyboardType,
         style: TextStyle(
@@ -464,6 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: isDark ? Colors.white : const Color(0xFF1A1A2E),
         ),
         decoration: InputDecoration(
+          counterText: '',
           labelText: label,
           labelStyle: TextStyle(
             color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,

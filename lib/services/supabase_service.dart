@@ -1,6 +1,32 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Puts a time limit on every request to Supabase (database, login,
+/// functions, storage). Without it, on a very slow or stalled connection
+/// a request can hang for minutes and its screen spins forever; with it,
+/// the request fails with a [TimeoutException] the screens turn into a
+/// "connection is slow" message.
+class _TimeoutHttpClient extends http.BaseClient {
+  _TimeoutHttpClient(this._inner);
+
+  final http.Client _inner;
+
+  static const Duration _requestLimit = Duration(seconds: 25);
+  // Photo uploads send more data, so they get longer on slow mobile data.
+  static const Duration _storageLimit = Duration(minutes: 2);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    final limit = request.url.path.contains('/storage/v1/') ? _storageLimit : _requestLimit;
+    return _inner.send(request).timeout(limit);
+  }
+
+  @override
+  void close() => _inner.close();
+}
 
 class SupabaseService {
   static const String _supabaseUrl = 'https://wbhobbehgqlzfborscvx.supabase.co';
@@ -44,6 +70,7 @@ class SupabaseService {
       await Supabase.initialize(
         url: _supabaseUrl,
         anonKey: _supabaseAnonKey,
+        httpClient: _TimeoutHttpClient(http.Client()),
       );
       _isInitialized = true;
       _instance = SupabaseService._();
@@ -120,20 +147,44 @@ class SupabaseService {
     );
   }
 
-  Future<void> resetUserPassword(String email, String newPassword) async {
+  /// Final step of "Forgot password". [code] must be the same 6-digit code
+  /// the user just verified -- the server checks it again, so nobody else
+  /// can set the password during the reset (supabase_security_fixes_v2.sql).
+  /// Throws an [Exception] carrying a user-facing message on failure.
+  Future<void> resetUserPassword(String email, String code, String newPassword) async {
     if (!_isInitialized) throw Exception('Supabase not initialized');
-    
-    // Call RPC function to reset password
-    await client.rpc('reset_user_password', params: {
-      'user_email': email.toLowerCase(),
-      'new_password': newPassword,
+
+    final result = await client.rpc('reset_user_password', params: {
+      'p_email': email.trim().toLowerCase(),
+      'p_code': code.trim(),
+      'p_new_password': newPassword,
     });
+    if (result is! Map || result['success'] != true) {
+      final error = result is Map ? result['error'] : null;
+      throw Exception(error ?? 'Failed to reset password. Please try again.');
+    }
   }
 
-  Future<void> changePassword(String newPassword) async {
+  /// Changes the signed-in user's password after re-checking the current
+  /// one, so someone holding an unlocked phone can't lock the owner out.
+  /// Throws an [Exception] with a user-facing message on failure.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
     if (!_isInitialized) throw Exception('Supabase not initialized');
-    if (!isLoggedIn) throw Exception('Not logged in');
-    
+    final email = currentUser?.email;
+    if (!isLoggedIn || email == null) throw Exception('Please sign in again.');
+
+    try {
+      await client.auth.signInWithPassword(email: email, password: currentPassword);
+    } on AuthException catch (e) {
+      if (e.message.toLowerCase().contains('invalid')) {
+        throw Exception('Current password is incorrect.');
+      }
+      rethrow;
+    }
+
     await client.auth.updateUser(
       UserAttributes(password: newPassword),
     );
@@ -436,43 +487,43 @@ class SupabaseService {
     if (!_isInitialized) return [];
     
     try {
-      final response = await client
-          .from('user_profiles')
-          .select('id, display_name, avatar_url, total_points, total_quizzes, total_correct')
-          .order('total_points', ascending: false)
-          .limit(limit);
-      
+      // Server function returning only public fields (name, avatar, points,
+      // rank) -- other students' emails and schools are no longer readable
+      // (supabase_security_fixes_v2.sql). `rank` comes from the database's
+      // own rank column, so it matches the rank shown everywhere else.
+      final response = await client.rpc('get_leaderboard', params: {'p_limit': limit});
+
       final List<Map<String, dynamic>> result = [];
       int position = 1;
-      for (final row in response) {
-        final points = (row['total_points'] as num?)?.toInt() ?? 0;
-        String rank = 'Rookie';
-        if (points >= 5000) rank = 'Legend';
-        else if (points >= 2500) rank = 'Master';
-        else if (points >= 1000) rank = 'Expert';
-        else if (points >= 500) rank = 'Scholar';
-        else if (points >= 100) rank = 'Student';
-        
+      for (final row in List<Map<String, dynamic>>.from(response as List)) {
         result.add({
-          'user_id': row['id'],
-          'display_name': row['display_name'] ?? 'Anonymous',
+          'user_id': row['user_id'],
+          'display_name': row['display_name'] ?? 'Student',
           'avatar_url': row['avatar_url'],
-          'total_points': points,
-          'rank': rank,
+          'total_points': (row['total_points'] as num?)?.toInt() ?? 0,
+          'rank': row['rank'] ?? 'Rookie',
           'rank_position': position,
         });
         position++;
       }
       return result;
     } catch (e) {
-      return [];
+      // Let the screen show its "can't load" state with a retry instead of
+      // an empty leaderboard that looks like nobody has played yet.
+      debugPrint('getLeaderboard failed: $e');
+      rethrow;
     }
   }
 
   Future<int?> getUserRank() async {
     if (!isLoggedIn) return null;
-    
-    final leaderboard = await getLeaderboard();
+
+    final List<Map<String, dynamic>> leaderboard;
+    try {
+      leaderboard = await getLeaderboard();
+    } catch (_) {
+      return null;
+    }
     
     for (int i = 0; i < leaderboard.length; i++) {
       if (leaderboard[i]['user_id'] == userId) {

@@ -158,6 +158,8 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
 5. `supabase_seed_questions.sql` *(optional)* — 759 questions migrated out of the old hardcoded Dart files, ready to seed the bank so it isn't empty on first run. Regenerate with `dart run tools/export_questions_to_sql.dart` if the source files still existed — they don't anymore, so this script is now historical.
 6. `supabase_admin_management.sql` — lets an existing admin promote/demote another user from inside the app (Admin Panel → Students → "⋮") instead of needing SQL Editor access every time.
 7. `supabase_template_generation.sql` — the free, no-API-key "Generate from Templates" path (the only question generator in the app): one Postgres function that turns the `question_templates`/`concept_bank` data from step 4 into real questions. Works immediately after this file runs, no further setup.
+8. **`supabase_security_fixes_v2.sql`** — pre-launch security fixes: profiles (emails, schools, roles) are no longer readable by other users or logged-out visitors; the leaderboard is served by `get_leaderboard()` with public fields only; daily scores are private and insert-only; password reset re-checks the emailed code; code emails are rate-limited; avatars are limited to 2 MB images; name lengths are capped. **Requires app v1.0.1 or newer** for Forgot Password and the leaderboard.
+9. `supabase_enforce_email_verification.sql` — makes the database refuse to create an account unless the email passed the 6-digit check, so Supabase's public sign-up API can't be used to skip it. **Test a new sign-up in the app right after running it**; the file has a one-line rollback. To add a user by hand afterwards, see the file's header.
 
 Core tables used by the app:
 
@@ -170,7 +172,7 @@ Core tables used by the app:
 
 Questions are generated only through **Admin Panel → Questions → Generate from Templates** (step 7 above). It runs entirely inside the database — no API key, no upload, no cost — and every generated item lands inactive until an admin reviews and restores it.
 
-The old "Generate from Document" (PDF → AI) path has been removed from the app. If it was ever set up on your Supabase project, `supabase_remove_document_generation.sql` cleans up what it left behind there — see that file's header.
+The old "Generate from Document" (PDF → AI) path has been removed from the app. Step 8 (`supabase_security_fixes_v2.sql`) also drops the `document_uploads` table it left behind; the separate `supabase_remove_document_generation.sql` lists the two leftovers SQL can't remove (the storage bucket and the Edge Function).
 
 ### Security notes
 

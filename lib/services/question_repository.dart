@@ -70,7 +70,13 @@ class QuestionRepository extends ChangeNotifier {
   /// scheduled. Reads keep being served instantly from memory the whole time;
   /// this only decides when to go looking for newer content. It is what stops
   /// a 40-question quiz build from touching the disk or the network 40 times.
-  static const Duration memoTtl = Duration(minutes: 10);
+  ///
+  /// One hour: the whole bank is ~120 KB compressed per download, so a
+  /// shorter window multiplies data use (and Supabase egress) for every
+  /// student, while questions change rarely. A Faculty edit reaches
+  /// students within this window; the editing admin's own device refreshes
+  /// immediately via [invalidate].
+  static const Duration memoTtl = Duration(hours: 1);
 
   /// Floor between two network attempts, so an offline device retries at a
   /// sane rate instead of once per question lookup.
@@ -136,7 +142,11 @@ class QuestionRepository extends ChangeNotifier {
   /// the network, so a cold start on a dead connection is still instant.
   Future<void> init() async {
     await _ensureCacheLoaded();
-    unawaited(refreshFromCloud());
+    // The snapshot's own timestamp survives restarts, so reopening the app
+    // shortly after the last download doesn't fetch the whole bank again.
+    if (_questions.isEmpty || _isStale) {
+      unawaited(refreshFromCloud());
+    }
   }
 
   /// Forces a fetch from `public.questions`, then rewrites the offline

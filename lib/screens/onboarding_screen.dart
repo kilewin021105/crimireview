@@ -152,6 +152,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(OnboardingPage page) {
+    // Short screens (small phones, or a phone with a tall status/nav bar)
+    // get a smaller icon and tighter spacing; scrolling is the last resort
+    // so the description is never cut off.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 460;
+        final iconBox = compact ? 120.0 : 160.0;
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: _buildPageContent(page, iconBox: iconBox, compact: compact),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPageContent(OnboardingPage page, {required double iconBox, required bool compact}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -159,8 +177,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
 
           Container(
-            width: 160,
-            height: 160,
+            width: iconBox,
+            height: iconBox,
             decoration: BoxDecoration(
               gradient: page.gradient,
               borderRadius: BorderRadius.circular(40),
@@ -174,7 +192,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: Icon(
               page.icon,
-              size: 80,
+              size: iconBox / 2,
               color: Colors.white,
             ),
           )
@@ -187,8 +205,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               )
               .fadeIn(duration: 400.ms),
           
-          const SizedBox(height: 48),
-          
+          SizedBox(height: compact ? 28 : 48),
+
 
           Text(
             page.title,

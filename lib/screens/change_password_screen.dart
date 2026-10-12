@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/supabase_service.dart';
 import '../services/theme_service.dart';
+import '../utils/error_messages.dart';
 import '../widgets/password_strength_indicator.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -13,10 +14,12 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   
   bool _isLoading = false;
+  bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
@@ -24,6 +27,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   void dispose() {
+    _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -38,7 +42,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     });
 
     try {
-      await SupabaseService.instance.changePassword(_newPasswordController.text);
+      await SupabaseService.instance.changePassword(
+        currentPassword: _currentPasswordController.text,
+        newPassword: _newPasswordController.text,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -61,9 +68,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _errorMessage = friendlyError(e, fallback: 'Could not change your password. Please try again.');
       });
     }
   }
@@ -181,6 +189,65 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 const SizedBox(height: 20),
               ],
               
+              // Current Password Field -- re-checked by the server before the
+              // change, so an unlocked phone can't be used to lock the owner out.
+              Text(
+                'Current Password',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkCard : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: TextFormField(
+                  controller: _currentPasswordController,
+                  obscureText: _obscureCurrentPassword,
+                  style: GoogleFonts.poppins(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Enter current password',
+                    hintStyle: TextStyle(color: Colors.grey.shade500),
+                    prefixIcon: Icon(
+                      Icons.lock_open_rounded,
+                      color: AppColors.accent,
+                    ),
+                    suffixIcon: IconButton(
+                      onPressed: () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword),
+                      icon: Icon(
+                        _obscureCurrentPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your current password';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // New Password Field
               Text(
                 'New Password',
@@ -240,6 +307,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     if (!result.hasUppercase) return 'Add an uppercase letter';
                     if (!result.hasLowercase) return 'Add a lowercase letter';
                     if (!result.hasNumber) return 'Add a number';
+                    if (value == _currentPasswordController.text) {
+                      return 'Choose a password different from your current one';
+                    }
                     return null;
                   },
                 ),
