@@ -634,8 +634,25 @@ You asked for a modern redesign of the whole app, from login through every stude
 - `flutter analyze`: 0 errors, 0 warnings.
 - `flutter test`: the layout test now uses the bundled font and checks the pre-login screens at 320, 360 and 412 px wide in **both light and dark mode** (33 checks, all pass).
 - **New screenshot harness** (`test/screenshots/`, skipped in normal test runs): renders every screen to PNG with sample data, including the admin panel through a test-only `AdminService.debugInstance` hook. All 60+ screenshots were reviewed in light and dark; no layout overflows.
-- Debug APK build, to confirm the Android launch-screen resources compile.
+- A debug APK build was started but stopped before finishing (the laptop was low on memory); the release build below is what confirms the Android resources compile.
 - Not tested on a physical phone in this session.
+
+## 2026-10-12 — Session 42: redesign kept on its own branch, APK built
+
+**Branches.** You chose to keep the old design on `main` and put the redesign up as a separate pull request:
+- `main` = commit `83e290a`, the old design plus the Session 37–40 security fixes.
+- `redesign` = commit `33ea539` (on top of `main`), only the Session 41 redesign. Pull request: https://github.com/kilewin021105/crimireview/pull/new/redesign
+- The `docs/manuscript_*.md` drafts stay uncommitted on purpose.
+
+**Release APK of the redesign**, built from the `redesign` branch with `flutter build apk --release`:
+- `build/app/outputs/flutter-apk/app-release.apk`, 57.2 MB, `com.crimireview.crimireview` **1.0.1 (versionCode 2)**, min Android 7.0 (SDK 24), target SDK 35.
+- SHA-256 `A197781BF569BC4E4133E996BDD5C362CAE115106AF64E53FC3642317C7BD61B`.
+- Checked inside the APK: the bundled Plus Jakarta Sans fonts and `logo_mark.png` are packaged, so this is the redesign, not the old UI.
+- Still signed with the **debug key** (no `android/key.properties` yet), the same key as the published v1.0.0, so it installs as an update over v1.0.0 on a phone.
+- Leftover Gradle processes from the stalled build were stopped first; the build then took about 6 minutes (Gradle `assembleRelease` 255 s).
+- Not yet installed on a phone (none was connected).
+
+**Housekeeping:** `android/.kotlin/` (the Kotlin compiler's temporary session files) is now git-ignored; one such file had been committed by mistake and is removed from the repo.
 
 ---
 
