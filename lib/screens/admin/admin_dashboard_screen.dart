@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/subject.dart';
 import '../../services/admin_service.dart';
-import '../../services/theme_service.dart';
+import '../../utils/error_messages.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
+import '../../widgets/ui/ui.dart';
 import 'admin_questions_screen.dart';
 import 'admin_students_screen.dart';
 
@@ -28,10 +28,9 @@ class AdminDashboardScreen extends StatefulWidget {
   /// cards fall back to [Navigator.push].
   final ValueChanged<int>? onNavigateToTab;
 
-  /// Extra AppBar actions -- used by `AdminShellScreen` to add "View as
-  /// Student" / "Sign Out" on the shell's landing tab, the same way the
-  /// student `HomeScreen` carries its own profile shortcut rather than
-  /// repeating it on every tab.
+  /// Extra AppBar actions -- used by `AdminShellScreen` to add "Sign Out"
+  /// on the shell's landing tab, the same way the student `HomeScreen`
+  /// carries its own profile shortcut rather than repeating it on every tab.
   final List<Widget>? appBarActions;
 
   const AdminDashboardScreen({
@@ -80,154 +79,181 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyError(e, fallback: 'Please check your connection and try again.');
         _loading = false;
       });
     }
   }
 
+  void _openQuestions() async {
+    if (widget.onNavigateToTab != null) {
+      widget.onNavigateToTab!(1);
+      return;
+    }
+    await Navigator.push(context, SlidePageRoute(page: const AdminQuestionsScreen()));
+    _load();
+  }
+
+  void _openStudents() {
+    if (widget.onNavigateToTab != null) {
+      widget.onNavigateToTab!(2);
+      return;
+    }
+    Navigator.push(context, SlidePageRoute(page: const AdminStudentsScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: _buildAppBar(isDark),
-      body: SafeArea(
-        top: false,
-        child: RefreshIndicator(
-          onRefresh: _load,
-          color: AppColors.accent,
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? _buildError(isDark)
-                  : ListView(
-                      padding: EdgeInsets.fromLTRB(padding, 8, padding, 32),
-                      children: [
-                        _buildStatGrid(isDark),
-                        const SizedBox(height: 24),
-                        _buildNavCard(
-                          isDark: isDark,
-                          icon: Icons.quiz_rounded,
-                          title: 'Manage Questions',
-                          subtitle:
-                              '${_questionStats['active'] ?? 0} active of ${_questionStats['total'] ?? 0} total items',
-                          color: AppColors.accent,
-                          onTap: () async {
-                            if (widget.onNavigateToTab != null) {
-                              widget.onNavigateToTab!(1);
-                              return;
-                            }
-                            await Navigator.push(
-                              context,
-                              SlidePageRoute(page: const AdminQuestionsScreen()),
-                            );
-                            _load();
-                          },
+      appBar: AppTopBar(
+        title: 'Dashboard',
+        subtitle: 'Content health and student progress',
+        showBack: widget.showBackButton,
+        actions: [
+          ToolbarIconButton(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Refresh',
+            size: 40,
+            onPressed: _loading ? null : _load,
+          ),
+          ...?widget.appBarActions,
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: _loading
+            ? const LoadingView(label: 'Loading dashboard...')
+            : _error != null
+                ? ListView(
+                    children: [
+                      const SizedBox(height: 60),
+                      EmptyState(
+                        icon: Icons.error_outline_rounded,
+                        title: "Couldn't load the dashboard",
+                        message: _error,
+                        actionLabel: 'Try again',
+                        onAction: _load,
+                        color: context.palette.danger,
+                      ),
+                    ],
+                  )
+                : ListView(
+                    padding: EdgeInsets.fromLTRB(padding, 4, padding, 32),
+                    children: [
+                      ContentWidth(
+                        maxWidth: 1000,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Appear(index: 0, child: _buildHero()),
+                            const SizedBox(height: 14),
+                            Appear(index: 1, child: _buildStatGrid()),
+                            const SizedBox(height: AppSpace.section),
+                            Appear(index: 2, child: _buildShortcuts()),
+                            const SizedBox(height: AppSpace.section),
+                            Appear(
+                              index: 3,
+                              child: LayoutBuilder(builder: (context, c) {
+                                final wide = c.maxWidth >= 760;
+                                final subjects = _section(
+                                  'Content by subject',
+                                  'Active / total questions',
+                                  _buildSubjectBreakdown(),
+                                );
+                                final audit = _section(
+                                  'Recent admin activity',
+                                  'Last ${_auditLog.length} changes',
+                                  _buildAuditLog(),
+                                );
+                                if (!wide) {
+                                  return Column(
+                                    children: [subjects, const SizedBox(height: AppSpace.section), audit],
+                                  );
+                                }
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: subjects),
+                                    const SizedBox(width: 16),
+                                    Expanded(child: audit),
+                                  ],
+                                );
+                              }),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 12),
-                        _buildNavCard(
-                          isDark: isDark,
-                          icon: Icons.groups_rounded,
-                          title: 'Monitor Students',
-                          subtitle:
-                              '${_students.length} student${_students.length == 1 ? '' : 's'} tracked',
-                          color: const Color(0xFF14B8A6),
-                          onTap: () {
-                            if (widget.onNavigateToTab != null) {
-                              widget.onNavigateToTab!(2);
-                              return;
-                            }
-                            Navigator.push(
-                              context,
-                              SlidePageRoute(page: const AdminStudentsScreen()),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        _buildSectionHeader('Content by Subject', isDark),
-                        const SizedBox(height: 12),
-                        _buildSubjectBreakdown(isDark),
-                        const SizedBox(height: 24),
-                        _buildSectionHeader('Recent Admin Activity', isDark),
-                        const SizedBox(height: 12),
-                        _buildAuditLog(isDark),
-                      ],
-                    ),
-        ),
+                      ),
+                    ],
+                  ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(bool isDark) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      leading: widget.showBackButton
-          ? IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-                  ],
-                ),
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+  Widget _section(String title, String subtitle, Widget child) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(title: title, subtitle: subtitle),
+          const SizedBox(height: 12),
+          child,
+        ],
+      );
+
+  Widget _buildHero() {
+    final text = context.textStyles;
+    final total = (_questionStats['total'] as num?)?.toInt() ?? 0;
+    final active = (_questionStats['active'] as num?)?.toInt() ?? 0;
+    return GradientCard(
+      onTap: _openQuestions,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'QUESTION BANK',
+                style: text.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.75)),
+              ),
+              const Spacer(),
+              Pill(
+                label: 'Manage',
+                icon: Icons.arrow_forward_rounded,
+                color: Colors.white,
+                background: Colors.white.withValues(alpha: 0.16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('$active', style: text.displaySmall?.copyWith(color: Colors.white)),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  'active of $total questions',
+                  style: text.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.8)),
                 ),
               ),
-            )
-          : null,
-      title: Text(
-        'Admin Panel',
-        style: GoogleFonts.poppins(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-        ),
-      ),
-      centerTitle: true,
-      actions: widget.appBarActions,
-    );
-  }
-
-  Widget _buildError(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              'Could not load the admin dashboard.\n$_error',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade700),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _load,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
-              child: const Text('Retry', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          AppProgressBar(
+            value: total == 0 ? 0 : active / total,
+            color: Colors.white,
+            trackColor: Colors.white.withValues(alpha: 0.2),
+            height: 7,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatGrid(bool isDark) {
+  Widget _buildStatGrid() {
+    final p = context.palette;
     final total = _questionStats['total'] ?? 0;
-    final active = _questionStats['active'] ?? 0;
     final generated = _questionStats['generated'] ?? 0;
 
     var studentsRemediation = 0;
@@ -244,214 +270,178 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final avgMasteryPercent = pKnownCount == 0 ? 0 : ((pKnownSum / pKnownCount) * 100).round();
 
     final tiles = [
-      _StatTileData('$active', 'Active Questions', Icons.fact_check_rounded, AppColors.accent),
-      _StatTileData('$total', 'Total in Bank', Icons.storage_rounded, const Color(0xFF3B82F6)),
-      _StatTileData('${_students.length}', 'Students', Icons.groups_rounded, const Color(0xFF14B8A6)),
-      _StatTileData('$avgMasteryPercent%', 'Avg. Mastery', Icons.psychology_rounded, const Color(0xFFF59E0B)),
-      _StatTileData('$studentsRemediation', 'Topics Needing Review', Icons.report_problem_rounded, AppColors.error),
-      _StatTileData('$generated', 'Auto-Generated Items', Icons.auto_awesome_rounded, const Color(0xFFEC4899)),
+      StatTile(icon: Icons.groups_rounded, value: '${_students.length}', label: 'Students', color: const Color(0xFF0E9F9A)),
+      StatTile(icon: Icons.psychology_rounded, value: '$avgMasteryPercent%', label: 'Avg. mastery', color: p.gold),
+      StatTile(icon: Icons.flag_rounded, value: '$studentsRemediation', label: 'Topics to review', color: p.danger),
+      StatTile(icon: Icons.storage_rounded, value: '$total', label: 'Total in bank', color: p.info),
+      StatTile(icon: Icons.auto_awesome_rounded, value: '$generated', label: 'Auto-generated', color: const Color(0xFFE3478C)),
+      StatTile(icon: Icons.history_rounded, value: '${_auditLog.length}', label: 'Recent changes', color: p.primary),
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.5,
-      ),
-      itemCount: tiles.length,
-      itemBuilder: (context, i) => _buildStatTile(tiles[i], isDark),
-    );
+    return LayoutBuilder(builder: (context, c) {
+      final columns = c.maxWidth >= 760 ? 6 : (c.maxWidth >= 480 ? 3 : 2);
+      return GridView.count(
+        crossAxisCount: columns,
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: columns == 6 ? 1.05 : 1.35,
+        children: tiles,
+      );
+    });
   }
 
-  Widget _buildStatTile(_StatTileData data, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
+  Widget _buildShortcuts() {
+    final p = context.palette;
+    final active = _questionStats['active'] ?? 0;
+    final total = _questionStats['total'] ?? 0;
+    final cards = [
+      _shortcut(
+        icon: Icons.quiz_rounded,
+        color: p.primary,
+        title: 'Manage questions',
+        subtitle: '$active active of $total total items',
+        onTap: _openQuestions,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: data.color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(data.icon, color: data.color, size: 18),
-          ),
-          const Spacer(),
-          Text(
-            data.value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-            ),
-          ),
-          Text(
-            data.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-            ),
-          ),
-        ],
+      _shortcut(
+        icon: Icons.groups_rounded,
+        color: const Color(0xFF0E9F9A),
+        title: 'Monitor students',
+        subtitle: '${_students.length} student${_students.length == 1 ? '' : 's'} tracked',
+        onTap: _openStudents,
       ),
-    );
+    ];
+    return LayoutBuilder(builder: (context, c) {
+      if (c.maxWidth < 560) {
+        return Column(children: [cards[0], const SizedBox(height: 10), cards[1]]);
+      }
+      return Row(children: [
+        Expanded(child: cards[0]),
+        const SizedBox(width: 10),
+        Expanded(child: cards[1]),
+      ]);
+    });
   }
 
-  Widget _buildNavCard({
-    required bool isDark,
+  Widget _shortcut({
     required IconData icon,
+    required Color color,
     required String title,
     required String subtitle,
-    required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    final text = context.textStyles;
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, bool isDark) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-      ),
-    );
-  }
-
-  Widget _buildSubjectBreakdown(bool isDark) {
-    final bySubject = (_questionStats['bySubject'] as Map?) ?? const {};
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
+      padding: const EdgeInsets.all(14),
+      child: Row(
         children: [
-          for (final subject in CriminologySubjects.all)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(subject.icon, size: 18, color: subject.color),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      subject.shortName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${(bySubject[subject.id]?['active']) ?? 0} / ${(bySubject[subject.id]?['total']) ?? 0}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
+          IconBadge(icon: icon, color: color, size: 46, iconSize: 23),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: text.titleSmall),
+                const SizedBox(height: 2),
+                Text(subtitle, style: text.bodySmall),
+              ],
             ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: context.palette.textTertiary),
         ],
       ),
     );
   }
 
-  Widget _buildAuditLog(bool isDark) {
+  Widget _buildSubjectBreakdown() {
+    final p = context.palette;
+    final text = context.textStyles;
+    final bySubject = (_questionStats['bySubject'] as Map?) ?? const {};
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          for (var i = 0; i < CriminologySubjects.all.length; i++) ...[
+            if (i > 0) Divider(height: 1, color: p.border),
+            Builder(builder: (context) {
+              final subject = CriminologySubjects.all[i];
+              final active = ((bySubject[subject.id]?['active']) as num?)?.toInt() ?? 0;
+              final total = ((bySubject[subject.id]?['total']) as num?)?.toInt() ?? 0;
+              final color = AppColors.subjectColor(subject.id);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                child: Row(
+                  children: [
+                    IconBadge(
+                      icon: AppTheme.subjectIcons[subject.id] ?? subject.icon,
+                      color: color,
+                      size: 34,
+                      iconSize: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: Text(subject.shortName, style: text.titleSmall)),
+                              Text(
+                                '$active / $total',
+                                style: text.labelMedium?.copyWith(color: p.textPrimary, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          AppProgressBar(value: total == 0 ? 0 : active / total, color: color, height: 5),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuditLog() {
+    final p = context.palette;
     if (_auditLog.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          'No admin activity yet. Actions you take on questions will appear here.',
-          style: TextStyle(color: isDark ? Colors.grey.shade500 : Colors.grey.shade600, fontSize: 13),
+      return const AppCard(
+        child: EmptyState(
+          compact: true,
+          icon: Icons.history_rounded,
+          title: 'No activity yet',
+          message: 'Changes you make to questions will appear here.',
         ),
       );
     }
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         children: [
           for (var i = 0; i < _auditLog.length; i++) ...[
-            _buildAuditRow(_auditLog[i], isDark),
-            if (i != _auditLog.length - 1)
-              Divider(height: 1, color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
+            if (i > 0)
+              Padding(
+                padding: const EdgeInsets.only(left: 60),
+                child: Divider(height: 1, color: p.border),
+              ),
+            _buildAuditRow(_auditLog[i]),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildAuditRow(Map<String, dynamic> entry, bool isDark) {
+  Widget _buildAuditRow(Map<String, dynamic> entry) {
+    final p = context.palette;
+    final text = context.textStyles;
     final action = (entry['action'] ?? '').toString();
     final targetId = (entry['target_id'] ?? '').toString();
     final createdAt = DateTime.tryParse((entry['created_at'] ?? '').toString());
@@ -461,46 +451,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     switch (action) {
       case 'create':
         icon = Icons.add_circle_outline_rounded;
-        color = AppColors.success;
+        color = p.success;
         break;
       case 'update':
         icon = Icons.edit_rounded;
-        color = const Color(0xFF3B82F6);
+        color = p.info;
         break;
       case 'delete':
         icon = Icons.delete_outline_rounded;
-        color = AppColors.error;
+        color = p.danger;
         break;
       case 'restore':
         icon = Icons.restore_rounded;
-        color = const Color(0xFFF59E0B);
+        color = p.warning;
         break;
       default:
         icon = Icons.circle_outlined;
-        color = Colors.grey;
+        color = p.textTertiary;
     }
+    final label = action.isEmpty ? 'Change' : '${action[0].toUpperCase()}${action.substring(1)}';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: color),
+          IconBadge(icon: icon, color: color, size: 34, iconSize: 18),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              '${action[0].toUpperCase()}${action.substring(1)} · $targetId',
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: text.titleSmall),
+                Text(targetId, style: text.bodySmall, overflow: TextOverflow.ellipsis),
+              ],
             ),
           ),
-          if (createdAt != null)
-            Text(
-              _timeAgo(createdAt),
-              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade600 : Colors.grey.shade500),
-            ),
+          if (createdAt != null) Text(_timeAgo(createdAt), style: text.labelSmall),
         ],
       ),
     );
@@ -513,12 +499,4 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
   }
-}
-
-class _StatTileData {
-  final String value;
-  final String label;
-  final IconData icon;
-  final Color color;
-  _StatTileData(this.value, this.label, this.icon, this.color);
 }

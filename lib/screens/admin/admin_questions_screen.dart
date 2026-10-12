@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/question.dart';
 import '../../models/subject.dart';
 import '../../services/admin_service.dart';
-import '../../services/theme_service.dart';
+import '../../utils/error_messages.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
+import '../../widgets/ui/ui.dart';
 import 'admin_question_editor_screen.dart';
 import 'admin_template_generation_screen.dart';
 
@@ -100,7 +100,7 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyError(e, fallback: 'Please check your connection and try again.');
         _loading = false;
       });
     }
@@ -129,19 +129,12 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingMore = false);
-      _showSnack(e.toString(), isError: true);
+      _showSnack(friendlyError(e, fallback: 'Could not load more questions.'), isError: true);
     }
   }
 
   void _showSnack(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? AppColors.error : AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    showAppSnack(context, message, tone: isError ? BannerTone.danger : BannerTone.success);
   }
 
   Future<void> _openEditor([Question? existing]) async {
@@ -159,167 +152,157 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
       _showSnack(goingActive ? 'Question restored' : 'Question deactivated');
       _reload();
     } catch (e) {
-      _showSnack('Failed: $e', isError: true);
+      _showSnack(friendlyError(e, fallback: 'Could not update the question.'), isError: true);
     }
   }
 
   Future<void> _confirmDelete(Question q) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete permanently?'),
-        content: Text(
-          'This removes "${q.questionText}" from the database entirely. '
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Delete permanently?',
+      message: 'This removes "${q.questionText}" from the database entirely. '
           'Prefer deactivating unless this was a mistake -- deactivated items '
           'can be restored, this cannot.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      confirmLabel: 'Delete',
+      destructive: true,
+      icon: Icons.delete_forever_rounded,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     try {
       await AdminService.instance.deleteQuestionPermanently(q.id);
       _showSnack('Question deleted');
       _reload();
     } catch (e) {
-      _showSnack('Failed: $e', isError: true);
+      _showSnack(friendlyError(e, fallback: 'Could not delete the question.'), isError: true);
     }
+  }
+
+  Subject? _subjectFor(String id) {
+    for (final s in CriminologySubjects.all) {
+      if (s.id == id) return s;
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: _buildAppBar(isDark),
+      appBar: AppTopBar(
+        title: widget.initialTemplateId != null ? 'Generated batch' : 'Question bank',
+        subtitle: _loading
+            ? 'Loading...'
+            : '${_questions.length}${_hasMore ? '+' : ''} question${_questions.length == 1 ? '' : 's'} shown',
+        showBack: widget.showBackButton,
+        // Only on the tab-root instance -- a screen already deep-linked into
+        // one template's review batch (widget.showBackButton == true) doesn't
+        // need a second way to start another generation run.
+        actions: widget.showBackButton
+            ? null
+            : [
+                ToolbarIconButton(
+                  icon: Icons.auto_fix_high_rounded,
+                  tooltip: 'Generate from templates',
+                  size: 40,
+                  onPressed: () => Navigator.push(
+                    context,
+                    SlidePageRoute(page: const AdminTemplateGenerationScreen()),
+                  ),
+                ),
+              ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openEditor(),
-        backgroundColor: AppColors.accent,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Question', style: TextStyle(color: Colors.white)),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New question'),
       ),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(padding, 8, padding, 0),
-              child: _buildFilters(isDark),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? _buildError(isDark)
-                      : _questions.isEmpty
-                          ? _buildEmpty(isDark)
-                          : NotificationListener<ScrollNotification>(
-                              onNotification: (notification) {
-                                if (notification.metrics.pixels >=
-                                    notification.metrics.maxScrollExtent - 200) {
-                                  _loadMore();
-                                }
-                                return false;
-                              },
-                              child: RefreshIndicator(
-                                onRefresh: _reload,
-                                color: AppColors.accent,
-                                child: ListView.builder(
-                                  padding: EdgeInsets.fromLTRB(padding, 0, padding, 100),
-                                  itemCount: _questions.length + (_hasMore ? 1 : 0),
-                                  itemBuilder: (context, i) {
-                                    if (i >= _questions.length) {
-                                      return const Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 16),
-                                        child: Center(child: CircularProgressIndicator()),
-                                      );
-                                    }
-                                    return _buildQuestionCard(_questions[i], isDark);
-                                  },
-                                ),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(padding, 4, padding, 0),
+            child: ContentWidth(maxWidth: 1000, child: _buildFilters()),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: _loading
+                ? const LoadingView(label: 'Loading questions...')
+                : _error != null
+                    ? Center(
+                        child: EmptyState(
+                          icon: Icons.error_outline_rounded,
+                          title: "Couldn't load questions",
+                          message: _error,
+                          actionLabel: 'Try again',
+                          onAction: _reload,
+                          color: context.palette.danger,
+                        ),
+                      )
+                    : _questions.isEmpty
+                        ? Center(
+                            child: EmptyState(
+                              icon: Icons.inbox_rounded,
+                              title: 'No questions found',
+                              message: 'Nothing matches these filters. Try clearing the search or filters.',
+                              actionLabel: 'New question',
+                              onAction: () => _openEditor(),
+                            ),
+                          )
+                        : NotificationListener<ScrollNotification>(
+                            onNotification: (notification) {
+                              if (notification.metrics.pixels >=
+                                  notification.metrics.maxScrollExtent - 200) {
+                                _loadMore();
+                              }
+                              return false;
+                            },
+                            child: RefreshIndicator(
+                              onRefresh: _reload,
+                              child: ListView.builder(
+                                padding: EdgeInsets.fromLTRB(padding, 0, padding, 100),
+                                itemCount: _questions.length + (_hasMore ? 1 : 0),
+                                itemBuilder: (context, i) {
+                                  if (i >= _questions.length) {
+                                    return const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 16),
+                                      child: LoadingView(),
+                                    );
+                                  }
+                                  return ContentWidth(
+                                    maxWidth: 1000,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(bottom: 10),
+                                      child: _buildQuestionCard(_questions[i]),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-            ),
-          ],
-        ),
+                          ),
+          ),
+        ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(bool isDark) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      leading: widget.showBackButton
-          ? IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
-                ),
-                child: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-              ),
-            )
-          : null,
-      title: Text(
-        'Questions',
-        style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-      ),
-      centerTitle: true,
-      // Only on the tab-root instance -- a screen already deep-linked into
-      // one template's review batch (widget.showBackButton == true) doesn't
-      // need a second way to start another generation run.
-      actions: widget.showBackButton
-          ? null
-          : [
-              IconButton(
-                tooltip: 'Generate from Templates',
-                icon: Icon(Icons.auto_fix_high_rounded, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-                onPressed: () => Navigator.push(
-                  context,
-                  SlidePageRoute(page: const AdminTemplateGenerationScreen()),
-                ),
-              ),
-            ],
-    );
-  }
-
-  Widget _buildFilters(bool isDark) {
+  Widget _buildFilters() {
+    final p = context.palette;
+    final subject = _subjectId == null ? null : _subjectFor(_subjectId!);
     return Column(
       children: [
         TextField(
           controller: _searchController,
           onSubmitted: (_) => _reload(),
-          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
+          textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             hintText: 'Search question text or topic',
-            hintStyle: TextStyle(color: isDark ? Colors.grey.shade500 : Colors.grey.shade500),
             prefixIcon: const Icon(Icons.search_rounded),
             suffixIcon: IconButton(
+              tooltip: 'Search',
               icon: const Icon(Icons.arrow_forward_rounded),
               onPressed: _reload,
             ),
-            filled: true,
-            fillColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-            contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
           ),
         ),
         const SizedBox(height: 10),
@@ -327,51 +310,43 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildDropdownChip<String?>(
-                isDark: isDark,
-                value: _subjectId,
-                label: 'All Subjects',
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('All Subjects')),
-                  for (final s in CriminologySubjects.all)
-                    DropdownMenuItem(value: s.id, child: Text(s.shortName)),
+              _MenuChip<String?>(
+                icon: Icons.category_rounded,
+                label: subject?.shortName ?? 'All subjects',
+                active: _subjectId != null,
+                options: [
+                  const (null, 'All subjects'),
+                  for (final s in CriminologySubjects.all) (s.id, s.shortName),
                 ],
-                onChanged: (v) {
+                onSelected: (v) {
                   setState(() => _subjectId = v);
                   _reload();
                 },
               ),
               const SizedBox(width: 8),
-              _buildDropdownChip<Difficulty?>(
-                isDark: isDark,
-                value: _difficulty,
-                label: 'All Difficulties',
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('All Difficulties')),
-                  for (final d in Difficulty.values)
-                    DropdownMenuItem(value: d, child: Text(d.name[0].toUpperCase() + d.name.substring(1))),
+              _MenuChip<Difficulty?>(
+                icon: Icons.signal_cellular_alt_rounded,
+                label: _difficulty == null
+                    ? 'All difficulties'
+                    : _difficulty!.name[0].toUpperCase() + _difficulty!.name.substring(1),
+                active: _difficulty != null,
+                options: [
+                  const (null, 'All difficulties'),
+                  for (final d in Difficulty.values) (d, d.name[0].toUpperCase() + d.name.substring(1)),
                 ],
-                onChanged: (v) {
+                onSelected: (v) {
                   setState(() => _difficulty = v);
                   _reload();
                 },
               ),
               const SizedBox(width: 8),
               FilterChip(
-                label: const Text('Show inactive'),
+                label: const Text('Inactive'),
                 selected: _includeInactive,
                 onSelected: (v) {
                   setState(() => _includeInactive = v);
                   _reload();
                 },
-                selectedColor: AppColors.accent.withValues(alpha: 0.18),
-                checkmarkColor: AppColors.accent,
-                backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-                labelStyle: TextStyle(
-                  fontSize: 12,
-                  color: _includeInactive ? AppColors.accent : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
-                ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide.none),
               ),
               // Only offered when the screen wasn't already deep-linked into
               // one upload's batch (widget.initialTemplateId) -- that case
@@ -379,22 +354,13 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
               if (widget.initialTemplateId == null) ...[
                 const SizedBox(width: 8),
                 FilterChip(
+                  avatar: Icon(Icons.auto_awesome_rounded, size: 16, color: p.textSecondary),
                   label: const Text('Generated only'),
                   selected: _source == QuestionSource.generated,
                   onSelected: (v) {
                     setState(() => _source = v ? QuestionSource.generated : null);
                     _reload();
                   },
-                  selectedColor: const Color(0xFFEC4899).withValues(alpha: 0.18),
-                  checkmarkColor: const Color(0xFFEC4899),
-                  backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: _source == QuestionSource.generated
-                        ? const Color(0xFFEC4899)
-                        : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide.none),
                 ),
               ],
             ],
@@ -404,170 +370,185 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
     );
   }
 
-  Widget _buildDropdownChip<T>({
-    required bool isDark,
-    required T value,
-    required String label,
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          items: items,
-          onChanged: (v) => onChanged(v as T),
-          isDense: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-          style: TextStyle(fontSize: 12, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-          dropdownColor: isDark ? AppColors.darkCard : Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildError(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
-            const SizedBox(height: 12),
-            Text('Could not load questions.\n$_error', textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _reload,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
-              child: const Text('Retry', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmpty(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.inbox_rounded, size: 48, color: isDark ? Colors.grey.shade700 : Colors.grey.shade400),
-            const SizedBox(height: 12),
-            Text(
-              'No questions match these filters.',
-              style: TextStyle(color: isDark ? Colors.grey.shade500 : Colors.grey.shade600),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuestionCard(AdminQuestionEntry entry, bool isDark) {
+  Widget _buildQuestionCard(AdminQuestionEntry entry) {
+    final p = context.palette;
+    final text = context.textStyles;
     final q = entry.question;
-    final diffColor = _difficultyColor(q.difficulty);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-        border: entry.isActive ? null : Border.all(color: AppColors.error.withValues(alpha: 0.4)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+    final subject = _subjectFor(q.subject);
+    final subjectColor = AppColors.subjectColor(q.subject);
+
+    return Opacity(
+      opacity: entry.isActive ? 1 : 0.72,
+      child: AppCard(
         onTap: () => _openEditor(q),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _buildTag(q.subject.replaceAll('_', ' '), AppColors.accent, isDark),
-                  const SizedBox(width: 6),
-                  _buildTag(q.difficulty.name, diffColor, isDark),
-                  const SizedBox(width: 6),
-                  if (q.source != QuestionSource.admin) _buildTag(q.source.name, const Color(0xFFEC4899), isDark),
-                  if (!entry.isActive) ...[
-                    const SizedBox(width: 6),
-                    _buildTag('inactive', AppColors.error, isDark),
-                  ],
-                  const Spacer(),
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert_rounded, size: 20, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                    onSelected: (action) {
-                      switch (action) {
-                        case 'edit':
-                          _openEditor(q);
-                          break;
-                        case 'deactivate':
-                          _toggleActive(entry);
-                          break;
-                        case 'delete':
-                          _confirmDelete(q);
-                          break;
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(
-                        value: 'deactivate',
-                        child: Text(entry.isActive ? 'Deactivate' : 'Restore'),
+        padding: const EdgeInsets.fromLTRB(14, 12, 4, 14),
+        borderColor: entry.isActive ? null : p.danger.withValues(alpha: 0.4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      Pill(
+                        label: subject?.shortName ?? q.subject.replaceAll('_', ' '),
+                        color: subjectColor,
+                        fontSize: 10.5,
                       ),
-                      const PopupMenuItem(value: 'delete', child: Text('Delete permanently')),
+                      Pill(
+                        label: q.difficulty.name[0].toUpperCase() + q.difficulty.name.substring(1),
+                        color: p.forDifficulty(q.difficulty.index),
+                        fontSize: 10.5,
+                      ),
+                      if (q.source != QuestionSource.admin)
+                        Pill(
+                          label: q.source.name,
+                          icon: Icons.auto_awesome_rounded,
+                          color: const Color(0xFFE3478C),
+                          fontSize: 10.5,
+                        ),
+                      if (!entry.isActive)
+                        Pill(label: 'Inactive', icon: Icons.visibility_off_rounded, color: p.danger, fontSize: 10.5),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Actions',
+                  icon: Icon(Icons.more_horiz_rounded, size: 22, color: p.textSecondary),
+                  onSelected: (action) {
+                    switch (action) {
+                      case 'edit':
+                        _openEditor(q);
+                        break;
+                      case 'deactivate':
+                        _toggleActive(entry);
+                        break;
+                      case 'delete':
+                        _confirmDelete(q);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(leading: Icon(Icons.edit_rounded), title: Text('Edit'), dense: true),
+                    ),
+                    PopupMenuItem(
+                      value: 'deactivate',
+                      child: ListTile(
+                        leading: Icon(entry.isActive ? Icons.visibility_off_rounded : Icons.restore_rounded),
+                        title: Text(entry.isActive ? 'Deactivate' : 'Restore'),
+                        dense: true,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline_rounded, color: p.danger),
+                        title: Text('Delete permanently', style: TextStyle(color: p.danger)),
+                        dense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 6),
+                  Text(q.topic.toUpperCase(), style: text.labelSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    q.questionText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleSmall?.copyWith(height: 1.45),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.list_rounded, size: 15, color: p.textTertiary),
+                      const SizedBox(width: 4),
+                      Text('${q.answerOptions.length} options', style: text.bodySmall),
+                      const SizedBox(width: 12),
+                      Icon(Icons.history_rounded, size: 15, color: p.textTertiary),
+                      const SizedBox(width: 4),
+                      Text('v${q.version}', style: text.bodySmall),
+                      if (q.hasRationales) ...[
+                        const SizedBox(width: 12),
+                        Icon(Icons.check_circle_rounded, size: 15, color: p.success),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Rationales',
+                            style: text.bodySmall?.copyWith(color: p.success),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                q.topic,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                q.questionText,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 14, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${q.answerOptions.length} options · v${q.version}${q.hasRationales ? ' · has rationales' : ''}',
-                style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade600 : Colors.grey.shade500),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildTag(String text, Color color, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(8)),
-      child: Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+/// A filter chip that opens a menu of choices.
+class _MenuChip<T> extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final List<(T, String)> options;
+  final ValueChanged<T> onSelected;
+
+  const _MenuChip({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.options,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final text = context.textStyles;
+    final fg = active ? p.onPrimarySoft : p.textPrimary;
+    return PopupMenuButton<int>(
+      tooltip: label,
+      onSelected: (i) => onSelected(options[i].$1),
+      itemBuilder: (context) => [
+        for (var i = 0; i < options.length; i++)
+          PopupMenuItem(value: i, child: Text(options[i].$2)),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? p.primarySoft : p.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppSpace.radiusSm),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: active ? p.primary : p.textSecondary),
+            const SizedBox(width: 6),
+            Text(label, style: text.labelMedium?.copyWith(color: fg)),
+            const SizedBox(width: 2),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: fg),
+          ],
+        ),
+      ),
     );
-  }
-
-  Color _difficultyColor(Difficulty d) {
-    switch (d) {
-      case Difficulty.easy:
-        return AppColors.success;
-      case Difficulty.medium:
-        return AppColors.warning;
-      case Difficulty.hard:
-        return AppColors.error;
-    }
   }
 }

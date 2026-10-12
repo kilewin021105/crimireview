@@ -1,147 +1,152 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/adaptive_learning_service.dart';
-import '../services/theme_service.dart';
 import '../models/achievement.dart';
+import '../utils/responsive.dart';
+import '../widgets/ui/ui.dart';
 
 class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final service = Provider.of<AdaptiveLearningService>(context);
     final unlocked = service.getUnlockedAchievements();
     final unlockedIds = unlocked.map((a) => a.id).toSet();
+    final earned = Achievements.all.where((a) => unlockedIds.contains(a.id)).toList();
+    final locked = Achievements.all.where((a) => !unlockedIds.contains(a.id)).toList()
+      ..sort((a, b) => _fraction(b, service).compareTo(_fraction(a, service)));
+    final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_rounded,
-                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Achievements',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${unlocked.length}/${Achievements.all.length} unlocked',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+      appBar: AppTopBar(
+        title: 'Achievements',
+        subtitle: '${unlocked.length} of ${Achievements.all.length} unlocked',
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(padding, 4, padding, 28),
+        children: [
+          ContentWidth(child: _buildSummary(context, unlocked.length, locked, service)),
+          if (earned.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.section),
+            const ContentWidth(child: SectionHeader(title: 'Earned')),
+            const SizedBox(height: 12),
+            for (var i = 0; i < earned.length; i++)
+              ContentWidth(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Appear(index: i, child: _buildAchievementTile(context, earned[i], true, service)),
+                ),
               ),
-            ),
-
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: unlocked.length / Achievements.all.length,
-                      backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation(AppColors.accent),
-                      minHeight: 8,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                itemCount: Achievements.all.length,
-                itemBuilder: (context, index) {
-                  final achievement = Achievements.all[index];
-                  final isUnlocked = unlockedIds.contains(achievement.id);
-                  return _buildAchievementTile(achievement, isUnlocked, isDark, service);
-                },
-              ),
-            ),
           ],
-        ),
+          if (locked.isNotEmpty) ...[
+            const SizedBox(height: AppSpace.section - 10),
+            const ContentWidth(child: SectionHeader(title: 'In progress')),
+            const SizedBox(height: 12),
+            for (var i = 0; i < locked.length; i++)
+              ContentWidth(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Appear(
+                    index: earned.length + i,
+                    child: _buildAchievementTile(context, locked[i], false, service),
+                  ),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildAchievementTile(Achievement achievement, bool isUnlocked, bool isDark, AdaptiveLearningService service) {
-    final progress = _getAchievementProgress(achievement, service);
-    final progressValue = (progress / achievement.requirement).clamp(0.0, 1.0);
+  double _fraction(Achievement a, AdaptiveLearningService service) =>
+      (_getAchievementProgress(a, service) / a.requirement).clamp(0.0, 1.0);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-        border: isUnlocked
-            ? Border.all(color: AppColors.accent.withValues(alpha: 0.3), width: 1.5)
-            : null,
-      ),
+  Widget _buildSummary(
+    BuildContext context,
+    int unlockedCount,
+    List<Achievement> locked,
+    AdaptiveLearningService service,
+  ) {
+    final p = context.palette;
+    final text = context.textStyles;
+    final total = Achievements.all.length;
+    final next = locked.isEmpty ? null : locked.first;
+    return AppCard(
+      padding: const EdgeInsets.all(18),
       child: Row(
         children: [
-
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: isUnlocked
-                  ? AppColors.accent.withValues(alpha: 0.15)
-                  : (isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade100),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              achievement.icon,
-              color: isUnlocked
-                  ? AppColors.accent
-                  : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-              size: 28,
+          RingProgress(
+            value: total == 0 ? 0 : unlockedCount / total,
+            size: 84,
+            stroke: 9,
+            color: p.gold,
+            center: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.emoji_events_rounded, color: p.gold, size: 22),
+                Text('$unlockedCount/$total', style: text.labelMedium?.copyWith(color: p.textPrimary, fontWeight: FontWeight.w800)),
+              ],
             ),
           ),
           const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  next == null ? 'All badges earned!' : 'Next up: ${next.name}',
+                  style: text.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  next == null
+                      ? 'You have unlocked every achievement. Impressive.'
+                      : next.description,
+                  style: text.bodySmall,
+                ),
+                if (next != null) ...[
+                  const SizedBox(height: 10),
+                  AppProgressBar(value: _fraction(next, service), color: p.gold, height: 6),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildAchievementTile(
+    BuildContext context,
+    Achievement achievement,
+    bool isUnlocked,
+    AdaptiveLearningService service,
+  ) {
+    final p = context.palette;
+    final text = context.textStyles;
+    final progress = _getAchievementProgress(achievement, service);
+    final progressValue = (progress / achievement.requirement).clamp(0.0, 1.0);
+
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      borderColor: isUnlocked ? p.gold.withValues(alpha: 0.35) : null,
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: isUnlocked ? p.goldSoft : p.surfaceAlt,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              achievement.icon,
+              color: isUnlocked ? p.gold : p.textTertiary,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,61 +156,26 @@ class AchievementsScreen extends StatelessWidget {
                     Expanded(
                       child: Text(
                         achievement.name,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: isUnlocked
-                              ? (isDark ? Colors.white : const Color(0xFF1A1A2E))
-                              : (isDark ? Colors.grey.shade500 : Colors.grey.shade500),
+                        style: text.titleSmall?.copyWith(
+                          color: isUnlocked ? p.textPrimary : p.textSecondary,
                         ),
                       ),
                     ),
                     if (isUnlocked)
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.check_rounded,
-                          color: AppColors.success,
-                          size: 16,
-                        ),
-                      ),
+                      Pill(label: 'Earned', icon: Icons.check_rounded, color: p.success, fontSize: 10.5),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  achievement.description,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                  ),
-                ),
+                const SizedBox(height: 2),
+                Text(achievement.description, style: text.bodySmall),
                 if (!isUnlocked) ...[
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: progressValue,
-                            backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
-                            valueColor: AlwaysStoppedAnimation(AppColors.accent.withValues(alpha: 0.6)),
-                            minHeight: 4,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+                      Expanded(child: AppProgressBar(value: progressValue, height: 6)),
+                      const SizedBox(width: 10),
                       Text(
-                        '$progress/${achievement.requirement}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                        ),
+                        '${progress.clamp(0, achievement.requirement)}/${achievement.requirement}',
+                        style: text.labelMedium,
                       ),
                     ],
                   ),
@@ -220,7 +190,7 @@ class AchievementsScreen extends StatelessWidget {
 
   int _getAchievementProgress(Achievement achievement, AdaptiveLearningService service) {
     final progress = service.userProgress;
-    
+
     switch (achievement.type) {
       case AchievementType.quizzes:
         int total = 0;

@@ -4,17 +4,16 @@
 //
 // Run: flutter test test/responsive_screens_test.dart
 //
-// Text is drawn with the real Poppins font (test/fonts, SIL Open Font
-// License) under the family names google_fonts uses, because Flutter's
-// default test font draws every letter as a full square and would report
-// overflows that never happen on a real phone.
+// Text is drawn with the app's real bundled font (Plus Jakarta Sans,
+// assets/fonts, SIL Open Font License), because Flutter's default test
+// font draws every letter as a full square and would report overflows that
+// never happen on a real phone. Both light and dark themes are checked.
 
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -48,21 +47,14 @@ Future<List<String>> _overflowsFor(WidgetTester tester, Widget screen, Size size
   try {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
-    // Same theme construction as CrimiReviewApp in lib/main.dart.
-    final theme = dark
-        ? AppTheme.darkTheme.copyWith(
-            textTheme: GoogleFonts.poppinsTextTheme().apply(
-                bodyColor: AppColors.textLight, displayColor: AppColors.textLight))
-        : AppTheme.lightTheme.copyWith(
-            textTheme: GoogleFonts.poppinsTextTheme().apply(
-                bodyColor: AppColors.textDark, displayColor: AppColors.textDark));
+    // Same themes CrimiReviewApp uses in lib/main.dart.
+    final theme = dark ? AppTheme.darkTheme : AppTheme.lightTheme;
     await tester.pumpWidget(
       ChangeNotifierProvider(
         create: (_) => ThemeService(),
         child: MaterialApp(theme: theme, home: screen),
       ),
     );
-    // Let google_fonts' failed downloads settle before measuring.
     await tester.pump();
     await tester.pumpWidget(
       ChangeNotifierProvider(
@@ -85,24 +77,14 @@ Future<List<String>> _overflowsFor(WidgetTester tester, Widget screen, Size size
 
 void main() {
   setUpAll(() async {
-    GoogleFonts.config.allowRuntimeFetching = false;
-    // google_fonts names each weight as its own family: Poppins_regular,
-    // Poppins_500 ... Poppins_900. 'Roboto' covers widgets with no font set.
-    const files = {
-      'Poppins_regular': 'Regular',
-      'Poppins_500': 'Medium',
-      'Poppins_600': 'SemiBold',
-      'Poppins_700': 'Bold',
-      'Poppins_800': 'ExtraBold',
-      'Poppins_900': 'Black',
-      'Roboto': 'Regular',
-    };
-    for (final entry in files.entries) {
-      final bytes = File('test/fonts/Poppins-${entry.value}.ttf').readAsBytesSync();
-      final loader = FontLoader(entry.key)
-        ..addFont(Future.value(ByteData.view(bytes.buffer)));
-      await loader.load();
+    // One family with every bundled weight, exactly as pubspec.yaml
+    // declares it; the engine picks the right file for each FontWeight.
+    final loader = FontLoader(kAppFontFamily);
+    for (final weight in ['Regular', 'Italic', 'Medium', 'SemiBold', 'Bold', 'ExtraBold']) {
+      final bytes = File('assets/fonts/PlusJakartaSans-$weight.ttf').readAsBytesSync();
+      loader.addFont(Future.value(ByteData.view(bytes.buffer)));
     }
+    await loader.load();
   });
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -122,10 +104,12 @@ void main() {
 
   for (final entry in screens.entries) {
     for (final size in sizes.entries) {
-      testWidgets('${entry.key} fits at ${size.key}', (tester) async {
-        final overflows = await _overflowsFor(tester, entry.value(), size.value);
-        expect(overflows, isEmpty, reason: overflows.join('\n'));
-      });
+      for (final dark in [false, true]) {
+        testWidgets('${entry.key} fits at ${size.key}${dark ? ' (dark)' : ''}', (tester) async {
+          final overflows = await _overflowsFor(tester, entry.value(), size.value, dark: dark);
+          expect(overflows, isEmpty, reason: overflows.join('\n'));
+        });
+      }
     }
   }
 
@@ -136,7 +120,7 @@ void main() {
         const AuthScreen(),
         size.value,
         act: (tester) async {
-          final toggle = find.textContaining('Sign Up');
+          final toggle = find.text('Create account');
           if (toggle.evaluate().isNotEmpty) {
             await tester.tap(toggle.last, warnIfMissed: false);
           }

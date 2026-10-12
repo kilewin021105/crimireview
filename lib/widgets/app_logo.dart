@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/theme_service.dart';
 
-/// CrimiReview App Logo Widget
-/// Use this for consistent branding across the app
+/// The CrimiReview logo (the same artwork as the app icon) on a rounded
+/// white tile, optionally with the wordmark underneath.
 class AppLogo extends StatelessWidget {
   final double size;
   final bool showText;
@@ -17,141 +17,88 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final tile = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(size * 0.28),
+        border: Border.all(color: context.isDarkMode ? Colors.transparent : p.border),
+        boxShadow: showShadow
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF13286E).withValues(alpha: context.isDarkMode ? 0.5 : 0.16),
+                  blurRadius: size * 0.35,
+                  offset: Offset(0, size * 0.12),
+                ),
+              ]
+            : null,
+      ),
+      clipBehavior: Clip.antiAlias,
+      padding: EdgeInsets.all(size * 0.1),
+      // assets/images/logo_mark.png is the app icon artwork cropped to
+      // the mark itself, so it fills the tile like the launcher icon.
+      child: Image.asset(
+        'assets/images/logo_mark.png',
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, __, ___) => Icon(
+          Icons.balance_rounded,
+          size: size * 0.5,
+          color: p.primary,
+        ),
+      ),
+    );
+
+    if (!showText) return tile;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF6C5CE7), // Purple
-                Color(0xFF4834D4), // Darker purple
-              ],
-            ),
-            borderRadius: BorderRadius.circular(size * 0.25),
-            boxShadow: showShadow ? [
-              BoxShadow(
-                color: const Color(0xFF6C5CE7).withValues(alpha: 0.4),
-                blurRadius: size * 0.25,
-                offset: Offset(0, size * 0.1),
-              ),
-            ] : null,
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Book icon background
-              Positioned(
-                top: size * 0.15,
-                child: Icon(
-                  Icons.menu_book_rounded,
-                  size: size * 0.45,
-                  color: Colors.white.withValues(alpha: 0.2),
-                ),
-              ),
-              // Main CR text
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'CR',
-                    style: TextStyle(
-                      fontSize: size * 0.35,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -1,
-                      height: 1,
-                    ),
-                  ),
-                  Container(
-                    margin: EdgeInsets.only(top: size * 0.02),
-                    width: size * 0.5,
-                    height: size * 0.04,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(size * 0.02),
-                    ),
-                  ),
-                ],
-              ),
-              // Badge accent
-              Positioned(
-                bottom: size * 0.1,
-                right: size * 0.1,
-                child: Container(
-                  width: size * 0.22,
-                  height: size * 0.22,
-                  decoration: BoxDecoration(
-                    color: CrimiColors.gold,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: size * 0.025,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.verified_rounded,
-                    size: size * 0.12,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (showText) ...[
-          SizedBox(height: size * 0.2),
-          Text(
-            'CrimiReview',
-            style: TextStyle(
-              fontSize: size * 0.28,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1A1A2E),
-            ),
-          ),
-        ],
+        tile,
+        SizedBox(height: size * 0.22),
+        const AppWordmark(),
       ],
     );
   }
 }
 
-/// Simple icon-only version for smaller uses
+/// "CrimiReview" set in the brand style: "Crimi" in ink, "Review" in blue.
+class AppWordmark extends StatelessWidget {
+  final double fontSize;
+  final Color? color;
+
+  const AppWordmark({super.key, this.fontSize = 24, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final base = TextStyle(
+      fontFamily: kAppFontFamily,
+      fontSize: fontSize,
+      fontWeight: FontWeight.w800,
+      letterSpacing: -0.6,
+      height: 1.1,
+      color: color ?? p.textPrimary,
+    );
+    return Text.rich(
+      TextSpan(
+        children: [
+          const TextSpan(text: 'Crimi'),
+          TextSpan(text: 'Review', style: TextStyle(color: color ?? p.primary)),
+        ],
+      ),
+      style: base,
+    );
+  }
+}
+
+/// Small logo for headers and app bars.
 class AppLogoIcon extends StatelessWidget {
   final double size;
 
   const AppLogoIcon({super.key, this.size = 24});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF6C5CE7),
-            Color(0xFF4834D4),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(size * 0.2),
-      ),
-      child: Center(
-        child: Text(
-          'CR',
-          style: TextStyle(
-            fontSize: size * 0.4,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: -0.5,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppLogo(size: size, showShadow: false);
 }

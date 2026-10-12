@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Custom page route with smooth slide + fade transition
+/// Shared-axis style transition: the new page slides a short distance
+/// while it fades in, and the page underneath drifts slightly the other way
+/// (the motion pattern modern Material and iOS apps use).
 class SlidePageRoute<T> extends PageRouteBuilder<T> {
   final Widget page;
   final SlideDirection direction;
@@ -10,23 +12,23 @@ class SlidePageRoute<T> extends PageRouteBuilder<T> {
     this.direction = SlideDirection.right,
   }) : super(
           pageBuilder: (context, animation, secondaryAnimation) => page,
-          transitionDuration: const Duration(milliseconds: 300),
-          reverseTransitionDuration: const Duration(milliseconds: 250),
+          transitionDuration: const Duration(milliseconds: 320),
+          reverseTransitionDuration: const Duration(milliseconds: 260),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // Define slide offset based on direction
+            // A short slide (not the full screen width) reads as modern.
             Offset begin;
             switch (direction) {
               case SlideDirection.right:
-                begin = const Offset(1.0, 0.0);
+                begin = const Offset(0.16, 0.0);
                 break;
               case SlideDirection.left:
-                begin = const Offset(-1.0, 0.0);
+                begin = const Offset(-0.16, 0.0);
                 break;
               case SlideDirection.up:
-                begin = const Offset(0.0, 1.0);
+                begin = const Offset(0.0, 0.10);
                 break;
               case SlideDirection.down:
-                begin = const Offset(0.0, -1.0);
+                begin = const Offset(0.0, -0.10);
                 break;
             }
 
@@ -49,13 +51,13 @@ class SlidePageRoute<T> extends PageRouteBuilder<T> {
               end: 1.0,
             ).animate(CurvedAnimation(
               parent: animation,
-              curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+              curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
             ));
 
             // Secondary animation for the page being replaced
             final secondarySlide = Tween<Offset>(
               begin: Offset.zero,
-              end: const Offset(-0.25, 0.0),
+              end: const Offset(-0.06, 0.0),
             ).animate(CurvedAnimation(
               parent: secondaryAnimation,
               curve: Curves.easeOutCubic,
@@ -98,24 +100,25 @@ class FadePageRoute<T> extends PageRouteBuilder<T> {
         );
 }
 
-/// Scale + Fade transition for dialogs and modals
+/// Gentle scale + fade, used when moving between whole areas of the app
+/// (onboarding -> sign in -> home). No overshoot "bounce".
 class ScalePageRoute<T> extends PageRouteBuilder<T> {
   final Widget page;
 
   ScalePageRoute({required this.page})
       : super(
           pageBuilder: (context, animation, secondaryAnimation) => page,
-          transitionDuration: const Duration(milliseconds: 300),
-          reverseTransitionDuration: const Duration(milliseconds: 200),
+          transitionDuration: const Duration(milliseconds: 360),
+          reverseTransitionDuration: const Duration(milliseconds: 220),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final curvedAnimation = CurvedAnimation(
               parent: animation,
-              curve: Curves.easeOutBack,
-              reverseCurve: Curves.easeIn,
+              curve: Curves.easeOutCubic,
+              reverseCurve: Curves.easeInCubic,
             );
 
             return ScaleTransition(
-              scale: Tween<double>(begin: 0.9, end: 1.0).animate(curvedAnimation),
+              scale: Tween<double>(begin: 0.96, end: 1.0).animate(curvedAnimation),
               child: FadeTransition(
                 opacity: curvedAnimation,
                 child: child,

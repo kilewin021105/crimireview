@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/question.dart';
 import '../../models/subject.dart';
 import '../../services/question_generation_service.dart';
-import '../../services/theme_service.dart';
+import '../../utils/error_messages.dart';
+import '../../widgets/ui/ui.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
 import 'admin_questions_screen.dart';
@@ -57,7 +57,7 @@ class _AdminTemplateGenerationScreenState
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyError(e, fallback: 'Please check your connection and try again.');
         _loading = false;
       });
     }
@@ -65,14 +65,7 @@ class _AdminTemplateGenerationScreenState
 
   void _showSnack(String message, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? AppColors.error : AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    showAppSnack(context, message, tone: isError ? BannerTone.danger : BannerTone.success);
   }
 
   Future<void> _generate(TemplateStatus template) async {
@@ -124,214 +117,155 @@ class _AdminTemplateGenerationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: _buildAppBar(isDark),
-      body: SafeArea(
-        top: false,
-        child: RefreshIndicator(
-          onRefresh: _load,
-          color: AppColors.accent,
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? _buildError(isDark)
-                  : ListView(
-                      padding: EdgeInsets.fromLTRB(padding, 8, padding, 40),
-                      children: [
-                        const SizedBox(height: 20),
-                        if (_templates.isEmpty) _buildEmpty(isDark),
-                        for (final t in _templates)
-                          _buildTemplateCard(t, isDark),
-                      ],
-                    ),
-        ),
+      appBar: const AppTopBar(
+        title: 'Generate questions',
+        subtitle: 'From templates · no AI key needed',
+      ),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: _loading
+            ? const LoadingView(label: 'Loading templates...')
+            : _error != null
+                ? ListView(
+                    children: [
+                      const SizedBox(height: 60),
+                      EmptyState(
+                        icon: Icons.error_outline_rounded,
+                        title: "Couldn't load templates",
+                        message: _error,
+                        actionLabel: 'Try again',
+                        onAction: _load,
+                        color: context.palette.danger,
+                      ),
+                    ],
+                  )
+                : ListView(
+                    padding: EdgeInsets.fromLTRB(padding, 4, padding, 40),
+                    children: [
+                      const ContentWidth(
+                        maxWidth: 820,
+                        child: InlineBanner(
+                          tone: BannerTone.info,
+                          icon: Icons.auto_fix_high_rounded,
+                          title: 'How it works',
+                          message:
+                              'Each concept in a template produces exactly one question. Generated questions go into the bank as "generated" so you can review them before students rely on them.',
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      if (_templates.isEmpty)
+                        const EmptyState(
+                          icon: Icons.inventory_2_outlined,
+                          title: 'No active templates',
+                          message: 'Add rows to public.question_templates and public.concept_bank to use this generator.',
+                        ),
+                      for (var i = 0; i < _templates.length; i++)
+                        ContentWidth(
+                          maxWidth: 820,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Appear(index: i, child: _buildTemplateCard(_templates[i])),
+                          ),
+                        ),
+                    ],
+                  ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(bool isDark) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: IconButton(
-        onPressed: () => Navigator.pop(context),
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
-            ],
-          ),
-          child: Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-        ),
-      ),
-      title: Text(
-        'Generate from Templates',
-        style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-      ),
-      centerTitle: true,
-    );
-  }
-
-  Widget _buildError(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
-            const SizedBox(height: 12),
-            Text('Could not load templates.\n$_error',
-                textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _load,
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
-              child: const Text('Retry', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmpty(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Text(
-        'No active templates. Add rows to public.question_templates and '
-        'public.concept_bank to use this generator.',
-        style: TextStyle(
-            color: isDark ? Colors.grey.shade500 : Colors.grey.shade600),
-      ),
-    );
-  }
-
-  Widget _buildTemplateCard(TemplateStatus template, bool isDark) {
+  Widget _buildTemplateCard(TemplateStatus template) {
+    final p = context.palette;
+    final text = context.textStyles;
     final subject = CriminologySubjects.all.firstWhere(
         (s) => s.id == template.subjectId,
         orElse: () => CriminologySubjects.all.first);
+    final color = AppColors.subjectColor(subject.id);
     final isGenerating = _generating.contains(template.id);
     final exhausted = template.conceptsRemaining <= 0;
+    final used = template.totalConcepts - template.conceptsRemaining;
+    final difficultyIndex = Difficulty.values.indexWhere((d) => d.name == template.difficulty.toLowerCase());
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.auto_fix_high_rounded,
-                    color: AppColors.accent, size: 20),
-              ),
+              IconBadge(icon: AppTheme.subjectIcons[subject.id] ?? Icons.auto_fix_high_rounded, color: color, size: 42),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      template.topic,
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color:
-                              isDark ? Colors.white : const Color(0xFF1A1A2E)),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${subject.name} · ${template.difficulty}',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? Colors.grey.shade500
-                              : Colors.grey.shade600),
+                    Text(template.topic, style: text.titleSmall),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        Pill(label: subject.shortName, color: color, fontSize: 10.5),
+                        Pill(
+                          label: template.difficulty,
+                          color: difficultyIndex >= 0 ? p.forDifficulty(difficultyIndex) : p.textSecondary,
+                          fontSize: 10.5,
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: (exhausted ? Colors.grey : AppColors.success)
-                      .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+              Text('Concepts used', style: text.labelMedium),
+              const Spacer(),
+              Text(
+                '$used / ${template.totalConcepts}',
+                style: text.labelMedium?.copyWith(color: p.textPrimary, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          AppProgressBar(
+            value: template.totalConcepts == 0 ? 0 : used / template.totalConcepts,
+            color: exhausted ? p.textTertiary : color,
+            height: 6,
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
                 child: Text(
                   exhausted
-                      ? 'All ${template.totalConcepts} used'
-                      : '${template.conceptsRemaining} of ${template.totalConcepts} available',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: exhausted ? Colors.grey.shade600 : AppColors.success,
-                  ),
+                      ? 'All concepts used. Add more to concept_bank to generate again.'
+                      : '${template.conceptsRemaining} new question${template.conceptsRemaining == 1 ? '' : 's'} can be generated.',
+                  style: text.bodySmall,
                 ),
               ),
-              const Spacer(),
-              SizedBox(
-                height: 36,
-                child: ElevatedButton(
-                  onPressed: (isGenerating || exhausted)
-                      ? null
-                      : () => _generate(template),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    disabledBackgroundColor:
-                        isDark ? Colors.white12 : Colors.grey.shade200,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                  child: isGenerating
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                      : Text(
-                          'Generate',
-                          style: TextStyle(
-                            color: exhausted
-                                ? (isDark
-                                    ? Colors.white30
-                                    : Colors.grey.shade400)
-                                : Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
+              const SizedBox(width: 12),
+              if (exhausted)
+                SecondaryButton(
+                  label: 'Review batch',
+                  icon: Icons.visibility_rounded,
+                  expand: false,
+                  height: 42,
+                  onPressed: () => _openReview(template),
+                )
+              else
+                PrimaryButton(
+                  label: 'Generate',
+                  icon: Icons.auto_awesome_rounded,
+                  expand: false,
+                  height: 42,
+                  loading: isGenerating,
+                  onPressed: () => _generate(template),
                 ),
-              ),
             ],
           ),
         ],

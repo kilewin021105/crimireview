@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_logo.dart';
 import '../models/user_progress.dart';
-import '../services/theme_service.dart';
+import '../widgets/ui/ui.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/offline_sync_service.dart';
@@ -303,328 +303,267 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  
+  void _toggleMode(bool login) {
+    if (_isLogin == login) return;
+    setState(() {
+      _isLogin = login;
+      _errorMessage = null;
+    });
+    HapticFeedback.lightImpact();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
+    final text = context.textStyles;
     final isSmall = Responsive.isSmallPhone(context);
-    final logoSize = isSmall ? 80.0 : 100.0;
-    final iconSize = isSmall ? 44.0 : 56.0;
-    final titleSize = Responsive.fontSize(context, 28);
-    final padding = Responsive.horizontalPadding(context);
-    
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(padding),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(height: isSmall ? 32 : 48),
-                  
-                  Center(
-                    child: Container(
-                      width: logoSize,
-                      height: logoSize,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkCard : Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1a365d).withOpacity(0.15),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.school,
-                        size: iconSize,
-                        color: AppColors.accent,
-                      ),
+    final topInset = MediaQuery.of(context).padding.top;
+    final headerHeight = topInset + (isSmall ? 200.0 : 236.0);
+    final isSuccessMessage = _errorMessage != null && _errorMessage!.contains('created');
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        body: SingleChildScrollView(
+          child: Stack(
+            children: [
+              // Brand header
+              Container(
+                height: headerHeight,
+                width: double.infinity,
+                decoration: BoxDecoration(gradient: p.heroGradient),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -60,
+                      top: -40,
+                      child: _circle(200, Colors.white.withValues(alpha: 0.06)),
                     ),
-                  ),
-                  
-                  SizedBox(height: isSmall ? 24 : 32),
-                  
-                  Text(
-                    _isLogin ? 'CrimiReview' : 'Create Account',
-                    style: TextStyle(
-                      fontSize: titleSize,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : AppColors.textDark,
+                    Positioned(
+                      left: -50,
+                      bottom: -20,
+                      child: _circle(140, Colors.white.withValues(alpha: 0.05)),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  Text(
-                    _isLogin 
-                      ? 'Sign in to continue' 
-                      : 'Start your review journey',
-                    style: TextStyle(
-                      fontSize: Responsive.fontSize(context, 15),
-                      color: isDark ? Colors.white60 : AppColors.textMuted,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  SizedBox(height: isSmall ? 32 : 40),
-                  
-                  if (!_isLogin) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            controller: _firstNameController,
-                            label: 'First Name',
-                            icon: Icons.person_outline,
-                            isDark: isDark,
-                            maxLength: 30,
-                            validator: (v) => (v ?? '').trim().isEmpty ? 'Enter first name' : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            controller: _lastNameController,
-                            label: 'Last Name',
-                            icon: Icons.person_outline,
-                            isDark: isDark,
-                            maxLength: 30,
-                            validator: (v) => (v ?? '').trim().isEmpty ? 'Enter last name' : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  
-                  _buildTextField(
-                    controller: _emailController,
-                    label: 'Email',
-                    icon: Icons.email_outlined,
-                    isDark: isDark,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (v) {
-                      if (v!.isEmpty) return 'Enter your email';
-                      if (!v.contains('@')) return 'Invalid email';
-                      return null;
-                    },
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  _buildTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    icon: Icons.lock_outline,
-                    isDark: isDark,
-                    obscureText: _obscurePassword,
-                    onChanged: (v) => setState(() => _password = v),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: isDark ? Colors.white38 : Colors.grey,
-                        size: 20,
-                      ),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                    validator: (v) {
-                      if (v!.isEmpty) return 'Enter your password';
-                      if (!_isLogin) {
-                        final result = PasswordStrengthChecker.check(v);
-                        if (!result.hasMinLength) return 'At least 8 characters required';
-                        if (!result.hasMaxLength) return 'Max 16 characters allowed';
-                        if (!result.hasUppercase) return 'Add an uppercase letter';
-                        if (!result.hasLowercase) return 'Add a lowercase letter';
-                        if (!result.hasNumber) return 'Add a number';
-                      } else {
-                        if (v.length < 6) return 'Min 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  
-                  // Password strength indicator (only for signup)
-                  if (!_isLogin)
-                    PasswordStrengthIndicator(
-                      password: _password,
-                      showRequirements: true,
-                    ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  if (_errorMessage != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
-                      ),
-                      child: Row(
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(24, topInset + (isSmall ? 20 : 30), 24, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.error_outline, color: AppColors.error, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: TextStyle(color: AppColors.error, fontSize: 13),
+                          AppLogo(size: isSmall ? 44 : 52, showShadow: false),
+                          SizedBox(height: isSmall ? 14 : 20),
+                          Text(
+                            _isLogin ? 'Welcome back' : 'Create your account',
+                            style: text.headlineMedium?.copyWith(color: Colors.white),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _isLogin
+                                ? 'Sign in to continue your board exam review.'
+                                : 'Start reviewing for the board exam in minutes.',
+                            style: text.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.75),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  
-                  SizedBox(
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
+                  ],
+                ),
+              ),
+
+              // Form sheet
+              Container(
+                margin: EdgeInsets.only(top: headerHeight - 28),
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height - headerHeight + 28,
+                ),
+                decoration: BoxDecoration(
+                  color: p.background,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSpace.radiusXl)),
+                ),
+                child: ContentWidth(
+                  maxWidth: 480,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      isSmall ? 18 : 24,
+                      24,
+                      isSmall ? 18 : 24,
+                      24 + MediaQuery.of(context).padding.bottom,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          PillTabs(
+                            labels: const ['Sign in', 'Create account'],
+                            index: _isLogin ? 0 : 1,
+                            onChanged: (i) => _toggleMode(i == 0),
+                          ),
+                          const SizedBox(height: 24),
+                          if (!_isLogin) ...[
+                            _buildNameFields(),
+                            const SizedBox(height: 16),
+                          ],
+                          AppTextField(
+                            controller: _emailController,
+                            label: 'Email',
+                            hint: 'you@example.com',
+                            icon: Icons.mail_outline_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.email],
+                            validator: (v) {
+                              if (v!.isEmpty) return 'Enter your email';
+                              if (!v.contains('@')) return 'Invalid email';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            hint: _isLogin ? 'Enter your password' : '8 to 16 characters',
+                            icon: Icons.lock_outline_rounded,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            autofillHints: [
+                              _isLogin ? AutofillHints.password : AutofillHints.newPassword,
+                            ],
+                            onChanged: (v) => setState(() => _password = v),
+                            onSubmitted: (_) {
+                              if (!_isLoading) _submit();
+                            },
+                            suffix: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                size: 20,
+                              ),
+                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            ),
+                            validator: (v) {
+                              if (v!.isEmpty) return 'Enter your password';
+                              if (!_isLogin) {
+                                final result = PasswordStrengthChecker.check(v);
+                                if (!result.hasMinLength) return 'At least 8 characters required';
+                                if (!result.hasMaxLength) return 'Max 16 characters allowed';
+                                if (!result.hasUppercase) return 'Add an uppercase letter';
+                                if (!result.hasLowercase) return 'Add a lowercase letter';
+                                if (!result.hasNumber) return 'Add a number';
+                              } else {
+                                if (v.length < 6) return 'Min 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          if (_isLogin)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const ForgotPasswordScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text('Forgot password?'),
                               ),
                             )
-                          : Text(
-                              _isLogin ? 'Sign In' : 'Sign Up',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          else
+                            PasswordStrengthIndicator(
+                              password: _password,
+                              showRequirements: true,
                             ),
+                          SizedBox(height: _isLogin ? 8 : 20),
+                          if (_errorMessage != null) ...[
+                            InlineBanner(
+                              message: _errorMessage!,
+                              tone: isSuccessMessage ? BannerTone.success : BannerTone.danger,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          PrimaryButton(
+                            label: _isLogin ? 'Sign in' : 'Create account',
+                            loading: _isLoading,
+                            onPressed: _submit,
+                          ),
+                          const SizedBox(height: 20),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                _isLogin ? "Don't have an account? " : 'Already have an account? ',
+                                style: text.bodyMedium,
+                              ),
+                              InkWell(
+                                onTap: () => _toggleMode(!_isLogin),
+                                borderRadius: BorderRadius.circular(6),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                                  child: Text(
+                                    _isLogin ? 'Create one' : 'Sign in',
+                                    style: text.labelLarge?.copyWith(color: p.primary),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  
-                  if (_isLogin) ...[
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ForgotPasswordScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Forgot Password?',
-                        style: GoogleFonts.poppins(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                  
-                  const SizedBox(height: 24),
-                  
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _isLogin ? "Don't have an account? " : "Already have an account? ",
-                        style: GoogleFonts.poppins(
-                          color: isDark ? Colors.white60 : AppColors.textMuted,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isLogin = !_isLogin;
-                            _errorMessage = null;
-                          });
-                          HapticFeedback.lightImpact();
-                        },
-                        child: Text(
-                          _isLogin ? 'Sign Up' : 'Sign In',
-                          style: GoogleFonts.poppins(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required bool isDark,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-    void Function(String)? onChanged,
-    int? maxLength,
-  }) {
-    return TextFormField(
-      controller: controller,
-      maxLength: maxLength,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      onChanged: onChanged,
-      style: TextStyle(
-        color: isDark ? Colors.white : AppColors.textDark,
-        fontSize: 16,
-      ),
-      decoration: InputDecoration(
-          counterText: '',
-        labelText: label,
-        labelStyle: TextStyle(
-          color: isDark ? Colors.white60 : AppColors.textMuted,
-        ),
-        prefixIcon: Icon(
-          icon, 
-          color: AppColors.accent,
-          size: 22,
-        ),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: isDark ? AppColors.darkCard : AppColors.lightSurface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: AppColors.accent, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-      ),
+  Widget _buildNameFields() {
+    final first = AppTextField(
+      controller: _firstNameController,
+      label: 'First name',
+      hint: 'Juan',
+      maxLength: 30,
+      textCapitalization: TextCapitalization.words,
+      textInputAction: TextInputAction.next,
+      autofillHints: const [AutofillHints.givenName],
+      validator: (v) => (v ?? '').trim().isEmpty ? 'Enter first name' : null,
     );
+    final last = AppTextField(
+      controller: _lastNameController,
+      label: 'Last name',
+      hint: 'Dela Cruz',
+      maxLength: 30,
+      textCapitalization: TextCapitalization.words,
+      textInputAction: TextInputAction.next,
+      autofillHints: const [AutofillHints.familyName],
+      validator: (v) => (v ?? '').trim().isEmpty ? 'Enter last name' : null,
+    );
+    return LayoutBuilder(builder: (context, c) {
+      if (c.maxWidth < 300) {
+        return Column(children: [first, const SizedBox(height: 16), last]);
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: first),
+          const SizedBox(width: 12),
+          Expanded(child: last),
+        ],
+      );
+    });
   }
+
+  Widget _circle(double size, Color color) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }

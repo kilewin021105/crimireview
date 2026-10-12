@@ -6,7 +6,7 @@ import '../models/subject.dart';
 import '../models/user_progress.dart';
 import '../services/adaptive_learning_service.dart';
 import '../services/adaptive_ml_service.dart';
-import '../services/theme_service.dart';
+import '../widgets/ui/ui.dart';
 import '../services/supabase_service.dart';
 import '../services/offline_sync_service.dart';
 
@@ -119,7 +119,7 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
       timestamp: DateTime.now(),
     );
     
-    print('ML Learning: Subject=${widget.subject.id}, Predicted=$predictedScore, Actual=$actualScore');
+    debugPrint('ML Learning: Subject=${widget.subject.id}, Predicted=$predictedScore, Actual=$actualScore');
   }
 
   @override
@@ -130,206 +130,142 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
+    final text = context.textStyles;
     final correctCount = widget.results.where((r) => r).length;
-    final percentage = (correctCount / widget.questions.length * 100).round();
-    
+    final total = widget.questions.length;
+    final percentage = (correctCount / total * 100).round();
+    final scoreColor = _getScoreColor(percentage);
+    final avgSeconds = widget.responseTimes.isEmpty
+        ? 0.0
+        : widget.responseTimes.reduce((a, b) => a + b) / widget.responseTimes.length / 1000;
+
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        child: ContentWidth(
+          maxWidth: 560,
           child: Column(
             children: [
-              const Spacer(flex: 2),
-              
-
-              AnimatedBuilder(
-                animation: _scoreAnimation,
-                builder: (context, child) {
-                  return SizedBox(
-                    width: 200,
-                    height: 200,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 200,
-                          height: 200,
-                          child: CircularProgressIndicator(
-                            value: 1,
-                            strokeWidth: 12,
-                            strokeCap: StrokeCap.round,
-                            backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
-                            valueColor: AlwaysStoppedAnimation(Colors.transparent),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+                  child: Column(
+                    children: [
+                      Pill(
+                        label: '${widget.subject.shortName}${widget.difficulty != null ? ' · ${_difficultyLabel(widget.difficulty!)}' : ''}',
+                        color: AppColors.subjectColor(widget.subject.id),
+                      ),
+                      const SizedBox(height: 22),
+                      RingProgress(
+                        value: correctCount / total,
+                        size: 176,
+                        stroke: 14,
+                        color: scoreColor,
+                        center: AnimatedBuilder(
+                          animation: _scoreAnimation,
+                          builder: (context, _) => Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${(_scoreAnimation.value * 100).round()}%',
+                                style: text.displaySmall?.copyWith(fontSize: 42),
+                              ),
+                              Text('score', style: text.labelSmall),
+                            ],
                           ),
                         ),
-                        SizedBox(
-                          width: 200,
-                          height: 200,
-                          child: CircularProgressIndicator(
-                            value: _scoreAnimation.value,
-                            strokeWidth: 12,
-                            strokeCap: StrokeCap.round,
-                            backgroundColor: Colors.transparent,
-                            valueColor: AlwaysStoppedAnimation(_getScoreColor(percentage)),
-                          ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(_getMessage(percentage), style: text.headlineMedium, textAlign: TextAlign.center),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$correctCount out of $total correct',
+                        style: text.bodyLarge?.copyWith(color: p.textSecondary),
+                      ),
+                      if (_segmentPassed && widget.difficulty != null) ...[
+                        const SizedBox(height: 18),
+                        InlineBanner(
+                          tone: BannerTone.success,
+                          icon: _difficultyCompleted
+                              ? Icons.workspace_premium_rounded
+                              : Icons.lock_open_rounded,
+                          title: _difficultyCompleted
+                              ? '${_difficultyLabel(widget.difficulty!)} level completed!'
+                              : 'Segment ${SegmentProgress.rangeLabelFor(widget.segmentIndex ?? 0)} passed!',
+                          message: _difficultyCompleted
+                              ? 'Every segment of this level is passed. The next level is unlocked.'
+                              : 'Nice work. The next segment is ready for you.',
                         ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${(_scoreAnimation.value * 100).round()}%',
-                              style: TextStyle(
-                                fontSize: 48,
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                              ),
-                            ),
-                            Text(
-                              'Score',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+                      ] else if (widget.difficulty != null) ...[
+                        const SizedBox(height: 18),
+                        InlineBanner(
+                          tone: BannerTone.neutral,
+                          icon: Icons.flag_rounded,
+                          message:
+                              'Score ${(SubjectProgress.levelPassThreshold * 100).round()}% or higher to pass this segment.',
                         ),
                       ],
-                    ),
-                  );
-                },
-              ),
-              
-              const SizedBox(height: 32),
-              
-
-              Text(
-                _getMessage(percentage),
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                ),
-              ),
-              
-              const SizedBox(height: 8),
-              
-              Text(
-                '$correctCount out of ${widget.questions.length} correct',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-              ),
-              
-
-              if (_segmentPassed && widget.difficulty != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _difficultyCompleted
-                            ? Icons.workspace_premium_rounded
-                            : Icons.lock_open_rounded,
-                        color: AppColors.success,
-                        size: 20,
+                      const SizedBox(height: 22),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StatTile(
+                              icon: Icons.check_circle_rounded,
+                              value: '$correctCount',
+                              label: 'Correct',
+                              color: p.success,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: StatTile(
+                              icon: Icons.cancel_rounded,
+                              value: '${total - correctCount}',
+                              label: 'Wrong',
+                              color: p.danger,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: StatTile(
+                              icon: Icons.timer_rounded,
+                              value: '${avgSeconds.toStringAsFixed(avgSeconds < 10 ? 1 : 0)}s',
+                              label: 'Per question',
+                              color: p.info,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _difficultyCompleted
-                            ? '${widget.difficulty!.name.toUpperCase()} Difficulty Completed!'
-                            : 'Segment ${SegmentProgress.rangeLabelFor(widget.segmentIndex ?? 0)} Passed!',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.success,
-                        ),
-                      ),
+                      const SizedBox(height: 12),
+                      _buildBoardExamReadiness(context),
                     ],
                   ),
                 ),
-              ],
-              
-              const SizedBox(height: 32),
-              
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildStatCard(
-                    correctCount.toString(),
-                    'Correct',
-                    AppColors.success,
-                    isDark,
-                  ),
-                  const SizedBox(width: 24),
-                  _buildStatCard(
-                    (widget.questions.length - correctCount).toString(),
-                    'Wrong',
-                    AppColors.error,
-                    isDark,
-                  ),
-                ],
               ),
-              
-              const SizedBox(height: 24),
-              
-
-              // Board Exam Readiness
-              _buildBoardExamReadiness(context, isDark),
-              
-              const Spacer(flex: 3),
-              
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.accent,
-                        side: BorderSide(color: AppColors.accent, width: 2),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Text(
-                        'Try Again',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              Container(
+                decoration: BoxDecoration(
+                  color: p.surface,
+                  border: Border(top: BorderSide(color: p.border)),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        label: 'Try again',
+                        icon: Icons.refresh_rounded,
+                        onPressed: () => Navigator.pop(context),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Text(
-                        'Done',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'Done',
+                        onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -338,59 +274,31 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildStatCard(String value, String label, Color color, bool isDark) {
-    return Column(
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Center(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
-  }
+  String _difficultyLabel(Difficulty d) => d.name[0].toUpperCase() + d.name.substring(1);
 
   String _getMessage(int percentage) {
     if (percentage >= 80) return 'Excellent!';
-    if (percentage >= 60) return 'Good Job!';
-    if (percentage >= 40) return 'Keep Going!';
-    return 'Keep Practicing!';
+    if (percentage >= 60) return 'Good job!';
+    if (percentage >= 40) return 'Keep going!';
+    return 'Keep practicing!';
   }
 
   Color _getScoreColor(int percentage) {
+    final p = context.palette;
     if (percentage >= (SubjectProgress.levelPassThreshold * 100).round()) {
-      return AppColors.success;
+      return p.success;
     }
-    if (percentage >= 50) return AppColors.accent;
-    return AppColors.error;
+    if (percentage >= 50) return p.warning;
+    return p.danger;
   }
 
-  Widget _buildBoardExamReadiness(BuildContext context, bool isDark) {
+  Widget _buildBoardExamReadiness(BuildContext context) {
+    final p = context.palette;
+    final text = context.textStyles;
     final service = Provider.of<AdaptiveLearningService>(context, listen: false);
 
     // Only show if user has attempted ALL subjects
-    final allSubjects = CriminologySubjects.all;
+    const allSubjects = CriminologySubjects.all;
     final attemptedSubjects = allSubjects.where((s) {
       final progress = service.userProgress.subjectProgress[s.id];
       return progress != null && progress.totalQuestionsAnswered > 0;
@@ -398,27 +306,25 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
 
     if (attemptedSubjects < allSubjects.length) {
       final remaining = allSubjects.length - attemptedSubjects;
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
-        ),
-        child: Column(
+      return AppCard(
+        child: Row(
           children: [
-            Icon(Icons.lock_outline_rounded, color: AppColors.accent, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              'Board Exam Readiness',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF1A1A2E)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Complete quizzes in all $remaining more subject${remaining > 1 ? 's' : ''} to unlock your predicted board exam score.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+            IconBadge(icon: Icons.lock_outline_rounded, color: p.textSecondary, size: 42),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Board exam readiness', style: text.titleSmall),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Take a quiz in $remaining more subject${remaining > 1 ? 's' : ''} to unlock your predicted score.',
+                    style: text.bodySmall,
+                  ),
+                  const SizedBox(height: 10),
+                  AppProgressBar(value: attemptedSubjects / allSubjects.length, height: 6),
+                ],
+              ),
             ),
           ],
         ),
@@ -429,67 +335,37 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
     final readiness = service.getOverallBoardExamReadiness();
     final isReady = readiness >= 75;
     final needsWork = readiness < 60;
+    final tone = isReady ? p.success : (needsWork ? p.danger : p.warning);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isReady
-              ? AppColors.success.withValues(alpha: 0.3)
-              : needsWork
-                  ? AppColors.error.withValues(alpha: 0.3)
-                  : AppColors.warning.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
+    return AppCard(
+      child: Row(
         children: [
-          Text(
-            'Board Exam Readiness',
-            style: TextStyle(fontSize: 13, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${readiness.toStringAsFixed(0)}%',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w800,
-              color: isReady
-                  ? AppColors.success
-                  : needsWork
-                      ? AppColors.error
-                      : AppColors.warning,
+          RingProgress(
+            value: readiness / 100,
+            size: 64,
+            stroke: 7,
+            color: tone,
+            center: Text(
+              '${readiness.toStringAsFixed(0)}%',
+              style: text.labelMedium?.copyWith(color: p.textPrimary, fontWeight: FontWeight.w800),
             ),
           ),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: (isReady
-                      ? AppColors.success
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Board exam readiness', style: text.titleSmall),
+                const SizedBox(height: 6),
+                Pill(
+                  label: isReady
+                      ? "You're ready to pass!"
                       : needsWork
-                          ? AppColors.error
-                          : AppColors.warning)
-                  .withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              isReady
-                  ? 'You\'re ready to pass!'
-                  : needsWork
-                      ? 'Needs more practice'
-                      : 'Almost there!',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isReady
-                    ? AppColors.success
-                    : needsWork
-                        ? AppColors.error
-                        : AppColors.warning,
-              ),
+                          ? 'Needs more practice'
+                          : 'Almost there!',
+                  color: tone,
+                ),
+              ],
             ),
           ),
         ],

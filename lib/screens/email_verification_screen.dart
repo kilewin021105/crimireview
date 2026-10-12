@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../services/theme_service.dart';
 import '../services/email_verification_service.dart';
 import '../services/supabase_service.dart';
 import '../services/storage_service.dart';
@@ -10,6 +8,7 @@ import '../services/offline_sync_service.dart';
 import '../utils/error_messages.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
+import '../widgets/ui/ui.dart';
 import 'home_screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -29,12 +28,14 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
-  
+  // One field behind the six boxes (see CodeInput), so pasting the whole
+  // code from the email works.
+  final _codeController = TextEditingController();
+  final _codeFocus = FocusNode();
+
   final _emailService = EmailVerificationService.instance;
   final _supabase = SupabaseService.instance;
-  
+
   bool _isLoading = false;
   bool _isResending = false;
   bool _isVerifying = false;
@@ -50,12 +51,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   @override
   void dispose() {
-    for (var c in _controllers) {
-      c.dispose();
-    }
-    for (var f in _focusNodes) {
-      f.dispose();
-    }
+    _codeController.dispose();
+    _codeFocus.dispose();
     _cooldownTimer?.cancel();
     super.dispose();
   }
@@ -65,9 +62,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       _isLoading = true;
       _errorMessage = null;
     });
-    
+
     final result = await _emailService.sendVerificationEmail(widget.email);
-    
+
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -94,34 +91,21 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   Future<void> _resendCode() async {
     if (_resendCooldown > 0) return;
-    
+
     setState(() {
       _isResending = true;
       _errorMessage = null;
     });
-    
+
     final result = await _emailService.resendCode(widget.email);
-    
+
     if (mounted) {
       setState(() {
         _isResending = false;
         if (result['success'] == true) {
           _startCooldown();
           _clearCode();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  Text('Verification code sent!', style: GoogleFonts.poppins()),
-                ],
-              ),
-              backgroundColor: AppColors.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
+          showAppSnack(context, 'Verification code sent!', tone: BannerTone.success);
         } else {
           _errorMessage = result['error'] ?? 'Failed to resend code. Please try again.';
         }
@@ -130,14 +114,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   void _clearCode() {
-    for (var c in _controllers) {
-      c.clear();
-    }
-    _focusNodes[0].requestFocus();
+    _codeController.clear();
+    _codeFocus.requestFocus();
   }
 
   String _getCode() {
-    return _controllers.map((c) => c.text).join();
+    return _codeController.text;
   }
 
   Future<void> _verifyCode() async {
@@ -186,11 +168,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       if (mounted && _supabase.isLoggedIn) {
         // Ensure profile exists in database for leaderboard
         await _supabase.ensureProfileExists(displayName: widget.displayName);
-        
+
         final storage = StorageService();
         final currentUserId = _supabase.userId;
         final lastUserId = await storage.getLastUserId();
-        
+
         // Check if switching accounts (new signup on device that had another user)
         if (lastUserId != null && lastUserId != currentUserId) {
           // Different user - sync old user's pending data, then clear local progress
@@ -199,12 +181,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           }
           await storage.clearQuizProgress();
         }
-        
+
         // Save current user ID
         if (currentUserId != null) {
           await storage.setLastUserId(currentUserId);
         }
-        
+
         if (widget.displayName != null && widget.displayName!.isNotEmpty) {
           await storage.setUserName(widget.displayName!);
         }
@@ -226,6 +208,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           bestStreak: progress.longestStreak,
         );
 
+        if (!mounted) return;
         HapticFeedback.heavyImpact();
         Navigator.of(context).pushAndRemoveUntil(
           ScalePageRoute(page: const HomeScreen()),
@@ -242,311 +225,110 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     }
   }
 
-  void _onCodeChanged(int index, String value) {
-    if (value.length == 1 && index < 5) {
-      _focusNodes[index + 1].requestFocus();
-    } else if (value.isEmpty && index > 0) {
-      _focusNodes[index - 1].requestFocus();
-    }
-    
-    // Auto-verify when all digits entered
-    if (_getCode().length == 6) {
-      _verifyCode();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
+    final text = context.textStyles;
     final isSmall = Responsive.isSmallPhone(context);
     final padding = Responsive.horizontalPadding(context);
-    final iconContainerSize = isSmall ? 80.0 : 100.0;
-    final iconSize = isSmall ? 38.0 : 48.0;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-            ),
-          ),
-        ),
-      ),
+      appBar: AppTopBar(title: 'Verify email', onBack: () => Navigator.pop(context)),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingView(label: 'Sending your code...')
           : SafeArea(
+              top: false,
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(padding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(height: isSmall ? 12 : 20),
-                    
-                    // Email icon
-                    Container(
-                      width: iconContainerSize,
-                      height: iconContainerSize,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.accent.withOpacity(0.15),
-                            AppColors.accentDark.withOpacity(0.15),
-                          ],
-                        ),
-                        shape: BoxShape.circle,
+                padding: EdgeInsets.fromLTRB(padding, 8, padding, 24),
+                child: ContentWidth(
+                  maxWidth: 480,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: isSmall ? 4 : 12),
+                      IconBadge(
+                        icon: Icons.mark_email_unread_rounded,
+                        size: isSmall ? 56 : 64,
+                        radius: 20,
                       ),
-                      child: Icon(
-                        Icons.mark_email_read_rounded,
-                        size: iconSize,
-                        color: AppColors.accent,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Title
-                    Text(
-                      'Verify Your Email',
-                      style: GoogleFonts.poppins(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // Subtitle
-                    Text(
-                      'We sent a 6-digit code to',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.email,
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.accent,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    
-                    // Code input - responsive
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final maxWidth = constraints.maxWidth;
-                        // 6 boxes, each with 4 px margin on both sides = 48 px.
-                        final boxSize = ((maxWidth - 48) / 6).clamp(32.0, 52.0);
-                        final fontSize = boxSize * 0.45;
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(6, (index) {
-                            return Container(
-                              width: boxSize,
-                              height: boxSize * 1.15,
-                              margin: EdgeInsets.symmetric(horizontal: 4),
-                              child: TextField(
-                                controller: _controllers[index],
-                                focusNode: _focusNodes[index],
-                                textAlign: TextAlign.center,
-                                keyboardType: TextInputType.number,
-                                maxLength: 1,
-                                cursorColor: AppColors.accent,
-                                style: GoogleFonts.poppins(
-                                  fontSize: fontSize,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                                ),
-                                decoration: InputDecoration(
-                                  counterText: '',
-                                  filled: true,
-                                  fillColor: isDark ? AppColors.darkCard : Colors.white,
-                                  contentPadding: EdgeInsets.zero,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(
-                                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(
-                                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(
-                                      color: AppColors.accent,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                ],
-                                onChanged: (value) => _onCodeChanged(index, value),
-                              ),
-                            );
-                          }),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Error message
-                    if (_errorMessage != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.error.withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      const SizedBox(height: 20),
+                      Text('Check your email', style: text.headlineMedium),
+                      const SizedBox(height: 6),
+                      Text.rich(
+                        TextSpan(
+                          text: 'Enter the 6-digit code we sent to ',
                           children: [
-                            Icon(Icons.error_outline, color: AppColors.error, size: 18),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                _errorMessage!,
-                                style: GoogleFonts.poppins(
-                                  color: AppColors.error,
-                                  fontSize: 13,
-                                ),
-                              ),
+                            TextSpan(
+                              text: widget.email,
+                              style: TextStyle(color: p.textPrimary, fontWeight: FontWeight.w700),
                             ),
                           ],
                         ),
+                        style: text.bodyMedium,
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                    
-                    // Verify button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: _isVerifying ? null : _verifyCode,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          disabledBackgroundColor: AppColors.accent.withOpacity(0.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: _isVerifying
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  color: Colors.white,
-                                ),
+                      const SizedBox(height: 28),
+                      CodeInput(
+                        controller: _codeController,
+                        focusNode: _codeFocus,
+                        autofocus: true,
+                        enabled: !_isVerifying,
+                        hasError: _errorMessage != null,
+                        onChanged: (_) {
+                          if (_errorMessage != null) setState(() => _errorMessage = null);
+                        },
+                        onCompleted: (_) {
+                          if (!_isVerifying) _verifyCode();
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      if (_errorMessage != null) ...[
+                        InlineBanner(message: _errorMessage!, tone: BannerTone.danger),
+                        const SizedBox(height: 20),
+                      ],
+                      PrimaryButton(
+                        label: 'Verify email',
+                        loading: _isVerifying,
+                        onPressed: _verifyCode,
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            Text("Didn't receive the code? ", style: text.bodyMedium),
+                            if (_isResending)
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: p.primary),
                               )
-                            : Text(
-                                'Verify Email',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Resend code
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Didn't receive the code? ",
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: _resendCooldown > 0 || _isResending ? null : _resendCode,
-                          child: _isResending
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : Text(
-                                  _resendCooldown > 0
-                                      ? 'Resend in ${_resendCooldown}s'
-                                      : 'Resend',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: _resendCooldown > 0
-                                        ? Colors.grey
-                                        : AppColors.accent,
+                            else
+                              InkWell(
+                                onTap: _resendCooldown > 0 ? null : _resendCode,
+                                borderRadius: BorderRadius.circular(6),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                                  child: Text(
+                                    _resendCooldown > 0 ? 'Resend in ${_resendCooldown}s' : 'Resend',
+                                    style: text.labelLarge?.copyWith(
+                                      color: _resendCooldown > 0 ? p.textTertiary : p.primary,
+                                    ),
                                   ),
                                 ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
-                    
-                    // Info
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkCard : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline_rounded,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Check your spam folder if you don\'t see the email in your inbox.',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                               ),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 28),
+                      const InlineBanner(
+                        tone: BannerTone.neutral,
+                        icon: Icons.inbox_rounded,
+                        message:
+                            "Can't find it? Check your Spam or Promotions folder. The code expires in 10 minutes.",
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

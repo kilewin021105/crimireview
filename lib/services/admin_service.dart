@@ -26,8 +26,16 @@ import 'supabase_service.dart';
 class AdminService extends ChangeNotifier {
   AdminService._();
 
-  static final AdminService _instance = AdminService._();
+  /// For tests only: lets a subclass return sample data (the screenshot
+  /// tests render the admin screens without a database).
+  @visibleForTesting
+  AdminService.forTesting();
+
+  static AdminService _instance = AdminService._();
   static AdminService get instance => _instance;
+
+  @visibleForTesting
+  static set debugInstance(AdminService value) => _instance = value;
 
   static const String _questionsTable = 'questions';
   static const String _overviewView = 'student_progress_overview';

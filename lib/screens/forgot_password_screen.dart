@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import '../services/email_verification_service.dart';
 import '../services/supabase_service.dart';
-import '../services/theme_service.dart';
 import '../utils/error_messages.dart';
 import '../widgets/password_strength_indicator.dart';
+import '../widgets/ui/ui.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -63,14 +60,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           _currentStep = 1;
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Verification code sent to $email'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        showAppSnack(context, 'Verification code sent to $email', tone: BannerTone.success);
       } else {
         setState(() {
           _isLoading = false;
@@ -159,14 +149,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Password reset successfully! Please login.'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        showAppSnack(context, 'Password reset successfully! Please sign in.', tone: BannerTone.success);
         
         Navigator.of(context).pop(true);
       }
@@ -182,471 +165,177 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeService>(context).isDarkMode;
-    
+    final p = context.palette;
+    final text = context.textStyles;
+    const steps = [
+      (Icons.mail_outline_rounded, 'Enter your email', 'We will send a 6-digit code to the email address on your account.'),
+      (Icons.pin_outlined, 'Enter the code', null),
+      (Icons.key_rounded, 'Create a new password', 'Use 8 to 16 characters with uppercase, lowercase and a number.'),
+    ];
+    final step = steps[_currentStep];
+
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Reset Password',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-        ),
-        centerTitle: true,
+      appBar: AppTopBar(
+        title: 'Reset password',
+        onBack: () => Navigator.pop(context),
       ),
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Progress indicator
-              _buildProgressIndicator(isDark),
-              const SizedBox(height: 32),
-              
-              // Step content
-              if (_currentStep == 0) _buildEmailStep(isDark),
-              if (_currentStep == 1) _buildCodeStep(isDark),
-              if (_currentStep == 2) _buildPasswordStep(isDark),
-              
-              // Error message
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.error.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: AppColors.error, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: GoogleFonts.poppins(
-                            color: AppColors.error,
-                            fontSize: 13,
-                          ),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: ContentWidth(
+            maxWidth: 480,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StepProgress(current: _currentStep, total: 3),
+                const SizedBox(height: 28),
+                IconBadge(icon: step.$1, size: 56, radius: 18),
+                const SizedBox(height: 18),
+                Text(step.$2, style: text.headlineSmall),
+                const SizedBox(height: 6),
+                if (_currentStep == 1)
+                  Text.rich(
+                    TextSpan(
+                      text: 'We sent a 6-digit code to ',
+                      children: [
+                        TextSpan(
+                          text: _emailController.text.trim(),
+                          style: TextStyle(color: p.textPrimary, fontWeight: FontWeight.w700),
                         ),
-                      ),
-                    ],
+                        const TextSpan(text: '. It expires in 10 minutes.'),
+                      ],
+                    ),
+                    style: text.bodyMedium,
+                  )
+                else
+                  Text(step.$3!, style: text.bodyMedium),
+                const SizedBox(height: 28),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: KeyedSubtree(
+                    key: ValueKey(_currentStep),
+                    child: switch (_currentStep) {
+                      0 => _buildEmailStep(),
+                      1 => _buildCodeStep(),
+                      _ => _buildPasswordStep(),
+                    },
                   ),
                 ),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  InlineBanner(message: _errorMessage!, tone: BannerTone.danger),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildProgressIndicator(bool isDark) {
-    return Row(
-      children: [
-        _buildStepDot(0, isDark),
-        Expanded(child: _buildStepLine(0, isDark)),
-        _buildStepDot(1, isDark),
-        Expanded(child: _buildStepLine(1, isDark)),
-        _buildStepDot(2, isDark),
-      ],
-    );
-  }
-
-  Widget _buildStepDot(int step, bool isDark) {
-    final isActive = _currentStep >= step;
-    final isCurrent = _currentStep == step;
-    
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isActive ? AppColors.accent : (isDark ? AppColors.darkCard : Colors.grey[300]),
-        border: isCurrent ? Border.all(color: AppColors.accent, width: 3) : null,
-      ),
-      child: Center(
-        child: isActive && !isCurrent
-            ? const Icon(Icons.check, color: Colors.white, size: 18)
-            : Text(
-                '${step + 1}',
-                style: GoogleFonts.poppins(
-                  color: isActive ? Colors.white : (isDark ? Colors.white60 : Colors.grey[600]),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-      ),
-    );
-  }
-
-  Widget _buildStepLine(int afterStep, bool isDark) {
-    final isActive = _currentStep > afterStep;
-    
-    return Container(
-      height: 3,
-      color: isActive ? AppColors.accent : (isDark ? AppColors.darkCard : Colors.grey[300]),
-    );
-  }
-
-  Widget _buildEmailStep(bool isDark) {
+  Widget _buildEmailStep() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Enter your email',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'We\'ll send a 6-digit verification code to your email address.',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: isDark ? Colors.white60 : AppColors.textMuted,
-          ),
-        ),
-        const SizedBox(height: 32),
-        
-        TextField(
+        AppTextField(
           controller: _emailController,
+          label: 'Email address',
+          hint: 'you@example.com',
+          icon: Icons.mail_outline_rounded,
           keyboardType: TextInputType.emailAddress,
-          style: GoogleFonts.poppins(
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-          decoration: InputDecoration(
-            labelText: 'Email Address',
-            labelStyle: TextStyle(color: isDark ? Colors.white60 : AppColors.textMuted),
-            prefixIcon: Icon(
-              Icons.email_outlined,
-              color: isDark ? Colors.white60 : AppColors.textMuted,
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.darkCard : Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark ? Colors.white12 : Colors.grey[300]!,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.accent, width: 2),
-            ),
-          ),
+          autofillHints: const [AutofillHints.email],
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) {
+            if (!_isLoading) _sendResetCode();
+          },
         ),
         const SizedBox(height: 24),
-        
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _sendResetCode,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Text(
-                    'Send Code',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-          ),
+        PrimaryButton(
+          label: 'Send code',
+          loading: _isLoading,
+          onPressed: _sendResetCode,
         ),
       ],
     );
   }
 
-  Widget _buildCodeStep(bool isDark) {
+  Widget _buildCodeStep() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Enter verification code',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
+        CodeInput(
+          controller: _codeController,
+          autofocus: true,
+          hasError: _errorMessage != null,
+          onChanged: (_) {
+            if (_errorMessage != null) setState(() => _errorMessage = null);
+          },
+          onCompleted: (_) {
+            if (!_isLoading) _verifyCode();
+          },
+        ),
+        const SizedBox(height: 28),
+        PrimaryButton(
+          label: 'Verify code',
+          loading: _isLoading,
+          onPressed: _verifyCode,
         ),
         const SizedBox(height: 8),
-        Text(
-          'Enter the 6-digit code sent to ${_emailController.text}',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: isDark ? Colors.white60 : AppColors.textMuted,
-          ),
-        ),
-        const SizedBox(height: 32),
-        
-        // OTP Input
-        TextField(
-          controller: _codeController,
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          maxLength: 6,
-          style: GoogleFonts.poppins(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 12,
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-          ],
-          decoration: InputDecoration(
-            counterText: '',
-            hintText: '000000',
-            hintStyle: GoogleFonts.poppins(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 12,
-              color: isDark ? Colors.white24 : Colors.grey[300],
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.darkCard : Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark ? Colors.white12 : Colors.grey[300]!,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.accent, width: 2),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _verifyCode,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Text(
-                    'Verify Code',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
         Center(
           child: TextButton(
             onPressed: _isLoading ? null : _sendResetCode,
-            child: Text(
-              'Didn\'t receive the code? Resend',
-              style: GoogleFonts.poppins(
-                color: AppColors.accent,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child: const Text("Didn't get it? Resend code"),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPasswordStep(bool isDark) {
+  Widget _buildPasswordStep() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Create new password',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Create a strong password with at least 8 characters.',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: isDark ? Colors.white60 : AppColors.textMuted,
-          ),
-        ),
-        const SizedBox(height: 32),
-        
-        TextField(
+        AppTextField(
           controller: _passwordController,
+          label: 'New password',
+          hint: '8 to 16 characters',
+          icon: Icons.lock_outline_rounded,
           obscureText: _obscurePassword,
+          autofillHints: const [AutofillHints.newPassword],
           onChanged: (v) => setState(() => _password = v),
-          style: GoogleFonts.poppins(
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-          decoration: InputDecoration(
-            labelText: 'New Password',
-            labelStyle: TextStyle(color: isDark ? Colors.white60 : AppColors.textMuted),
-            prefixIcon: Icon(
-              Icons.lock_outline,
-              color: isDark ? Colors.white60 : AppColors.textMuted,
+          suffix: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              size: 20,
             ),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                color: isDark ? Colors.white60 : AppColors.textMuted,
-              ),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.darkCard : Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark ? Colors.white12 : Colors.grey[300]!,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.accent, width: 2),
-            ),
+            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
           ),
         ),
-        
-        // Password strength indicator
         PasswordStrengthIndicator(
           password: _password,
           showRequirements: true,
         ),
-        
-        const SizedBox(height: 20),
-        
-        TextField(
+        const SizedBox(height: 16),
+        AppTextField(
           controller: _confirmPasswordController,
+          label: 'Confirm password',
+          hint: 'Type it again',
+          icon: Icons.lock_outline_rounded,
           obscureText: _obscureConfirmPassword,
-          style: GoogleFonts.poppins(
-            color: isDark ? Colors.white : AppColors.textDark,
-          ),
-          decoration: InputDecoration(
-            labelText: 'Confirm Password',
-            labelStyle: TextStyle(color: isDark ? Colors.white60 : AppColors.textMuted),
-            prefixIcon: Icon(
-              Icons.lock_outline,
-              color: isDark ? Colors.white60 : AppColors.textMuted,
+          suffix: IconButton(
+            icon: Icon(
+              _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              size: 20,
             ),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                color: isDark ? Colors.white60 : AppColors.textMuted,
-              ),
-              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.darkCard : Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark ? Colors.white12 : Colors.grey[300]!,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.accent, width: 2),
-            ),
+            onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
           ),
         ),
         const SizedBox(height: 24),
-        
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _resetPassword,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Text(
-                    'Reset Password',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-          ),
+        PrimaryButton(
+          label: 'Reset password',
+          loading: _isLoading,
+          onPressed: _resetPassword,
         ),
       ],
     );

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../services/theme_service.dart';
+import '../widgets/app_logo.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/admin_service.dart';
@@ -79,72 +80,91 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
     final isSmall = Responsive.isSmallPhone(context);
-    final logoSize = isSmall ? 110.0 : 140.0;
-    final iconSize = isSmall ? 60.0 : 80.0;
-    
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: logoSize,
-              height: logoSize,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1a365d).withOpacity(0.2),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
+    final logoSize = isSmall ? 96.0 : 116.0;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(gradient: p.heroGradient),
+          child: Stack(
+            children: [
+              // Soft rings behind the logo.
+              Positioned.fill(
+                child: Center(
+                  child: Container(
+                    width: logoSize * 3.2,
+                    height: logoSize * 3.2,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.04),
+                    ),
                   ),
-                ],
+                ),
               ),
-              child: Icon(
-                Icons.school,
-                size: iconSize,
-                color: AppColors.accent,
+              Positioned.fill(
+                child: Center(
+                  child: Container(
+                    width: logoSize * 2.1,
+                    height: logoSize * 2.1,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
+                  ),
+                ),
               ),
-            )
-                .animate()
-                .scale(
-                  begin: const Offset(0.5, 0.5),
-                  end: const Offset(1.0, 1.0),
-                  duration: 600.ms,
-                  curve: Curves.elasticOut,
-                )
-                .fadeIn(duration: 400.ms),
-            
-            SizedBox(height: isSmall ? 20 : 24),
-            
-            Text(
-              'CrimiReview',
-              style: GoogleFonts.poppins(
-                fontSize: Responsive.fontSize(context, 28),
-                fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppLogo(size: logoSize)
+                        .animate()
+                        .scale(
+                          begin: const Offset(0.7, 0.7),
+                          end: const Offset(1.0, 1.0),
+                          duration: 650.ms,
+                          curve: Curves.easeOutBack,
+                        )
+                        .fadeIn(duration: 400.ms),
+                    SizedBox(height: isSmall ? 22 : 28),
+                    AppWordmark(
+                      fontSize: Responsive.fontSize(context, 30),
+                      color: Colors.white,
+                    )
+                        .animate(delay: 200.ms)
+                        .fadeIn(duration: 400.ms)
+                        .slideY(begin: 0.3, end: 0, curve: Curves.easeOutCubic),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your Criminology board exam reviewer',
+                      textAlign: TextAlign.center,
+                      style: context.textStyles.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.72),
+                      ),
+                    ).animate(delay: 380.ms).fadeIn(duration: 400.ms),
+                  ],
+                ),
               ),
-            )
-                .animate(delay: 200.ms)
-                .fadeIn(duration: 400.ms)
-                .slideY(begin: 0.3, end: 0),
-            
-            const SizedBox(height: 8),
-            
-            Text(
-              'Ace Your Board Exam',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: MediaQuery.of(context).padding.bottom + 48,
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ).animate(delay: 700.ms).fadeIn(duration: 400.ms),
               ),
-            )
-                .animate(delay: 400.ms)
-                .fadeIn(duration: 400.ms),
-          ],
+            ],
+          ),
         ),
       ),
     );

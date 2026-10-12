@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/theme_service.dart';
 
 enum PasswordStrength {
   empty,
@@ -103,149 +104,77 @@ class PasswordStrengthIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final result = PasswordStrengthChecker.check(password);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = context.textStyles;
 
     if (result.strength == PasswordStrength.empty) {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        // Strength bar
-        Row(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: _getProgressValue(result.strength),
-                  backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation(_getStrengthColor(result.strength)),
-                  minHeight: 6,
-                ),
+    final color = _strengthColor(context, result.strength);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: PasswordStrengthBar(password: password)),
+              const SizedBox(width: 12),
+              Text(
+                _strengthLabel(result.strength),
+                style: text.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w800),
               ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getStrengthColor(result.strength).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _getStrengthLabel(result.strength),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _getStrengthColor(result.strength),
-                ),
-              ),
+            ],
+          ),
+          if (showRequirements) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _requirement(context, '8-16 characters', result.hasMinLength && result.hasMaxLength),
+                _requirement(context, 'Uppercase', result.hasUppercase),
+                _requirement(context, 'Lowercase', result.hasLowercase),
+                _requirement(context, 'Number', result.hasNumber),
+                _requirement(context, 'Symbol (optional)', result.hasSpecialChar, optional: true),
+              ],
             ),
           ],
-        ),
-        if (showRequirements) ...[
-          const SizedBox(height: 16),
-          // Requirements list
-          _buildRequirement('8-16 characters', result.hasMinLength && result.hasMaxLength, isDark),
-          const SizedBox(height: 6),
-          _buildRequirement('Uppercase letter (A-Z)', result.hasUppercase, isDark),
-          const SizedBox(height: 6),
-          _buildRequirement('Lowercase letter (a-z)', result.hasLowercase, isDark),
-          const SizedBox(height: 6),
-          _buildRequirement('Number (0-9)', result.hasNumber, isDark),
-          const SizedBox(height: 6),
-          _buildRequirement('Special character (!@#\$%...)', result.hasSpecialChar, isDark),
         ],
-      ],
+      ),
     );
   }
 
-  Widget _buildRequirement(String text, bool isMet, bool isDark) {
-    return Row(
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: isMet 
-                ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isMet 
-                  ? const Color(0xFF10B981)
-                  : (isDark ? Colors.white24 : Colors.grey.shade300),
-              width: 1.5,
-            ),
-          ),
-          child: Center(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: isMet
-                  ? const Icon(
-                      Icons.check_rounded,
-                      size: 12,
-                      color: Color(0xFF10B981),
-                    )
-                  : Icon(
-                      Icons.remove_rounded,
-                      size: 10,
-                      color: isDark ? Colors.white30 : Colors.grey.shade400,
-                    ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
+  Widget _requirement(BuildContext context, String label, bool isMet, {bool optional = false}) {
+    final p = context.palette;
+    final color = isMet ? p.success : (optional ? p.textTertiary : p.textSecondary);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: isMet ? p.successSoft : p.surfaceAlt,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(isMet ? Icons.check_rounded : Icons.circle_outlined, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
             style: TextStyle(
-              fontSize: 13,
-              color: isMet
-                  ? (isDark ? Colors.white70 : Colors.grey.shade700)
-                  : (isDark ? Colors.white38 : Colors.grey.shade500),
-              fontWeight: isMet ? FontWeight.w500 : FontWeight.normal,
+              fontFamily: kAppFontFamily,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  double _getProgressValue(PasswordStrength strength) {
-    switch (strength) {
-      case PasswordStrength.empty:
-        return 0;
-      case PasswordStrength.weak:
-        return 0.25;
-      case PasswordStrength.fair:
-        return 0.5;
-      case PasswordStrength.good:
-        return 0.75;
-      case PasswordStrength.strong:
-        return 1.0;
-    }
-  }
-
-  Color _getStrengthColor(PasswordStrength strength) {
-    switch (strength) {
-      case PasswordStrength.empty:
-        return Colors.grey;
-      case PasswordStrength.weak:
-        return const Color(0xFFEF4444); // Red
-      case PasswordStrength.fair:
-        return const Color(0xFFF59E0B); // Orange/Amber
-      case PasswordStrength.good:
-        return const Color(0xFF3B82F6); // Blue
-      case PasswordStrength.strong:
-        return const Color(0xFF10B981); // Green
-    }
-  }
-
-  String _getStrengthLabel(PasswordStrength strength) {
+  String _strengthLabel(PasswordStrength strength) {
     switch (strength) {
       case PasswordStrength.empty:
         return '';
@@ -261,7 +190,23 @@ class PasswordStrengthIndicator extends StatelessWidget {
   }
 }
 
-/// Compact version for inline display
+Color _strengthColor(BuildContext context, PasswordStrength strength) {
+  final p = context.palette;
+  switch (strength) {
+    case PasswordStrength.empty:
+      return p.textTertiary;
+    case PasswordStrength.weak:
+      return p.danger;
+    case PasswordStrength.fair:
+      return p.warning;
+    case PasswordStrength.good:
+      return p.info;
+    case PasswordStrength.strong:
+      return p.success;
+  }
+}
+
+/// Four-segment strength meter.
 class PasswordStrengthBar extends StatelessWidget {
   final String password;
 
@@ -273,24 +218,24 @@ class PasswordStrengthBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final result = PasswordStrengthChecker.check(password);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
 
     if (result.strength == PasswordStrength.empty) {
       return const SizedBox.shrink();
     }
 
+    final active = _activeSegments(result.strength);
+    final color = _strengthColor(context, result.strength);
     return Row(
       children: List.generate(4, (index) {
-        final isActive = index < _getActiveSegments(result.strength);
         return Expanded(
-          child: Container(
-            height: 4,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 5,
             margin: EdgeInsets.only(right: index < 3 ? 4 : 0),
             decoration: BoxDecoration(
-              color: isActive
-                  ? _getStrengthColor(result.strength)
-                  : (isDark ? Colors.white12 : Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(2),
+              color: index < active ? color : p.surfaceAlt,
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
         );
@@ -298,7 +243,7 @@ class PasswordStrengthBar extends StatelessWidget {
     );
   }
 
-  int _getActiveSegments(PasswordStrength strength) {
+  int _activeSegments(PasswordStrength strength) {
     switch (strength) {
       case PasswordStrength.empty:
         return 0;
@@ -310,21 +255,6 @@ class PasswordStrengthBar extends StatelessWidget {
         return 3;
       case PasswordStrength.strong:
         return 4;
-    }
-  }
-
-  Color _getStrengthColor(PasswordStrength strength) {
-    switch (strength) {
-      case PasswordStrength.empty:
-        return Colors.grey;
-      case PasswordStrength.weak:
-        return const Color(0xFFEF4444);
-      case PasswordStrength.fair:
-        return const Color(0xFFF59E0B);
-      case PasswordStrength.good:
-        return const Color(0xFF3B82F6);
-      case PasswordStrength.strong:
-        return const Color(0xFF10B981);
     }
   }
 }

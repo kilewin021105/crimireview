@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/subject.dart';
 import '../models/question.dart';
 import '../models/user_progress.dart';
-import '../services/theme_service.dart';
 import '../utils/page_transitions.dart';
+import '../utils/responsive.dart';
+import '../widgets/ui/ui.dart';
 import 'quiz_screen.dart';
 
 class StudyNotesScreen extends StatelessWidget {
@@ -22,166 +23,69 @@ class StudyNotesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final notes = _getStudyNotes(subject.id, difficulty);
+    final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context, isDark),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+      appBar: const AppTopBar(title: 'Study notes', subtitle: 'Review before you start'),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(padding, 4, padding, 24),
+              child: ContentWidth(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSubjectCard(isDark),
-                    const SizedBox(height: 20),
-                    _buildNotesSection(isDark, notes),
-                    const SizedBox(height: 24),
-                    _buildKeyTerms(isDark),
-                    const SizedBox(height: 24),
-                    _buildTips(isDark),
-                    const SizedBox(height: 20),
+                    Appear(index: 0, child: _buildSubjectCard(context)),
+                    const SizedBox(height: AppSpace.section),
+                    Appear(index: 1, child: _buildNotesSection(context, notes)),
+                    const SizedBox(height: AppSpace.section),
+                    Appear(index: 2, child: _buildKeyTerms(context)),
+                    const SizedBox(height: AppSpace.section),
+                    Appear(index: 3, child: _buildTips(context)),
                   ],
                 ),
               ),
             ),
-            _buildStartButton(context, isDark),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.arrow_back_ios_rounded,
-                color: isDark ? Colors.white70 : Colors.black54,
-                size: 20,
-              ),
-            ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Study Notes',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                  ),
-                ),
-                Text(
-                  'Review before taking the quiz',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildStartButton(context),
         ],
       ),
     );
   }
 
-  Widget _buildSubjectCard(bool isDark) {
+  Widget _buildSubjectCard(BuildContext context) {
+    final p = context.palette;
+    final text = context.textStyles;
     final icon = AppTheme.subjectIcons[subject.id] ?? Icons.book_rounded;
-    final diffColor = difficulty == Difficulty.easy
-        ? const Color(0xFF22C55E)
-        : difficulty == Difficulty.medium
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFFEF4444);
+    final color = AppColors.subjectColor(subject.id);
+    final diffColor = p.forDifficulty(difficulty.index);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: AppColors.accent, size: 28),
-          ),
-          const SizedBox(width: 16),
+          IconBadge(icon: icon, color: color, size: 52, iconSize: 26),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  subject.name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
+                Text(subject.name, style: text.titleMedium),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: diffColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        difficulty.name.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: diffColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        SegmentProgress.rangeLabelFor(segmentIndex),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.accent,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${questions.length} questions',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                      ),
+                    Pill(label: _difficultyLabel, color: diffColor),
+                    Pill(label: SegmentProgress.rangeLabelFor(segmentIndex), color: p.primary),
+                    Pill(
+                      label: '${questions.length} questions',
+                      icon: Icons.help_outline_rounded,
+                      color: p.textSecondary,
+                      background: p.surfaceAlt,
                     ),
                   ],
                 ),
@@ -193,249 +97,187 @@ class StudyNotesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNotesSection(bool isDark, List<StudyNote> notes) {
+  String get _difficultyLabel =>
+      difficulty.name[0].toUpperCase() + difficulty.name.substring(1);
+
+  Widget _buildNotesSection(BuildContext context, List<StudyNote> notes) {
+    final p = context.palette;
+    final text = context.textStyles;
+    final color = AppColors.subjectColor(subject.id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.menu_book_rounded, color: AppColors.accent, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Key Concepts',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              ),
+        SectionHeader(title: 'Key concepts', subtitle: '${notes.length} things to remember'),
+        const SizedBox(height: 12),
+        for (var i = 0; i < notes.length; i++) ...[
+          AppCard(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: context.isDarkMode ? 0.2 : 0.12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Text(
+                    '${i + 1}',
+                    style: text.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(notes[i].title, style: text.titleSmall),
+                      const SizedBox(height: 6),
+                      Text(
+                        notes[i].content,
+                        style: text.bodyMedium?.copyWith(color: p.textPrimary.withValues(alpha: 0.82)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        ...notes.map((note) => _buildNoteCard(note, isDark)),
+          ),
+          if (i < notes.length - 1) const SizedBox(height: 10),
+        ],
       ],
     );
   }
 
-  Widget _buildNoteCard(StudyNote note, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.accent.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            note.title,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.accent,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            note.content,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: isDark ? Colors.white70 : Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKeyTerms(bool isDark) {
+  Widget _buildKeyTerms(BuildContext context) {
+    final p = context.palette;
+    final text = context.textStyles;
     final terms = _getKeyTerms(subject.id);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.lightbulb_rounded, color: Colors.amber, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Key Terms',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
+        const SectionHeader(title: 'Key terms'),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: terms.map((term) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              term,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white70 : Colors.black87,
-              ),
-            ),
-          )).toList(),
+          children: terms
+              .map((term) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: p.surface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: p.border),
+                    ),
+                    child: Text(term, style: text.labelMedium?.copyWith(color: p.textPrimary)),
+                  ))
+              .toList(),
         ),
       ],
     );
   }
 
-  Widget _buildTips(bool isDark) {
+  Widget _buildTips(BuildContext context) {
+    final p = context.palette;
+    final text = context.textStyles;
+    const tips = [
+      'Read each question carefully before answering',
+      'Eliminate obviously wrong answers first',
+      'Look for keywords that hint at the answer',
+      "Trust your first instinct unless you're sure",
+    ];
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.accent.withValues(alpha: 0.2),
-        ),
+        color: p.primarySoft,
+        borderRadius: BorderRadius.circular(AppSpace.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.tips_and_updates_rounded, color: AppColors.accent, size: 20),
+              Icon(Icons.tips_and_updates_rounded, color: p.onPrimarySoft, size: 20),
               const SizedBox(width: 8),
-              Text(
-                'Exam Tips',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.accent,
-                ),
-              ),
+              Text('Exam tips', style: text.titleSmall?.copyWith(color: p.onPrimarySoft)),
             ],
           ),
           const SizedBox(height: 12),
-          _buildTipItem('Read each question carefully before answering', isDark),
-          _buildTipItem('Eliminate obviously wrong answers first', isDark),
-          _buildTipItem('Look for keywords that hint at the answer', isDark),
-          _buildTipItem('Trust your first instinct unless you\'re sure', isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTipItem(String tip, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.check_circle_rounded,
-            color: AppColors.accent,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              tip,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white70 : Colors.black87,
+          for (final tip in tips)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(Icons.check_circle_rounded, color: p.primary, size: 17),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(tip, style: text.bodyMedium?.copyWith(color: p.textPrimary)),
+                  ),
+                ],
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildStartButton(BuildContext context, bool isDark) {
+  Widget _buildStartButton(BuildContext context) {
+    final p = context.palette;
+    final text = context.textStyles;
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        color: p.surface,
+        border: Border(top: BorderSide(color: p.border)),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+          child: ContentWidth(
+            child: Row(
               children: [
-                Text(
-                  'Ready?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Ready?', style: text.titleMedium),
+                      Text('${questions.length} questions await', style: text.bodySmall),
+                    ],
                   ),
                 ),
-                Text(
-                  '${questions.length} questions await',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                  ),
+                const SizedBox(width: 16),
+                PrimaryButton(
+                  label: 'Start quiz',
+                  icon: Icons.arrow_forward_rounded,
+                  trailingIcon: true,
+                  expand: false,
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      SlidePageRoute(
+                        page: QuizScreen(
+                          subject: subject,
+                          questions: questions,
+                          difficulty: difficulty,
+                          segmentIndex: segmentIndex,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                SlidePageRoute(
-                  page: QuizScreen(
-                    subject: subject,
-                    questions: questions,
-                    difficulty: difficulty,
-                    segmentIndex: segmentIndex,
-                  ),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Start Quiz',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.arrow_forward_rounded, size: 18),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

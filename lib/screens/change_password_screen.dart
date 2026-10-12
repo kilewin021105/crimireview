@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../services/supabase_service.dart';
-import '../services/theme_service.dart';
 import '../utils/error_messages.dart';
+import '../utils/responsive.dart';
 import '../widgets/password_strength_indicator.dart';
+import '../widgets/ui/ui.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -17,7 +17,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
@@ -35,7 +35,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -47,24 +47,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         newPassword: _newPasswordController.text,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                Text(
-                  'Password changed successfully!',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        showAppSnack(context, 'Password changed successfully!', tone: BannerTone.success);
         Navigator.pop(context);
       }
     } catch (e) {
@@ -76,168 +59,62 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     }
   }
 
+  Widget _eye(bool obscured, VoidCallback toggle) => IconButton(
+        onPressed: toggle,
+        icon: Icon(
+          obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+          size: 20,
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final text = context.textStyles;
+    final padding = Responsive.horizontalPadding(context);
+
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-            ),
-          ),
-        ),
-        title: Text(
-          'Change Password',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-          ),
-        ),
-        centerTitle: true,
+      appBar: AppTopBar(
+        title: 'Change password',
+        backIcon: Icons.close_rounded,
+        onBack: () => Navigator.pop(context),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header illustration
-              Center(
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.accent.withOpacity(0.1),
-                        AppColors.primary.withOpacity(0.1),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.lock_reset_rounded,
-                    size: 56,
-                    color: AppColors.accent,
-                  ),
+        padding: EdgeInsets.fromLTRB(padding, 8, padding, 28),
+        child: ContentWidth(
+          maxWidth: 480,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconBadge(icon: Icons.lock_reset_rounded, size: 56, radius: 18),
                 ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Info text
-              Center(
-                child: Text(
-                  'Create a strong password to protect your account',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
+                const SizedBox(height: 16),
+                Text('Set a new password', style: text.headlineSmall),
+                const SizedBox(height: 6),
+                Text(
+                  'Enter your current password first, then choose a strong new one.',
+                  style: text.bodyMedium,
                 ),
-              ),
-              const SizedBox(height: 32),
-              
-              // Error message
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.error.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: AppColors.error, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: GoogleFonts.poppins(
-                            color: AppColors.error,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-              
-              // Current Password Field -- re-checked by the server before the
-              // change, so an unlocked phone can't be used to lock the owner out.
-              Text(
-                'Current Password',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextFormField(
+                const SizedBox(height: 24),
+                if (_errorMessage != null) ...[
+                  InlineBanner(message: _errorMessage!, tone: BannerTone.danger),
+                  const SizedBox(height: 20),
+                ],
+
+                // Current password -- re-checked by the server before the
+                // change, so an unlocked phone can't be used to lock the owner out.
+                AppTextField(
                   controller: _currentPasswordController,
+                  label: 'Current password',
+                  hint: 'Enter current password',
+                  icon: Icons.lock_open_rounded,
                   obscureText: _obscureCurrentPassword,
-                  style: GoogleFonts.poppins(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Enter current password',
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
-                    prefixIcon: Icon(
-                      Icons.lock_open_rounded,
-                      color: AppColors.accent,
-                    ),
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword),
-                      icon: Icon(
-                        _obscureCurrentPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                  ),
+                  autofillHints: const [AutofillHints.password],
+                  suffix: _eye(_obscureCurrentPassword,
+                      () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword)),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your current password';
@@ -245,58 +122,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     return null;
                   },
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // New Password Field
-              Text(
-                'New Password',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextFormField(
+                const SizedBox(height: 20),
+                AppTextField(
                   controller: _newPasswordController,
+                  label: 'New password',
+                  hint: '8 to 16 characters',
+                  icon: Icons.lock_outline_rounded,
                   obscureText: _obscureNewPassword,
+                  autofillHints: const [AutofillHints.newPassword],
                   onChanged: (v) => setState(() => _password = v),
-                  style: GoogleFonts.poppins(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Enter new password',
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
-                    prefixIcon: Icon(
-                      Icons.lock_outline_rounded,
-                      color: AppColors.accent,
-                    ),
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
-                      icon: Icon(
-                        _obscureNewPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                  ),
+                  suffix: _eye(_obscureNewPassword,
+                      () => setState(() => _obscureNewPassword = !_obscureNewPassword)),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter a password';
@@ -313,63 +149,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     return null;
                   },
                 ),
-              ),
-              
-              // Password strength indicator
-              PasswordStrengthIndicator(
-                password: _password,
-                showRequirements: true,
-              ),
-              const SizedBox(height: 24),
-              
-              // Confirm Password Field
-              Text(
-                'Confirm Password',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                PasswordStrengthIndicator(
+                  password: _password,
+                  showRequirements: true,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextFormField(
+                const SizedBox(height: 16),
+                AppTextField(
                   controller: _confirmPasswordController,
+                  label: 'Confirm new password',
+                  hint: 'Type it again',
+                  icon: Icons.lock_outline_rounded,
                   obscureText: _obscureConfirmPassword,
-                  style: GoogleFonts.poppins(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Confirm your password',
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
-                    prefixIcon: Icon(
-                      Icons.lock_outline_rounded,
-                      color: AppColors.accent,
-                    ),
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                      icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                  ),
+                  suffix: _eye(_obscureConfirmPassword,
+                      () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword)),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please confirm your password';
@@ -380,73 +172,22 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     return null;
                   },
                 ),
-              ),
-              const SizedBox(height: 32),
-              
-              // Change Password Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _changePassword,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    disabledBackgroundColor: AppColors.accent.withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'Update Password',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                const SizedBox(height: 28),
+                PrimaryButton(
+                  label: 'Update password',
+                  loading: _isLoading,
+                  onPressed: _changePassword,
                 ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Cancel button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: TextButton(
+                const SizedBox(height: 12),
+                SecondaryButton(
+                  label: 'Cancel',
                   onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                      ),
-                    ),
-                  ),
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                    ),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  }
+}

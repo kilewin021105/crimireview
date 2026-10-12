@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/subject.dart';
-import '../services/theme_service.dart';
 import '../utils/page_transitions.dart';
+import '../utils/responsive.dart';
+import '../widgets/ui/ui.dart';
 import 'flashcard_screen.dart';
 
 /// Tab root for Flashcards: pick a subject, then study its deck.
@@ -17,109 +18,145 @@ class FlashcardsHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Flashcards',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(padding, 16, padding, 28),
+          child: ContentWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PageHeader(
+                  title: 'Flashcards',
+                  subtitle: 'Choose a deck to review',
+                ),
+                const SizedBox(height: 16),
+                const InlineBanner(
+                  tone: BannerTone.neutral,
+                  icon: Icons.touch_app_rounded,
+                  message: 'Tap a card to flip it and see the answer. Swipe to move to the next card.',
+                ),
+                const SizedBox(height: 20),
+                LayoutBuilder(builder: (context, c) {
+                  final columns = c.maxWidth >= 560 ? 3 : 2;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 12,
+                      mainAxisExtent: 178,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Choose a subject to review',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    itemCount: CriminologySubjects.all.length,
+                    itemBuilder: (context, index) => Appear(
+                      index: index,
+                      child: _DeckTile(subject: CriminologySubjects.all[index]),
                     ),
-                  ),
-                ],
-              ),
+                  );
+                }),
+              ],
             ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                itemCount: CriminologySubjects.all.length,
-                itemBuilder: (context, index) {
-                  final subject = CriminologySubjects.all[index];
-                  return _buildSubjectCard(context, subject, isDark);
-                },
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildSubjectCard(BuildContext context, Subject subject, bool isDark) {
+/// A subject's deck: the front card with two cards peeking out behind it.
+class _DeckTile extends StatelessWidget {
+  final Subject subject;
+
+  const _DeckTile({required this.subject});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final text = context.textStyles;
     final icon = AppTheme.subjectIcons[subject.id] ?? Icons.book_rounded;
+    final color = AppColors.subjectColor(subject.id);
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          SlidePageRoute(page: FlashcardScreen(subject: subject)),
+    Widget layer(double inset, double alpha) => Positioned(
+          left: inset,
+          right: inset,
+          top: 0,
+          bottom: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Color.alphaBlend(color.withValues(alpha: alpha), p.surface),
+              borderRadius: BorderRadius.circular(AppSpace.radiusLg),
+              border: Border.all(color: p.border),
+            ),
+          ),
         );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
+
+    return Stack(
+      children: [
+        layer(14, context.isDarkMode ? 0.18 : 0.10),
+        Positioned.fill(
+          top: 0,
+          bottom: 6,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 7),
+            child: Container(
               decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: AppColors.accent, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    subject.name,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Study Flashcards',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
+                color: Color.alphaBlend(color.withValues(alpha: context.isDarkMode ? 0.12 : 0.06), p.surface),
+                borderRadius: BorderRadius.circular(AppSpace.radiusLg),
+                border: Border.all(color: p.border),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-          ],
+          ),
         ),
-      ),
+        Positioned.fill(
+          bottom: 12,
+          child: AppCard(
+            padding: const EdgeInsets.all(14),
+            onTap: () {
+              Navigator.push(
+                context,
+                SlidePageRoute(page: FlashcardScreen(subject: subject)),
+              );
+            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconBadge(icon: icon, color: color, size: 40, iconSize: 21),
+                    const Spacer(),
+                    Icon(Icons.style_rounded, size: 18, color: p.textTertiary),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  subject.shortName,
+                  style: text.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${subject.topics.length} topics',
+                  style: text.bodySmall,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text('Study deck', style: text.labelMedium?.copyWith(color: color)),
+                    const SizedBox(width: 2),
+                    Icon(Icons.arrow_forward_rounded, size: 15, color: color),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

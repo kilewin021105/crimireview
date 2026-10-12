@@ -1,17 +1,15 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/storage_service.dart';
-import '../services/theme_service.dart';
 import '../services/feedback_service.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_logo.dart';
+import '../widgets/ui/ui.dart';
 import 'profile_screen.dart';
 import 'auth_screen.dart';
 import 'change_password_screen.dart';
@@ -26,11 +24,16 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _storage = StorageService();
   String _userName = 'Student';
+  String? _userEmail;
   String? _profileImagePath;
+  String? _avatarUrl;
   bool _notificationsEnabled = true;
   bool _soundEffectsEnabled = true;
   bool _hapticFeedbackEnabled = true;
   bool _isLoggedIn = false;
+
+  /// Shown in the About card; keep in step with `version:` in pubspec.yaml.
+  static const String _appVersion = '1.0.1';
 
   @override
   void initState() {
@@ -70,15 +73,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final name = await _storage.getUserName();
+    final email = await _storage.getUserEmail();
     final imagePath = await _storage.getProfileImage();
+    final avatarUrl = await _storage.getAvatarUrl();
     final notifications = await _storage.getNotificationsEnabled();
     final sound = await _storage.getSoundEffectsEnabled();
     final haptic = await _storage.getHapticFeedbackEnabled();
-    
+
     if (mounted) {
       setState(() {
         _userName = name;
+        _userEmail = email;
         _profileImagePath = imagePath;
+        _avatarUrl = avatarUrl;
         _notificationsEnabled = notifications;
         _soundEffectsEnabled = sound;
         _hapticFeedbackEnabled = haptic;
@@ -90,10 +97,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const String _supportEmail = 'support@crimireview.app';
 
   Future<void> _shareApp() async {
-    await Share.share(
-      'Check out CrimiReview - an adaptive reviewer for the Criminologist Licensure Examination! '
-      'Download it free: $_websiteUrl',
-      subject: 'CrimiReview App',
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Check out CrimiReview - an adaptive reviewer for the Criminologist Licensure Examination! '
+            'Download it free: $_websiteUrl',
+        subject: 'CrimiReview App',
+      ),
     );
   }
 
@@ -113,543 +122,213 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // launchUrl returns false (rather than throwing) when no email app is
     // set up, so the student would otherwise see nothing happen at all.
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('No email app found. Send your feedback to $_supportEmail'),
-          backgroundColor: AppColors.accent,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      showAppSnack(
+        context,
+        'No email app found. Send your feedback to $_supportEmail',
+        tone: BannerTone.info,
       );
     }
   }
 
-  void _showSignOutDialog(bool isDark) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Sign Out',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to sign out? Your local progress will be kept.',
-          style: TextStyle(
-            color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await SupabaseService.instance.signOut();
-              // Keep local quiz progress, only clear auth/profile data
-              await StorageService().clearAuthData();
-              if (context.mounted) {
-                Navigator.pop(context);
-                Navigator.of(this.context).pushAndRemoveUntil(
-                  SlidePageRoute(page: const AuthScreen()),
-                  (route) => false,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Sign out?',
+      message: 'Your progress on this phone will be kept. Sign in again any time to sync it.',
+      confirmLabel: 'Sign out',
+      destructive: true,
+      icon: Icons.logout_rounded,
+    );
+    if (!confirmed) return;
+    await SupabaseService.instance.signOut();
+    // Keep local quiz progress, only clear auth/profile data
+    await StorageService().clearAuthData();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      SlidePageRoute(page: const AuthScreen()),
+      (route) => false,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
+    final text = context.textStyles;
     final themeService = Provider.of<ThemeService>(context);
     final isDarkMode = themeService.themeMode == ThemeMode.dark;
     final padding = Responsive.horizontalPadding(context);
+    final email = SupabaseService.instance.currentUser?.email ?? _userEmail;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(padding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Settings',
-                style: TextStyle(
-                  fontSize: Responsive.fontSize(context, 28),
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Manage your preferences',
-                style: TextStyle(
-                  fontSize: Responsive.fontSize(context, 14),
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-              GestureDetector(
-                onTap: () async {
-                  await Navigator.push(context, SlidePageRoute(page: const ProfileScreen()));
-                  _loadSettings();
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+          padding: EdgeInsets.fromLTRB(padding, 16, padding, 28),
+          child: ContentWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PageHeader(title: 'Settings', subtitle: 'Manage your preferences'),
+                const SizedBox(height: 20),
+
+                AppCard(
+                  padding: const EdgeInsets.all(14),
+                  onTap: () async {
+                    await Navigator.push(context, SlidePageRoute(page: const ProfileScreen()));
+                    _loadSettings();
+                  },
                   child: Row(
                     children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                          image: _profileImagePath != null && _profileImagePath!.isNotEmpty
-                              ? DecorationImage(
-                                  image: FileImage(File(_profileImagePath!)),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                        ),
-                        child: _profileImagePath == null || _profileImagePath!.isEmpty
-                            ? Center(
-                                child: Text(
-                                  _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.accent,
-                                  ),
-                                ),
-                              )
-                            : null,
+                      UserAvatar(
+                        name: _userName,
+                        imagePath: _profileImagePath,
+                        imageUrl: _avatarUrl,
+                        size: 56,
+                        ring: true,
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(_userName, style: text.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 2),
                             Text(
-                              _userName,
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Edit profile',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                              ),
+                              email == null || email.isEmpty ? 'View and edit your profile' : email,
+                              style: text.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-                      ),
+                      Pill(label: 'Edit', color: p.primary),
                     ],
                   ),
                 ),
-              ),
-              
-              const SizedBox(height: 24),
-              
 
-              _buildSectionHeader('Appearance', isDark),
-              const SizedBox(height: 12),
-              
-              _buildSettingTile(
-                icon: isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                title: 'Dark Mode',
-                subtitle: isDarkMode ? 'On' : 'Off',
-                isDark: isDark,
-                trailing: _buildToggle(
-                  value: isDarkMode,
-                  onChanged: (value) {
-                    themeService.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
-                  },
-                  isDark: isDark,
-                ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-
-              _buildSectionHeader('Notifications & Feedback', isDark),
-              const SizedBox(height: 12),
-              
-              _buildSettingTile(
-                icon: Icons.notifications_outlined,
-                title: 'Notifications',
-                subtitle: _notificationsEnabled ? 'Enabled' : 'Disabled',
-                isDark: isDark,
-                trailing: _buildToggle(
-                  value: _notificationsEnabled,
-                  onChanged: (value) async {
-                    await _storage.setNotificationsEnabled(value);
-                    setState(() => _notificationsEnabled = value);
-
-                    await NotificationService.instance.setupScheduledNotifications();
-                  },
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              _buildSettingTile(
-                icon: Icons.volume_up_outlined,
-                title: 'Sound Effects',
-                subtitle: _soundEffectsEnabled ? 'Enabled' : 'Disabled',
-                isDark: isDark,
-                trailing: _buildToggle(
-                  value: _soundEffectsEnabled,
-                  onChanged: (value) async {
-                    await _storage.setSoundEffectsEnabled(value);
-                    setState(() => _soundEffectsEnabled = value);
-
-                    await FeedbackService.instance.refreshSettings();
-                  },
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              _buildSettingTile(
-                icon: Icons.vibration_outlined,
-                title: 'Haptic Feedback',
-                subtitle: _hapticFeedbackEnabled ? 'Enabled' : 'Disabled',
-                isDark: isDark,
-                trailing: _buildToggle(
-                  value: _hapticFeedbackEnabled,
-                  onChanged: (value) async {
-                    await _storage.setHapticFeedbackEnabled(value);
-                    setState(() => _hapticFeedbackEnabled = value);
-
-                    await FeedbackService.instance.refreshSettings();
-                    if (value) {
-                      FeedbackService.instance.lightTap();
-                    }
-                  },
-                  isDark: isDark,
-                ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-
-              _buildSectionHeader('Account', isDark),
-              const SizedBox(height: 12),
-              
-              if (_isLoggedIn) ...[
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    SlidePageRoute(page: const ChangePasswordScreen(), direction: SlideDirection.up),
-                  ),
-                  child: _buildSettingTile(
-                    icon: Icons.lock_outline_rounded,
-                    title: 'Change Password',
-                    subtitle: 'Update your password',
-                    isDark: isDark,
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                GestureDetector(
-                  onTap: () => _showSignOutDialog(isDark),
-                  child: _buildSettingTile(
-                    icon: Icons.logout_rounded,
-                    title: 'Sign Out',
-                    subtitle: SupabaseService.instance.currentUser?.email ?? '',
-                    isDark: isDark,
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.error,
-                    ),
-                    iconColor: AppColors.error,
-                  ),
-                ),
-              ] else ...[
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      SlidePageRoute(page: const AuthScreen()),
-                    );
-                  },
-                  child: _buildSettingTile(
-                    icon: Icons.login_rounded,
-                    title: 'Sign In',
-                    subtitle: 'Sync your progress to cloud',
-                    isDark: isDark,
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-                    ),
-                  ),
-                ),
-              ],
-              
-              const SizedBox(height: 24),
-              
-
-              _buildSectionHeader('Support', isDark),
-              const SizedBox(height: 12),
-              
-              GestureDetector(
-                onTap: _shareApp,
-                child: _buildSettingTile(
-                  icon: Icons.share_outlined,
-                  title: 'Share App',
-                  subtitle: 'Invite friends to study',
-                  isDark: isDark,
-                  trailing: Icon(
-                    Icons.chevron_right_rounded,
-                    color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-                  ),
-                ),
-              ),
-
-              // "Rate App" removed until there is a store listing to rate.
-              const SizedBox(height: 12),
-              
-              GestureDetector(
-                onTap: _sendFeedback,
-                child: _buildSettingTile(
-                  icon: Icons.feedback_outlined,
-                  title: 'Send Feedback',
-                  subtitle: 'Help us improve',
-                  isDark: isDark,
-                  trailing: Icon(
-                    Icons.chevron_right_rounded,
-                    color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 32),
-              
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF8B5CF6).withOpacity(0.12),
-                      const Color(0xFF8B5CF6).withOpacity(0.04),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
+                const SizedBox(height: 24),
+                AppListGroup(
+                  title: 'Appearance',
                   children: [
-
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkCard : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1a365d).withOpacity(0.12),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.school,
-                        size: 44,
-                        color: AppColors.accent,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'CrimiReview',
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Version 1.0.0',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF8B5CF6).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'For Future Criminologists',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF8B5CF6),
-                        ),
+                    AppListTile(
+                      icon: isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                      iconColor: const Color(0xFF7C4DDB),
+                      title: 'Dark mode',
+                      subtitle: isDarkMode ? 'On' : 'Off',
+                      onTap: () => themeService.setThemeMode(isDarkMode ? ThemeMode.light : ThemeMode.dark),
+                      trailing: Switch(
+                        value: isDarkMode,
+                        onChanged: (value) {
+                          themeService.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+                        },
                       ),
                     ),
                   ],
                 ),
-              ),
-              
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildSectionHeader(String title, bool isDark) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-      ),
-    );
-  }
-
-  Widget _buildSettingTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool isDark,
-    required Widget trailing,
-    Color? iconColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: (iconColor ?? AppColors.accent).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon,
-              color: iconColor ?? AppColors.accent,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-                  ),
+                const SizedBox(height: 24),
+                AppListGroup(
+                  title: 'Notifications & feedback',
+                  children: [
+                    AppListTile(
+                      icon: Icons.notifications_rounded,
+                      iconColor: p.info,
+                      title: 'Study reminders',
+                      subtitle: _notificationsEnabled ? 'On' : 'Off',
+                      onTap: () => _setNotifications(!_notificationsEnabled),
+                      trailing: Switch(value: _notificationsEnabled, onChanged: _setNotifications),
+                    ),
+                    AppListTile(
+                      icon: Icons.volume_up_rounded,
+                      iconColor: p.success,
+                      title: 'Sound effects',
+                      subtitle: _soundEffectsEnabled ? 'On' : 'Off',
+                      onTap: () => _setSound(!_soundEffectsEnabled),
+                      trailing: Switch(value: _soundEffectsEnabled, onChanged: _setSound),
+                    ),
+                    AppListTile(
+                      icon: Icons.vibration_rounded,
+                      iconColor: p.streak,
+                      title: 'Haptic feedback',
+                      subtitle: _hapticFeedbackEnabled ? 'On' : 'Off',
+                      onTap: () => _setHaptics(!_hapticFeedbackEnabled),
+                      trailing: Switch(value: _hapticFeedbackEnabled, onChanged: _setHaptics),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          trailing,
-        ],
-      ),
-    );
-  }
 
-  Widget _buildToggle({
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required bool isDark,
-  }) {
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        width: 52,
-        height: 30,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
-          color: value 
-            ? AppColors.accent 
-            : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-        ),
-        child: AnimatedAlign(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                const SizedBox(height: 24),
+                AppListGroup(
+                  title: 'Account',
+                  children: [
+                    if (_isLoggedIn) ...[
+                      AppListTile(
+                        icon: Icons.lock_rounded,
+                        title: 'Change password',
+                        subtitle: 'Update your password',
+                        onTap: () => Navigator.push(
+                          context,
+                          SlidePageRoute(page: const ChangePasswordScreen(), direction: SlideDirection.up),
+                        ),
+                      ),
+                      AppListTile(
+                        icon: Icons.logout_rounded,
+                        title: 'Sign out',
+                        subtitle: SupabaseService.instance.currentUser?.email,
+                        destructive: true,
+                        onTap: _confirmSignOut,
+                      ),
+                    ] else
+                      AppListTile(
+                        icon: Icons.login_rounded,
+                        title: 'Sign in',
+                        subtitle: 'Sync your progress to the cloud',
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            SlidePageRoute(page: const AuthScreen()),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+                AppListGroup(
+                  title: 'Support',
+                  children: [
+                    AppListTile(
+                      icon: Icons.ios_share_rounded,
+                      iconColor: p.info,
+                      title: 'Share CrimiReview',
+                      subtitle: 'Invite friends to study',
+                      onTap: _shareApp,
+                    ),
+                    // "Rate App" removed until there is a store listing to rate.
+                    AppListTile(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      iconColor: p.success,
+                      title: 'Send feedback',
+                      subtitle: 'Help us improve',
+                      onTap: _sendFeedback,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+                Center(
+                  child: Column(
+                    children: [
+                      const AppLogo(size: 56),
+                      const SizedBox(height: 14),
+                      const AppWordmark(fontSize: 20),
+                      const SizedBox(height: 4),
+                      Text('Version $_appVersion', style: text.bodySmall),
+                      const SizedBox(height: 10),
+                      Pill(label: 'For future criminologists', icon: Icons.balance_rounded, color: p.gold),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -659,4 +338,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _setNotifications(bool value) async {
+    await _storage.setNotificationsEnabled(value);
+    setState(() => _notificationsEnabled = value);
+    await NotificationService.instance.setupScheduledNotifications();
+  }
+
+  Future<void> _setSound(bool value) async {
+    await _storage.setSoundEffectsEnabled(value);
+    setState(() => _soundEffectsEnabled = value);
+    await FeedbackService.instance.refreshSettings();
+  }
+
+  Future<void> _setHaptics(bool value) async {
+    await _storage.setHapticFeedbackEnabled(value);
+    setState(() => _hapticFeedbackEnabled = value);
+    await FeedbackService.instance.refreshSettings();
+    if (value) {
+      FeedbackService.instance.lightTap();
+    }
+  }
 }
