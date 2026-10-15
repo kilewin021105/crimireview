@@ -1,12 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthChangeEvent, AuthState;
 import '../widgets/app_logo.dart';
-import '../models/user_progress.dart';
+import '../widgets/brand_logos.dart';
 import '../widgets/ui/ui.dart';
-import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
-import '../services/offline_sync_service.dart';
-import '../services/admin_service.dart';
+import '../services/post_sign_in_service.dart';
+import '../services/social_auth_service.dart';
 import '../utils/error_messages.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
@@ -23,22 +25,65 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
   String _password = '';
-  
+
+  /// Google / Facebook buttons to show: only providers switched on in
+  /// Supabase, so a student never taps into a "provider not enabled" page.
+  Set<SocialProvider> _socialProviders = {};
+
+  /// The provider whose browser page is open, until Supabase reports back.
+  SocialProvider? _pendingSocial;
+
+  /// Drives the spinner on that provider's button.
+  SocialProvider? _socialLoading;
+
+  /// Set while the after-sign-in sync runs, so it can only run once.
+  bool _finishing = false;
+
+  StreamSubscription<AuthState>? _authSubscription;
+  Timer? _resumeTimer;
+
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _supabase = SupabaseService.instance;
-  
+
+  bool get _busy => _isLoading || _socialLoading != null || _finishing;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (SocialAuthService.isSupportedPlatform) _loadSocialProviders();
+    if (SupabaseService.isInitialized) {
+      // Google / Facebook sign-in ends here: the browser sends the student
+      // back, Supabase swaps the one-time code for a session and reports it.
+      _authSubscription = _supabase.authStateChanges.listen(
+        _onAuthState,
+        onError: _onSocialError,
+      );
+    }
+  }
+
+  Future<void> _loadSocialProviders() async {
+    final cached = await SocialAuthService.instance.cachedEnabled();
+    if (mounted && cached.isNotEmpty) setState(() => _socialProviders = cached);
+    final fresh = await SocialAuthService.instance.refreshEnabled();
+    if (mounted && fresh != null) setState(() => _socialProviders = fresh);
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
+    _resumeTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _firstNameController.dispose();
@@ -46,15 +91,111 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
+  void _onAuthState(AuthState state) {
+    if (state.event != AuthChangeEvent.signedIn || _finishing || !mounted) return;
+    final fromSocial = _pendingSocial != null;
+    // A session arriving by itself while this screen is the one showing: a
+    // Google/Facebook sign-in that finished after Android restarted the app
+    // (slower than the splash screen). Ignored while the password sign-in
+    // runs (_isLoading) or when sign-up / forgot-password is open on top,
+    // because those screens finish their own sign-in.
+    final arrivedOnItsOwn = !_isLoading &&
+        _supabase.isLoggedIn &&
+        (ModalRoute.of(context)?.isCurrent ?? false);
+    if (!fromSocial && !arrivedOnItsOwn) return;
+    _pendingSocial = null;
+    _resumeTimer?.cancel();
+    _finishSignIn();
+  }
+
+  void _onSocialError(Object error) {
+    final provider = _pendingSocial;
+    if (provider == null || !mounted) return;
+    _pendingSocial = null;
+    _resumeTimer?.cancel();
+    setState(() {
+      _socialLoading = null;
+      _errorMessage = SocialAuthService.instance.describeError(error, provider);
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Back from the browser without finishing (closed it, pressed back):
+    // stop the spinner after a moment. The moment gives a real sign-in
+    // time to arrive; if it arrives later anyway, it still completes.
+    if (state != AppLifecycleState.resumed || _pendingSocial == null) return;
+    _resumeTimer?.cancel();
+    _resumeTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && !_finishing && _socialLoading != null) {
+        setState(() => _socialLoading = null);
+      }
+    });
+  }
+
+  Future<void> _socialSignIn(SocialProvider provider) async {
+    if (_busy) return;
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _socialLoading = provider;
+      _errorMessage = null;
+    });
+    try {
+      _pendingSocial = provider;
+      await SocialAuthService.instance.start(provider);
+    } catch (e) {
+      _pendingSocial = null;
+      if (!mounted) return;
+      setState(() {
+        _socialLoading = null;
+        _errorMessage = SocialAuthService.instance.describeError(e, provider);
+      });
+    }
+  }
+
+  /// Shared by every sign-in method: sync this account's data onto the
+  /// phone (PostSignInService), then open the admin or student home.
+  Future<void> _finishSignIn() async {
+    if (_finishing) return;
+    setState(() {
+      _finishing = true;
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final isAdmin = await PostSignInService.instance.run();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        ScalePageRoute(page: isAdmin ? const AdminShellScreen() : const HomeScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = friendlyError(e, fallback: 'Sign in failed. Please try again.');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _finishing = false;
+          _isLoading = false;
+          _socialLoading = null;
+        });
+      }
+    }
+  }
+
   Future<void> _submit() async {
+    if (_busy) return;
     if (!_formKey.currentState!.validate()) return;
-    
+    // Typing a password instead: forget an unfinished Google/Facebook try.
+    _pendingSocial = null;
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     HapticFeedback.mediumImpact();
-    
+
     try {
       if (_isLogin) {
         await _supabase.signIn(
@@ -77,217 +218,10 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       }
       
-      if (mounted && _supabase.isLoggedIn) {
-        final storage = StorageService();
-        final currentUserId = _supabase.userId;
-        final lastUserId = await storage.getLastUserId();
-        
-        // Check if switching accounts
-        if (lastUserId != null && lastUserId != currentUserId) {
-          // Different user logging in - sync old user's pending data first
-          if (OfflineSyncService.instance.hasPendingSync) {
-            await OfflineSyncService.instance.syncPendingOperations();
-          }
-          // Clear old user's local quiz progress so new user starts fresh
-          await storage.clearQuizProgress();
-        }
-        
-        // Save current user ID
-        if (currentUserId != null) {
-          await storage.setLastUserId(currentUserId);
-        }
-        
-        // Load full cloud progress (profile + subject progress + achievements)
-        final cloudData = await _supabase.loadFullCloudProgress();
-        final cloudProfile = cloudData?['profile'];
-        
-        if (cloudProfile != null) {
-          // Sync cloud profile data to local storage
-          if (cloudProfile['display_name'] != null) {
-            await storage.setUserName(cloudProfile['display_name']);
-          }
-          if (cloudProfile['email'] != null) {
-            await storage.setUserEmail(cloudProfile['email']);
-          }
-          if (cloudProfile['school'] != null) {
-            await storage.setSchool(cloudProfile['school']);
-          }
-          if (cloudProfile['current_streak'] != null) {
-            await storage.setDailyStreak(cloudProfile['current_streak']);
-          }
-          if (cloudProfile['avatar_url'] != null) {
-            await storage.setAvatarUrl(cloudProfile['avatar_url']);
-          }
-        }
-        
-        await storage.setOnboardingCompleted(true);
-        
-        // Load local progress for merging
-        final localProgress = await storage.loadProgress();
-        int localQuizzes = 0;
-        int localCorrect = 0;
-        for (final sp in localProgress.subjectProgress.values) {
-          localQuizzes += sp.totalQuizzesTaken;
-          localCorrect += sp.totalCorrectAnswers;
-        }
-        
-        // Sync cloud subject progress to local
-        final cloudSubjectProgress = cloudData?['subjectProgress'] as List<Map<String, dynamic>>?;
-        if (cloudSubjectProgress != null && cloudSubjectProgress.isNotEmpty) {
-          for (final cloudSp in cloudSubjectProgress) {
-            final subjectId = cloudSp['subject_id'] as String?;
-            if (subjectId == null) continue;
-            
-            final cloudAnswered = cloudSp['questions_answered'] as int? ?? 0;
-            final cloudCorrectAnswers = cloudSp['correct_answers'] as int? ?? 0;
-            final easyCorrect = cloudSp['easy_correct'] as int? ?? 0;
-            final easyTotal = cloudSp['easy_total'] as int? ?? 0;
-            final mediumCorrect = cloudSp['medium_correct'] as int? ?? 0;
-            final mediumTotal = cloudSp['medium_total'] as int? ?? 0;
-            final hardCorrect = cloudSp['hard_correct'] as int? ?? 0;
-            final hardTotal = cloudSp['hard_total'] as int? ?? 0;
-            final cloudEasySegments = cloudSp['easy_segments'] as List<dynamic>?;
-            final cloudMediumSegments = cloudSp['medium_segments'] as List<dynamic>?;
-            final cloudHardSegments = cloudSp['hard_segments'] as List<dynamic>?;
-            
-            // Get or create local subject progress
-            final localSp = localProgress.subjectProgress[subjectId];
-            
-            // Compare cloud vs local and take higher values
-            final mergedAnswered = (localSp?.totalQuestionsAnswered ?? 0) > cloudAnswered 
-                ? (localSp?.totalQuestionsAnswered ?? 0) : cloudAnswered;
-            final mergedCorrect = (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers 
-                ? (localSp?.totalCorrectAnswers ?? 0) : cloudCorrectAnswers;
-
-            List<SegmentProgress> mergeSegments(List<SegmentProgress>? local, List<dynamic>? cloud) {
-              return List.generate(SegmentProgress.segmentCount, (i) {
-                final localSeg = local?[i];
-                final cloudSegJson = cloud != null && i < cloud.length
-                    ? Map<String, dynamic>.from(cloud[i] as Map)
-                    : null;
-                final cloudSeg = cloudSegJson != null
-                    ? SegmentProgress.fromJson(cloudSegJson)
-                    : null;
-
-                if (localSeg == null) return cloudSeg ?? SegmentProgress(segmentIndex: i);
-                if (cloudSeg == null) return localSeg;
-
-                if (cloudSeg.questionsAnswered > localSeg.questionsAnswered) {
-                  return cloudSeg;
-                }
-                if (localSeg.questionsAnswered > cloudSeg.questionsAnswered) {
-                  return localSeg;
-                }
-
-                return SegmentProgress(
-                  segmentIndex: i,
-                  questionsAnswered: localSeg.questionsAnswered,
-                  correctAnswers: localSeg.correctAnswers > cloudSeg.correctAnswers
-                      ? localSeg.correctAnswers
-                      : cloudSeg.correctAnswers,
-                );
-              });
-            }
-
-            final mergedEasySegments = mergeSegments(localSp?.easySegments, cloudEasySegments);
-            final mergedMediumSegments = mergeSegments(localSp?.mediumSegments, cloudMediumSegments);
-            final mergedHardSegments = mergeSegments(localSp?.hardSegments, cloudHardSegments);
-            
-            // Determine if difficulty levels are passed (all segments must be passed)
-            final easyPassed = mergedEasySegments.every((segment) => segment.isPassed);
-            final mediumPassed = mergedMediumSegments.every((segment) => segment.isPassed);
-            final hardPassed = mergedHardSegments.every((segment) => segment.isPassed);
-            
-            // Create merged subject progress
-            localProgress.subjectProgress[subjectId] = SubjectProgress(
-              subjectId: subjectId,
-              topicProgress: localSp?.topicProgress ?? {},
-              totalQuizzesTaken: localSp?.totalQuizzesTaken ?? 0,
-              totalQuestionsAnswered: mergedAnswered,
-              totalCorrectAnswers: mergedCorrect,
-              lastStudyDate: cloudSp['last_study_date'] != null 
-                  ? DateTime.tryParse(cloudSp['last_study_date']) 
-                  : localSp?.lastStudyDate,
-                easyPassed: easyPassed,
-                mediumPassed: mediumPassed,
-                hardPassed: hardPassed,
-              wrongQuestionIds: localSp?.wrongQuestionIds ?? {},
-                easyCorrect: easyCorrect > (localSp?.easyCorrect ?? 0)
-                  ? easyCorrect
-                  : (localSp?.easyCorrect ?? 0),
-                easyTotal: easyTotal > (localSp?.easyTotal ?? 0)
-                  ? easyTotal
-                  : (localSp?.easyTotal ?? 0),
-                mediumCorrect: mediumCorrect > (localSp?.mediumCorrect ?? 0)
-                  ? mediumCorrect
-                  : (localSp?.mediumCorrect ?? 0),
-                mediumTotal: mediumTotal > (localSp?.mediumTotal ?? 0)
-                  ? mediumTotal
-                  : (localSp?.mediumTotal ?? 0),
-                hardCorrect: hardCorrect > (localSp?.hardCorrect ?? 0)
-                  ? hardCorrect
-                  : (localSp?.hardCorrect ?? 0),
-                hardTotal: hardTotal > (localSp?.hardTotal ?? 0)
-                  ? hardTotal
-                  : (localSp?.hardTotal ?? 0),
-                easySegments: mergedEasySegments,
-                mediumSegments: mergedMediumSegments,
-                hardSegments: mergedHardSegments,
-            );
-          }
-        }
-        
-        // Sync cloud achievements to local
-        final cloudAchievements = cloudData?['achievements'] as List<String>?;
-        if (cloudAchievements != null && cloudAchievements.isNotEmpty) {
-          // Merge cloud achievements with local (union of both)
-          final mergedAchievements = <String>{
-            ...localProgress.unlockedAchievements,
-            ...cloudAchievements,
-          };
-          localProgress.unlockedAchievements = mergedAchievements.toList();
-        }
-        
-        // Update streak from cloud if higher
-        if (cloudProfile != null) {
-          final cloudStreak = cloudProfile['current_streak'] as int? ?? 0;
-          final cloudBestStreak = cloudProfile['best_streak'] as int? ?? 0;
-          if (cloudStreak > localProgress.currentStreak) {
-            localProgress.currentStreak = cloudStreak;
-          }
-          if (cloudBestStreak > localProgress.longestStreak) {
-            localProgress.longestStreak = cloudBestStreak;
-          }
-        }
-        
-        // Save merged progress to local storage
-        await storage.saveProgress(localProgress);
-        
-        final cloudQuizzes = cloudProfile?['total_quizzes'] ?? 0;
-        final cloudCorrect = cloudProfile?['total_correct'] ?? 0;
-        final cloudPoints = cloudProfile?['total_points'] ?? 0;
-        
-        // Sync the higher values to cloud
-        await _supabase.syncLocalProgress(
-          totalPoints: (localCorrect * 10) > cloudPoints ? (localCorrect * 10) : cloudPoints,
-          totalQuizzes: localQuizzes > cloudQuizzes ? localQuizzes : cloudQuizzes,
-          totalCorrect: localCorrect > cloudCorrect ? localCorrect : cloudCorrect,
-          currentStreak: localProgress.currentStreak,
-          bestStreak: localProgress.longestStreak,
-        );
-        
-        // Explicitly refreshed (not just left to the reactive listener) so
-        // routing here can never race the network call it depends on --
-        // this is the moment a role check must be certain, not eventual.
-        final isAdmin = await AdminService.instance.refreshRole();
-        if (!mounted) return;
-
-        setState(() => _isLoading = false);
-
-        Navigator.of(context).pushReplacement(
-          ScalePageRoute(page: isAdmin ? const AdminShellScreen() : const HomeScreen()),
-        );
-      } else if (mounted) {
+      if (!mounted) return;
+      if (_supabase.isLoggedIn) {
+        await _finishSignIn();
+      } else {
         setState(() {
           _isLoading = false;
           _errorMessage = 'Account created! Please sign in.';
@@ -401,6 +335,12 @@ class _AuthScreenState extends State<AuthScreen> {
                             onChanged: (i) => _toggleMode(i == 0),
                           ),
                           const SizedBox(height: 24),
+                          if (_socialProviders.isNotEmpty) ...[
+                            _buildSocialButtons(),
+                            const SizedBox(height: 20),
+                            _orDivider(),
+                            const SizedBox(height: 20),
+                          ],
                           if (!_isLogin) ...[
                             _buildNameFields(),
                             const SizedBox(height: 16),
@@ -487,8 +427,8 @@ class _AuthScreenState extends State<AuthScreen> {
                           ],
                           PrimaryButton(
                             label: _isLogin ? 'Sign in' : 'Create account',
-                            loading: _isLoading,
-                            onPressed: _submit,
+                            loading: _isLoading && _socialLoading == null,
+                            onPressed: _busy ? null : _submit,
                           ),
                           const SizedBox(height: 20),
                           Wrap(
@@ -522,6 +462,51 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// "Google" and "Facebook" side by side (stacked on very narrow
+  /// screens). The same buttons create an account on first use, so they
+  /// appear on both tabs.
+  Widget _buildSocialButtons() {
+    final providers = SocialProvider.values.where(_socialProviders.contains).toList();
+    final buttons = [
+      for (final provider in providers)
+        _SocialButton(
+          provider: provider,
+          // One provider gets the room for the full label.
+          label: providers.length == 1 ? 'Continue with ${provider.label}' : provider.label,
+          loading: _socialLoading == provider,
+          onPressed: _busy ? null : () => _socialSignIn(provider),
+        ),
+    ];
+    return LayoutBuilder(builder: (context, c) {
+      if (buttons.length == 1) return buttons.first;
+      if (c.maxWidth < 300) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [buttons[0], const SizedBox(height: 10), buttons[1]],
+        );
+      }
+      return Row(children: [
+        Expanded(child: buttons[0]),
+        const SizedBox(width: 12),
+        Expanded(child: buttons[1]),
+      ]);
+    });
+  }
+
+  Widget _orDivider() {
+    final p = context.palette;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: p.border, height: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text('or use your email', style: context.textStyles.bodySmall),
+        ),
+        Expanded(child: Divider(color: p.border, height: 1)),
+      ],
     );
   }
 
@@ -566,4 +551,61 @@ class _AuthScreenState extends State<AuthScreen> {
         height: size,
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       );
+}
+
+/// Outlined button with the provider's own logo, styled like the app's
+/// [SecondaryButton] so it sits naturally next to the form.
+class _SocialButton extends StatelessWidget {
+  final SocialProvider provider;
+  final String label;
+  final bool loading;
+  final VoidCallback? onPressed;
+
+  const _SocialButton({
+    required this.provider,
+    required this.label,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final logo = switch (provider) {
+      SocialProvider.google => const GoogleLogo(size: 20),
+      SocialProvider.facebook => const FacebookLogo(size: 21),
+    };
+    return Semantics(
+      button: true,
+      label: 'Continue with ${provider.label}',
+      excludeSemantics: true,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(64, 52),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          foregroundColor: p.textPrimary,
+          backgroundColor: p.surface,
+          disabledForegroundColor: p.textSecondary,
+          side: BorderSide(color: p.border, width: 1.2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox.square(
+              dimension: 21,
+              child: loading
+                  ? Padding(
+                      padding: const EdgeInsets.all(1.5),
+                      child: CircularProgressIndicator(strokeWidth: 2.2, color: p.primary),
+                    )
+                  : Center(child: logo),
+            ),
+            const SizedBox(width: 10),
+            Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+          ],
+        ),
+      ),
+    );
+  }
 }

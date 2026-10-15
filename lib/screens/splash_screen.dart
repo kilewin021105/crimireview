@@ -6,6 +6,7 @@ import '../widgets/app_logo.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/admin_service.dart';
+import '../services/post_sign_in_service.dart';
 import '../utils/responsive.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
@@ -51,13 +52,26 @@ class _SplashScreenState extends State<SplashScreen>
       // AdminService.init() (main.dart) runs to completion before runApp(),
       // so isAdmin is already resolved for a restored session by the time
       // we get here -- no extra await needed.
-      nextScreen = AdminService.instance.isAdmin
-          ? const AdminShellScreen()
-          : const HomeScreen();
+      var isAdmin = AdminService.instance.isAdmin;
+
+      // A session this phone hasn't set up yet: a Google/Facebook sign-in
+      // that finished while the app was closed (Android may close it while
+      // the browser is open), or a web sign-in that reloaded the page.
+      // Run the same sync the login screen runs, so the right account's
+      // data is on the phone before Home opens.
+      if (await PostSignInService.instance.needsSetup()) {
+        try {
+          isAdmin = await PostSignInService.instance.run();
+        } catch (e) {
+          debugPrint('Post sign-in sync failed at start-up: $e');
+        }
+      }
+      nextScreen = isAdmin ? const AdminShellScreen() : const HomeScreen();
     } else {
       nextScreen = const AuthScreen();
     }
-    
+
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => nextScreen,

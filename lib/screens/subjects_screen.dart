@@ -4,10 +4,9 @@ import '../models/question.dart';
 import '../models/subject.dart';
 import '../models/user_progress.dart';
 import '../services/adaptive_learning_service.dart';
-import '../utils/page_transitions.dart';
+import '../utils/quiz_launcher.dart';
 import '../utils/responsive.dart';
 import '../widgets/ui/ui.dart';
-import 'study_notes_screen.dart';
 
 class SubjectsScreen extends StatefulWidget {
   const SubjectsScreen({super.key});
@@ -448,44 +447,13 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
 
   Future<void> _startQuizWithDifficulty(BuildContext context, Subject subject, Difficulty difficulty) async {
     if (_isPreparingQuiz) return; // guard against a double tap re-firing the fetch
-    final service = Provider.of<AdaptiveLearningService>(context, listen: false);
-    final segmentIndex = service.getCurrentSegmentIndex(
-      subjectId: subject.id,
-      difficulty: difficulty,
-    );
-
-    setState(() => _isPreparingQuiz = true);
-    List<Question> questions;
-    try {
-      questions = await service.getQuestionsForSegment(
-        subjectId: subject.id,
-        difficulty: difficulty,
-      );
-    } finally {
-      if (mounted) setState(() => _isPreparingQuiz = false);
-    }
-
-    if (!context.mounted) return;
-
-    if (questions.isEmpty) {
-      showAppSnack(
-        context,
-        'No ${difficulty.name} questions available for ${SegmentProgress.rangeLabelFor(segmentIndex)}',
-        tone: BannerTone.danger,
-      );
-      return;
-    }
-
-    Navigator.push(
+    await startSegmentQuiz(
       context,
-      SlidePageRoute(
-        page: StudyNotesScreen(
-          subject: subject,
-          questions: questions,
-          difficulty: difficulty,
-          segmentIndex: segmentIndex,
-        ),
-      ),
+      subject: subject,
+      difficulty: difficulty,
+      onPreparing: (preparing) {
+        if (mounted) setState(() => _isPreparingQuiz = preparing);
+      },
     );
   }
 }

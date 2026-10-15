@@ -20,13 +20,15 @@ App start
 - Sign up: a 6-digit email code (generated, verified, and emailed entirely server-side — see **Security** below), then the Supabase account is created and signed in.
 - Sign in merges local and cloud progress and handles account switching on shared devices.
 - Forgot password: the same server-side code flow, then a Supabase RPC (`reset_user_password`) applies the new password.
+- **Continue with Google / Facebook** (`lib/services/social_auth_service.dart`): Supabase OAuth with PKCE in the phone's browser, back into the app through `com.crimireview.crimireview://login-callback`. A Google/Facebook login with the same email as an existing account opens that same account. The buttons only appear for providers switched on in Supabase. Setup: **Google and Facebook sign-in** below.
+- Every sign-in method finishes through `PostSignInService` (cloud/local merge, account switching, admin routing).
 - **Dashboard setting required:** Authentication → Providers → Email → turn **off** "Confirm email". This app's own code-verification step replaces Supabase's built-in confirmation email; leaving both on causes sign-in to fail right after a successful signup.
 
 ### Main Navigation
 
 Five bottom tabs (students):
 
-- **Home:** greeting with avatar and streak, Daily Challenge hero card, quick stats, practice shortcuts, board-exam readiness, study modules, leaderboard shortcut.
+- **Home** (`dashboard_view.dart`): greeting, streak and leaderboard; **today's goal** (questions answered today against a goal the student picks: 10/20/30/50) with this week's study days; **continue learning** (most recent subject at the level and segment the student is on, one tap to start); Daily Challenge with a "done today" state; totals; board-exam readiness from the ML model; **topics to review** (lowest BKT mastery); shortcuts; study modules.
 - **Quiz:** subjects → difficulty lock/unlock → study notes → quiz → results. Item selection goes through `QuestionSelectionService` (unseen-first, weighted toward weak topics per the BKT model in `MasteryService`) so a retry never repeats the same set.
 - **Cards:** `FlashcardsHomeScreen` (subject picker) → `FlashcardScreen` (swipe-to-review deck for that subject), both reading from `QuestionRepository`.
 - **Progress:** stats, streak, subject breakdown, achievements entry.
@@ -180,7 +182,31 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
 6. `supabase_admin_management.sql` — lets an existing admin promote/demote another user from inside the app (Admin Panel → Students → "⋮") instead of needing SQL Editor access every time.
 7. `supabase_template_generation.sql` — the free, no-API-key "Generate from Templates" path (the only question generator in the app): one Postgres function that turns the `question_templates`/`concept_bank` data from step 4 into real questions. Works immediately after this file runs, no further setup.
 8. **`supabase_security_fixes_v2.sql`** — pre-launch security fixes: profiles (emails, schools, roles) are no longer readable by other users or logged-out visitors; the leaderboard is served by `get_leaderboard()` with public fields only; daily scores are private and insert-only; password reset re-checks the emailed code; code emails are rate-limited; avatars are limited to 2 MB images; name lengths are capped. **Requires app v1.0.1 or newer** for Forgot Password and the leaderboard.
-9. `supabase_enforce_email_verification.sql` — makes the database refuse to create an account unless the email passed the 6-digit check, so Supabase's public sign-up API can't be used to skip it. **Test a new sign-up in the app right after running it**; the file has a one-line rollback. To add a user by hand afterwards, see the file's header.
+9. `supabase_enforce_email_verification.sql` — makes the database refuse to create an account unless the email passed the 6-digit check, so Supabase's public sign-up API can't be used to skip it. Google and Facebook accounts are let through (those providers already proved the email). **Test a new sign-up in the app right after running it**; the file has a one-line rollback. To add a user by hand afterwards, see the file's header.
+10. `supabase_social_login.sql` — new accounts from Google / Facebook get their real name and profile photo instead of being named after their email address.
+
+## Google and Facebook sign-in
+
+The app side is done; these steps switch it on. They need your own Google and Facebook accounts, so they can't be done from code. Callback URL used below: `https://wbhobbehgqlzfborscvx.supabase.co/auth/v1/callback`.
+
+**0. Security first.** Run `supabase_enforce_email_verification.sql` (Supabase step 9) **before** switching either provider on. Supabase joins a Google login to an existing account with the same email; without step 9, someone could pre-create an email/password account for another student's Gmail (skipping the code) and later get into that student's account.
+
+**1. Google** ([console.cloud.google.com](https://console.cloud.google.com), any project):
+1. *Google Auth Platform → Branding*: app name `CrimiReview`, your support email. Under *Authorized domains* add `wbhobbehgqlzfborscvx.supabase.co`.
+2. *Audience*: External, then **Publish app** (otherwise only listed test users can sign in). Only the basic `openid`, `email`, `profile` scopes are used, so no Google review is needed.
+3. *Clients → Create client*: type **Web application**; *Authorized redirect URIs*: the callback URL above. Copy the **Client ID** and **Client secret**.
+4. Supabase dashboard → *Authentication → Sign In / Providers → Google*: enable, paste both, save.
+
+**2. Facebook** ([developers.facebook.com](https://developers.facebook.com) → My Apps → Create app):
+1. Use case **Authenticate and request data from users with Facebook Login**. In that use case's permissions, add **email** (public_profile is there by default).
+2. *Facebook Login → Settings → Valid OAuth Redirect URIs*: the callback URL above.
+3. *App settings → Basic*: copy the **App ID** and **App secret**; fill in a Privacy Policy URL (Facebook requires one to go live).
+4. Switch the app to **Live** (in Development mode only you and listed testers can log in).
+5. Supabase → *Sign In / Providers → Facebook*: enable, App ID as Client ID, App secret as secret, save.
+
+**3. Let the app receive the result.** Supabase → *Authentication → URL Configuration → Redirect URLs* → add `com.crimireview.crimireview://login-callback`. Without it Supabase sends students to the Site URL instead of back into the app.
+
+**4. Check.** Open the app's sign-in screen (it checks Supabase each time): the Google/Facebook buttons appear only after step 1/2. Test with an email that already has a CrimiReview account; it should open the same account with the same progress. If Facebook doesn't share an email (some accounts are phone-only), the app explains it and the student can use Google or email.
 
 Core tables used by the app:
 

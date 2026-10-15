@@ -18,6 +18,14 @@
 -- needs one line in the SQL Editor first, replacing the email:
 --   INSERT INTO public.email_verifications (email, code, expires_at, verified)
 --   VALUES (lower('person@example.com'), 'manual', now() + interval '10 minutes', true);
+--
+-- GOOGLE / FACEBOOK SIGN-IN: run this file BEFORE switching them on.
+-- Supabase joins a Google account to an existing account with the same
+-- email. Without this file, someone could create an email/password
+-- account for another student's Gmail address (skipping the code); when
+-- that student later taps "Google", they would land in the account
+-- whose password the other person knows. With this file, that first
+-- account can never be created.
 -- ================================================================
 
 CREATE OR REPLACE FUNCTION public.require_verified_email()
@@ -27,6 +35,13 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $require$
 BEGIN
+  -- Google and Facebook have already proven the person owns this email.
+  -- raw_app_meta_data is written by Supabase Auth itself (the public
+  -- sign-up API cannot set it), so a direct sign-up can't claim this.
+  IF NEW.raw_app_meta_data->>'provider' IN ('google', 'facebook') THEN
+    RETURN NEW;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM public.email_verifications
     WHERE email = lower(btrim(NEW.email))
@@ -49,6 +64,12 @@ DROP TRIGGER IF EXISTS require_verified_email_before_signup ON auth.users;
 CREATE TRIGGER require_verified_email_before_signup
   BEFORE INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.require_verified_email();
+
+-- cleanup_expired_verifications() deletes verified rows too. Callable by
+-- anyone, it could be run in a loop to make every sign-up fail now that
+-- sign-up needs a verified row (flagged by the advisor in Session 40).
+-- The app never calls it.
+REVOKE ALL ON FUNCTION public.cleanup_expired_verifications() FROM PUBLIC, anon, authenticated;
 
 -- ROLLBACK:
 --   DROP TRIGGER IF EXISTS require_verified_email_before_signup ON auth.users;

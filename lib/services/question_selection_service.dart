@@ -483,6 +483,24 @@ class QuestionSelectionService {
     return false;
   }
 
+  /// Called when a DIFFERENT student signs in on this phone: forgets which
+  /// questions the previous student saw (phone only), then loads the new
+  /// student's own history from the cloud. Without this, the new student
+  /// was steered away from questions they had never actually seen.
+  /// Not [reset], which would also delete the new student's cloud history.
+  Future<void> forgetLocalForAccountSwitch() async {
+    await _ensureInit();
+    _exposure.clear();
+    _poolIds.clear();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefsKey);
+    } catch (e) {
+      debugPrint('[QuestionSelection] local clear failed: $e');
+    }
+    await _hydrateFromCloud();
+  }
+
   /// Wipes the ledger locally and in the cloud -- every question becomes
   /// unseen again. Used by "reset progress" and by the admin demo flow.
   Future<void> reset() async {

@@ -673,17 +673,63 @@ The website's source is a separate repo, `kilewin021105/crimireview-landing`, no
 
 ---
 
+## 2026-10-15 — Session 44: Google / Facebook sign-in, rebuilt dashboard, account-switch data fix
+
+You asked for "sign in with Google or Facebook" so students don't have to type, with authentication that keeps each student's data protected and correct, plus a modern rebuild of the dashboard. Branch `social-login-dashboard`; `main` is unchanged until you merge its pull request.
+
+**Google and Facebook sign-in**
+- **How it works:** the student taps Google or Facebook and signs in on that company's own page in the phone's browser (this app never sees their password). The browser comes back to the app through the link `com.crimireview.crimireview://login-callback` with a one-time code. Supabase exchanges it for a session using **PKCE**: before opening the browser, the app keeps a secret on the phone, and the code is useless without it, so another app that catches the code can't use it.
+- **Same account, same progress:** Supabase joins a Google/Facebook login to an existing account with the same verified email, so a student who signed up with email + password and later taps Google lands in their own account, not in a new empty one.
+- Google always shows its account chooser (`prompt=select_account`), so on a shared or family phone the student picks their own account instead of being signed in silently as whoever used Google last.
+- The buttons only appear for providers that are switched on in Supabase. The app checks Supabase's public settings each time the sign-in screen opens and remembers the last answer, so nobody taps into a "provider not enabled" error page. **Checked live today: Google and Facebook are both still off**, so the sign-in screen looks exactly as before until you do the README steps.
+- Clear messages for: cancelled sign-in, Facebook not sharing an email address, an expired attempt, no internet.
+- If the student closes the browser without finishing, the spinner stops by itself after a few seconds.
+- Android sometimes closes the app while the browser is open (low-memory phones). The sign-in then finishes when the app restarts: the splash screen notices a session that hasn't been set up on this phone and runs the same data sync as the login screen.
+- Android: intent filter for the link; Flutter's own deep-link router is switched off so it doesn't also try to open the link as a page (`AndroidManifest.xml`). iOS: the same URL scheme in `Info.plist`. Desktop builds hide the buttons (there's no way back from the browser there).
+- **Settings:** an account that only uses Google/Facebook has no password, so "Change password" becomes "Signed in with Google". Also fixed: the Settings tab added a new sign-in listener every time it opened and never removed it.
+
+**One sign-in pipeline (refactor):** the ~200 lines that ran after a password sign-in (account switching, cloud/local merge, admin check) lived inside the login button. They moved, unchanged, to `lib/services/post_sign_in_service.dart`, and the login button, Google/Facebook sign-in and the splash screen all call it. A Google login can't skip a step that an email login does.
+
+**Bug fixed: one student's learning data could end up in another student's account.** When a different student signed in on the same phone, the app cleared the scores but **not** the BKT topic-mastery model or the "questions already seen" list. The next answer then uploaded the previous student's whole mastery model into the new student's account (`MasteryService.syncToCloud` uploads everything it holds under whoever is signed in), and the new student was steered away from questions they had never seen. The code's own comment said "one student must never inherit another student's model", but nothing called the cleanup. Now both are cleared on the phone only and the new student's own copies are loaded from the cloud (`forgetLocalForAccountSwitch()` in `mastery_service.dart` / `question_selection_service.dart`), from both sign-in and sign-up. The existing `reset()` wasn't usable for this because it would also delete the *new* student's cloud data.
+
+**Database**
+- `supabase_social_login.sql` (new): `handle_new_user()`, the trigger that creates each new account's profile, now also reads the name and photo Google/Facebook send. Before, a Google account would have been named after its email address with no photo. Photos are only accepted from Google/Facebook and only over https; names are trimmed to the 80-character limit (a longer name would have made sign-up fail). It also gets a fixed `search_path`, one of the advisor warnings from Session 40. Email sign-ups produce exactly the same profile as before.
+- **Applied to the live project** through the Supabase connector (migration `social_login_handle_new_user`, recorded in the project's migration list). A read-back of the function afterwards was blocked by Claude Code's safety check, so it is confirmed by the migration record, not by reading the function.
+- `supabase_enforce_email_verification.sql` (**not run yet**, still your launch step 2): now lets Google/Facebook accounts through, and it also revokes `cleanup_expired_verifications()` from the public (the Session 40 advisor note). The check uses `raw_app_meta_data.provider`, which only Supabase Auth itself can write. A sign-up that puts "google" in the user-editable metadata is still refused.
+- **Run it before switching Google on.** Without it, someone could pre-create an email/password account for another student's Gmail (skipping the code) and get into that student's account once they use Google. See README "Google and Facebook sign-in", step 0.
+- Tested on a local PostgreSQL 18 copy, 9/9 as expected: email sign-up with a verified code → created, name kept; the same code reused → refused; no code → refused; forged "google" in user metadata → refused; Google → created with name and photo; Facebook with a non-https picture → no photo; a 120-character name → trimmed to 80; Facebook with no name → email prefix; triggers run as Supabase's auth role even with EXECUTE revoked; the public can no longer call the cleanup function.
+- Checked live: "Confirm email" is off (`mailer_autoconfirm: true`), as this app requires. Removed from the known gaps below.
+
+**Dashboard rebuilt** (`lib/screens/dashboard_view.dart`, which replaces the Home tab's code inside `home_screen.dart`):
+- **Today's goal:** questions answered today against a daily goal (10/20/30/50, tap the card to change it, default 20), as a ring, plus **this week's study days** (Mon–Sun). Days before this update are filled in from the current streak, so existing students don't start with an empty week.
+- **Continue learning:** the subject studied most recently, at the lowest level not yet passed and the segment the student is on ("Easy · Questions 11–20", "1 of 4 segments passed"). One tap starts it the same way the Quiz tab does; that code moved to `lib/utils/quiz_launcher.dart` so both use one copy. A new student sees "Start here" with the first subject.
+- **Daily Challenge** shows "Done" once today's is finished.
+- Totals in one compact row; **board-exam readiness** (the ML model's recommended difficulty, weak and strong subjects, unchanged logic) in a cleaner card.
+- **Topics to review (new):** the three topics with the lowest BKT mastery (answered at least twice, not yet mastered), with a mastery bar; tapping one opens that subject's study notes. This shows the thesis's learner model on the main screen.
+- Shortcuts (Quiz, Cards, Ranks, Badges) and study modules as a swipeable row.
+- New small record: questions answered per day (`daily_activity`, last 60 days, on the phone only), written when a quiz or the Daily Challenge finishes. It is cleared on account switch and on progress reset like the rest of the local progress.
+
+**Verification**
+- `flutter analyze`: 0 errors, 0 warnings (the 17 info-level notes were there before).
+- `flutter test`: 34 pass, 1 skipped (the screenshot harness, which only runs when asked).
+- Screenshots reviewed: sign-in with both providers / Google only / 320 px phone, light and dark; the full dashboard on 390 px and 320 px, light and dark, and a brand-new student. No overflows. Two texts cut off on 320 px phones were fixed. The screenshot harness now also loads the ML model and sample BKT data, so the readiness and topics sections are visible in the review images.
+- **Not tested end to end:** a real Google/Facebook login. That needs the providers switched on (README steps) and the new APK on a phone.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
 
 - **Daily Challenge** shows an explanation either way (better than the old Quiz screen was), but still uses the plain overall `explanation` field, not the richer per-option "why THIS specific wrong choice fails" rationale, and does not call `MasteryService.recordAttempt()`. Only the main Quiz flow does, as of Session 9.
 - **The quiz Results screen** has no per-question answer review at all (Daily Challenge's own separate results screen does have one). A student who wants to see *why* they missed something after finishing has to remember it from the quiz itself.
-- **Supabase Authentication → "Confirm email" setting** — the app's own custom code-verification flow assumes this dashboard toggle is off. This was flagged early on but never independently re-verified after the security fixes; worth a quick check in the dashboard if login-right-after-signup ever behaves oddly.
+- **Google / Facebook sign-in is built but switched off** until the README "Google and Facebook sign-in" steps are done. Run `supabase_enforce_email_verification.sql` before that (Session 44).
 
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 44: `lib/services/social_auth_service.dart`, `lib/services/post_sign_in_service.dart`, `lib/screens/dashboard_view.dart`, `lib/utils/quiz_launcher.dart`, `lib/widgets/brand_logos.dart`, `supabase_social_login.sql`.
 
 Session 41 (redesign): `lib/widgets/ui/` (design-system components), `assets/fonts/` (Plus Jakarta Sans + OFL licence), `assets/images/logo_mark.png`, `test/screenshots/` (screenshot harness), `android/app/src/main/res/values-v31/` and `values-night-v31/` (Android 12+ launch screen).
 

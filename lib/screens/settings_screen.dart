@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthState;
 import 'package:url_launcher/url_launcher.dart';
 import '../services/storage_service.dart';
 import '../services/feedback_service.dart';
@@ -42,11 +45,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     StorageService.profileChangeNotifier.addListener(_handleProfileChanged);
     _updateAuthState();
     if (SupabaseService.isInitialized) {
-      SupabaseService.instance.authStateChanges.listen((_) {
+      _authSubscription = SupabaseService.instance.authStateChanges.listen((_) {
         if (mounted) _updateAuthState();
       });
     }
   }
+
+  // Kept so dispose() can stop it; before, every visit to this tab left
+  // another listener running for the rest of the session.
+  StreamSubscription<AuthState>? _authSubscription;
 
   void _handleProfileChanged() {
     _loadSettings();
@@ -54,6 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     StorageService.profileChangeNotifier.removeListener(_handleProfileChanged);
     super.dispose();
   }
@@ -263,15 +271,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'Account',
                   children: [
                     if (_isLoggedIn) ...[
-                      AppListTile(
-                        icon: Icons.lock_rounded,
-                        title: 'Change password',
-                        subtitle: 'Update your password',
-                        onTap: () => Navigator.push(
-                          context,
-                          SlidePageRoute(page: const ChangePasswordScreen(), direction: SlideDirection.up),
+                      // A Google/Facebook-only account has no password to change.
+                      if (SupabaseService.instance.hasPasswordSignIn)
+                        AppListTile(
+                          icon: Icons.lock_rounded,
+                          title: 'Change password',
+                          subtitle: 'Update your password',
+                          onTap: () => Navigator.push(
+                            context,
+                            SlidePageRoute(page: const ChangePasswordScreen(), direction: SlideDirection.up),
+                          ),
+                        )
+                      else
+                        AppListTile(
+                          icon: Icons.verified_user_rounded,
+                          iconColor: p.success,
+                          title: 'Signed in with ${_methodLabel()}',
+                          subtitle: 'Your password is managed by ${_methodLabel()}',
                         ),
-                      ),
                       AppListTile(
                         icon: Icons.logout_rounded,
                         title: 'Sign out',
@@ -336,6 +353,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  /// "Google", "Facebook" or "Google and Facebook" for a no-password account.
+  String _methodLabel() {
+    final names = [
+      for (final m in SupabaseService.instance.signInMethods)
+        if (m == 'google') 'Google' else if (m == 'facebook') 'Facebook',
+    ];
+    return names.isEmpty ? 'a social account' : names.join(' and ');
   }
 
   Future<void> _setNotifications(bool value) async {

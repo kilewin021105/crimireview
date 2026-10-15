@@ -8,6 +8,7 @@
 // Uses the app's real bundled font and the Material icon font, sample
 // local progress, and no network (Supabase is never initialised here).
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -21,6 +22,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crimireview/models/subject.dart';
 import 'package:crimireview/models/user_progress.dart';
 import 'package:crimireview/services/adaptive_learning_service.dart';
+import 'package:crimireview/services/adaptive_ml_service.dart';
+import 'package:crimireview/services/mastery_service.dart';
 import 'package:crimireview/services/connectivity_service.dart';
 import 'package:crimireview/services/offline_sync_service.dart';
 import 'package:crimireview/services/storage_service.dart';
@@ -67,6 +70,7 @@ Map<String, Object> sampleProgressPrefs() {
   final progress = UserProgress(userName: 'Juan Dela Cruz');
   progress.currentStreak = 6;
   progress.longestStreak = 11;
+  progress.lastActiveDate = DateTime.now();
   progress.unlockedAchievements = ['first_quiz', 'streak_3', 'perfect_score'];
   var i = 0;
   for (final s in CriminologySubjects.all) {
@@ -103,6 +107,32 @@ Map<String, Object> sampleProgressPrefs() {
     'user_school': 'Philippine College of Criminology',
     'daily_streak': 6,
     'user_progress': progress.toJsonString(),
+    // Questions answered per day, for the dashboard's goal ring.
+    'daily_activity': jsonEncode({
+      StorageService.dayKey(DateTime.now()): 12,
+      StorageService.dayKey(DateTime.now().subtract(const Duration(days: 1))): 25,
+    }),
+  };
+}
+
+Map<String, Object> sampleMastery() {
+  final rows = [
+    ('criminal_jurisprudence', 'Justifying Circumstances', 0.34, 6, 2),
+    ('law_enforcement', 'Police Patrol Operations', 0.48, 5, 3),
+    ('criminalistics', 'Fingerprint Classification', 0.57, 8, 5),
+    ('criminology', 'Theories of Crime Causation', 0.95, 9, 9),
+  ];
+  return {
+    for (final (subject, topic, p, attempts, correct) in rows)
+      '$subject::$topic': {
+        'subjectId': subject,
+        'topic': topic,
+        'pKnown': p,
+        'attempts': attempts,
+        'correct': correct,
+        'consecutiveCorrect': 1,
+        'lastPracticed': DateTime.now().toIso8601String(),
+      },
   };
 }
 
@@ -127,6 +157,17 @@ void main() {
     await _loadFont('Roboto', ['$material/roboto-regular.ttf', '$material/roboto-bold.ttf']);
     Directory(_outDir).createSync(recursive: true);
     AdminService.debugInstance = FakeAdminService();
+
+    // Learning models the dashboard reads: a few BKT topic records, and
+    // the bundled ML model (readiness, recommended difficulty).
+    SharedPreferences.setMockInitialValues({'topic_mastery_v1': jsonEncode(sampleMastery())});
+    await MasteryService.instance.init();
+    try {
+      await AdaptiveMLService.instance.initialize();
+    } catch (e) {
+      // ignore: avoid_print
+      print('ML model not loaded for screenshots: $e');
+    }
   });
 
   final filters = _only.isEmpty ? <String>[] : _only.split(',');

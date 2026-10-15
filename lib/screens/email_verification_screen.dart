@@ -5,6 +5,8 @@ import '../services/email_verification_service.dart';
 import '../services/supabase_service.dart';
 import '../services/storage_service.dart';
 import '../services/offline_sync_service.dart';
+import '../services/mastery_service.dart';
+import '../services/question_selection_service.dart';
 import '../utils/error_messages.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
@@ -180,6 +182,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             await OfflineSyncService.instance.syncPendingOperations();
           }
           await storage.clearQuizProgress();
+          // The previous student's learning models too (phone copy only).
+          await MasteryService.instance.forgetLocalForAccountSwitch();
+          await QuestionSelectionService.instance.forgetLocalForAccountSwitch();
         }
 
         // Save current user ID

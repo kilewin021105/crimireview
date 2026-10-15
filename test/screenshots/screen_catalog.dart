@@ -107,6 +107,10 @@ Map<String, Object> questionBankPrefs() => {
       QuestionRepository.cacheTimestampKey: DateTime.now().toIso8601String(),
     };
 
+const Map<String, Object> _socialOn = {
+  'social_providers_enabled': ['google', 'facebook'],
+};
+
 List<Shot> screenCatalog() => [
       Shot('splash', (_) => const SplashScreen(), seeded: false, pumps: 6),
       Shot('onboarding', (_) => const OnboardingScreen(), seeded: false),
@@ -115,6 +119,14 @@ List<Shot> screenCatalog() => [
           seeded: false, dark: false, size: const Size(320, 568)),
       Shot('auth_signup', (_) => const AuthScreen(),
           seeded: false, act: (t) => tapText(t, 'Create account')),
+      // Google + Facebook switched on (the last check is saved on the phone).
+      Shot('auth_social', (_) => const AuthScreen(), seeded: false, prefs: _socialOn),
+      Shot('auth_social_small', (_) => const AuthScreen(),
+          seeded: false, dark: false, size: const Size(320, 568), prefs: _socialOn),
+      Shot('auth_social_signup', (_) => const AuthScreen(),
+          seeded: false, dark: false, prefs: _socialOn, act: (t) => tapText(t, 'Create account')),
+      Shot('auth_social_google_only', (_) => const AuthScreen(),
+          seeded: false, dark: false, prefs: const {'social_providers_enabled': ['google']}),
       Shot('forgot_password', (_) => const ForgotPasswordScreen(), seeded: false),
       Shot(
         'email_verification',
@@ -127,6 +139,12 @@ List<Shot> screenCatalog() => [
       ),
       Shot('home', (_) => const HomeScreen()),
       Shot('home_small', (_) => const HomeScreen(), dark: false, size: const Size(320, 640)),
+      // The whole dashboard in one tall image.
+      Shot('home_full', (_) => const HomeScreen(), size: const Size(390, 2050)),
+      Shot('home_full_small', (_) => const HomeScreen(), dark: false, size: const Size(320, 2150)),
+      // A brand-new student: nothing studied yet.
+      Shot('home_new_student', (_) => const HomeScreen(),
+          seeded: false, dark: false, prefs: const {'onboarding_completed': true, 'user_name': 'Bea Ramos'}),
       Shot('tab_quiz', (_) => const HomeScreen(), act: (t) => tapText(t, 'Quiz')),
       Shot('tab_cards', (_) => const HomeScreen(), act: (t) => tapText(t, 'Cards')),
       Shot('tab_progress', (_) => const HomeScreen(), act: (t) => tapText(t, 'Progress')),

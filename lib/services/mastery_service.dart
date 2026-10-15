@@ -828,6 +828,29 @@ class MasteryService extends ChangeNotifier {
   // RESET
   // ---------------------------------------------------------------------------
 
+  /// Called when a DIFFERENT student signs in on this phone: forgets the
+  /// previous student's model on the phone only, then loads the new
+  /// student's own model from the cloud.
+  ///
+  /// Not [reset]: that also deletes the cloud copy of whoever is signed in
+  /// now -- the new student. Without this, the previous student's topics
+  /// stayed in memory and the next [syncToCloud] (which uploads the whole
+  /// model under the signed-in user id) copied them into the new student's
+  /// account.
+  Future<void> forgetLocalForAccountSwitch() async {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    _mastery.clear();
+    try {
+      final prefs = await _getPrefs();
+      await prefs.remove(_prefsKey);
+    } catch (e) {
+      debugPrint('MasteryService local clear failed: $e');
+    }
+    notifyListeners();
+    await loadFromCloud();
+  }
+
   /// Wipes the learner model locally and, when possible, in the cloud.
   ///
   /// Used by "reset progress" in settings and when switching accounts on a
