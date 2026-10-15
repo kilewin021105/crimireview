@@ -815,6 +815,14 @@ You gave a new logo (white C, red R, graduation cap, scales of justice and an op
 - `flutter analyze`: 0 errors / 0 warnings. `flutter test`: 34 pass.
 - All 70 screens re-rendered in light and dark; no layout problems. `quiz_answered` still fails only for the old test-only sound reason.
 - The website was rendered in Chrome.
+- **Debug APK builds**, and the new launcher icon and logo are inside it (the packaged in-app logo matches the new file byte for byte).
+
+**Laptop problem found while building: VS Code was eating the memory.**
+- The first APK build stalled. About 35 Gradle helper programs (Gradle daemons) were running, about 250 MB each.
+- They were started by VS Code's Java extensions (`redhat.java`, `vscode-gradle`), not by the build. These extensions kept trying to load `android/` as a Java project: 13 new ones in 45 seconds with nothing building. The 26 `hs_err_pid*.log` crash files in the project folder, all from 2026-09-05, fit this pattern.
+- Fix: `.vscode/settings.json` tells those extensions not to load Gradle projects in this folder. Flutter builds don't use them.
+- After that, 0 new daemons in 60 seconds, and the build took 121 s instead of 308 s.
+- The settings file is local and not committed, so it applies whichever branch is checked out.
 
 ---
 
