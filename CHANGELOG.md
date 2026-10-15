@@ -661,6 +661,18 @@ You asked for a modern redesign of the whole app, from login through every stude
 
 ---
 
+## 2026-10-14 — Session 43: website (www.crimireview.app) hardened, GitHub account no longer shown
+
+The website's source is a separate repo, `kilewin021105/crimireview-landing`, now cloned to `C:\crimireview-landing`. Vercel redeploys it on every push to `main`. Commit `3150985`:
+- **Download button** now links to `www.crimireview.app/download` instead of a github.com address. A new `vercel.json` redirects that link to the latest app release's `app-release.apk`, so publishing a new release still updates the site automatically.
+- **Footer "GitHub" link removed.** The live page now contains no mention of GitHub. Clicking Download still briefly goes through GitHub (that's where the file is stored), but the page and its code only show your domain.
+- **Security headers** on every page (`vercel.json`): the site can't be embedded inside other sites (`X-Frame-Options: DENY`, `frame-ancestors 'none'`), plus `X-Content-Type-Options: nosniff` and a referrer policy. HTTPS-only (HSTS) was already on.
+- **Fixed "Requires Android 5.0 or higher"** to **7.0**, the app's real minimum (minSdk 24). Students on Android 5–6 were being offered an APK that can't install. This resolves the follow-up noted in Session 36.
+- **Verified live:** all four headers present, 0 mentions of GitHub in the page, `/download` → 307 redirect to the release APK.
+- Editing the page with the browser's Inspect tool only changes the copy on that person's own screen; the files on Vercel can't be changed that way. What protects the site is the GitHub, Vercel, domain-registrar and email accounts (2FA recommended).
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
