@@ -185,7 +185,9 @@ void main() {
         final problems = <String>[];
         FlutterError.onError = (details) {
           final text = details.exceptionAsString();
-          if (text.contains('overflowed')) problems.add(text.split('\n').first);
+          // Every layout error, not only overflows: a page that throws
+          // during layout renders blank, and that must not pass silently.
+          problems.add(text.split('\n').first);
         };
         tester.view.physicalSize = shot.size * 2;
         tester.view.devicePixelRatio = 2;
@@ -236,7 +238,7 @@ void main() {
           });
           if (problems.isNotEmpty) {
             // ignore: avoid_print
-            print('OVERFLOW in $name: ${problems.join(' | ')}');
+            print('LAYOUT PROBLEM in $name: ${problems.join(' | ')}');
           }
         } finally {
           FlutterError.onError = previous;

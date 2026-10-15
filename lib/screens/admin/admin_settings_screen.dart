@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../services/social_auth_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/app_info.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/app_logo.dart';
-import '../../widgets/brand_logos.dart';
 import '../../widgets/ui/ui.dart';
-import '../auth_screen.dart';
+import '../sign_in_choice_screen.dart';
 import '../change_password_screen.dart';
 
 /// Settings tab of the admin panel.
@@ -21,15 +19,14 @@ import '../change_password_screen.dart';
 /// were signed in as, and "Sign out" was a bare icon on the dashboard.
 ///
 /// Sections:
-///   * Account: name, email, the Administrator role and how they sign in.
+///   * Account: name, email and the Administrator role.
 ///   * Appearance: light / dark / follow the phone.
-///   * Sign-in methods: whether Email, Google and Facebook are switched on
-///     in Supabase right now, read live, so the admin can confirm the
-///     README setup worked without opening the Supabase dashboard.
 ///   * Security: change password (password accounts only), sign out.
 ///   * About: version, website, support email.
 ///
-/// Nothing here changes data other students see.
+/// Nothing here changes data other students see. Sign-in methods (email,
+/// Google, Facebook) are deliberately not shown here: they have their own
+/// page before sign-in (`SignInChoiceScreen`).
 class AdminSettingsScreen extends StatefulWidget {
   /// Signs out and returns to the login screen. The shell passes its own
   /// so the wide-screen side menu and this tab do exactly the same thing.
@@ -48,10 +45,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   String? _imagePath;
   String? _avatarUrl;
 
-  /// null while checking; otherwise the providers switched on in Supabase.
-  Set<SocialProvider>? _enabledProviders;
-  bool _providerCheckFailed = false;
-
   static const String _websiteUrl = 'https://www.crimireview.app';
   static const String _supportEmail = 'support@crimireview.app';
 
@@ -59,7 +52,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   void initState() {
     super.initState();
     _loadProfile();
-    _checkProviders();
     StorageService.profileChangeNotifier.addListener(_loadProfile);
   }
 
@@ -83,20 +75,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     });
   }
 
-  Future<void> _checkProviders() async {
-    setState(() {
-      _enabledProviders = null;
-      _providerCheckFailed = false;
-    });
-    final fresh = await SocialAuthService.instance.refreshEnabled();
-    final result = fresh ?? await SocialAuthService.instance.cachedEnabled();
-    if (!mounted) return;
-    setState(() {
-      _enabledProviders = result;
-      _providerCheckFailed = fresh == null;
-    });
-  }
-
   Future<void> _signOut() async {
     if (widget.onSignOut != null) return widget.onSignOut!();
     final confirmed = await showConfirmDialog(
@@ -110,9 +88,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     if (!confirmed) return;
     await SupabaseService.instance.signOut();
     await StorageService().clearAuthData();
+    final signIn = await SignInChoiceScreen.entry();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      SlidePageRoute(page: const AuthScreen()),
+      SlidePageRoute(page: signIn),
       (route) => false,
     );
   }
@@ -145,8 +124,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 const SizedBox(height: 24),
                 _appearance(),
                 const SizedBox(height: 24),
-                _signInMethods(),
-                const SizedBox(height: 24),
                 _security(),
                 const SizedBox(height: 24),
                 _about(),
@@ -161,7 +138,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   Widget _accountCard() {
     final p = context.palette;
     final text = context.textStyles;
-    final methods = SupabaseService.instance.signInMethods;
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -176,14 +152,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 if (_email != null && _email!.isNotEmpty)
                   Text(_email!, style: text.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    Pill(label: 'Administrator', icon: Icons.shield_rounded, color: p.gold),
-                    for (final m in methods) Pill(label: _methodName(m), color: p.textSecondary),
-                  ],
-                ),
+                Pill(label: 'Administrator', icon: Icons.shield_rounded, color: p.gold),
               ],
             ),
           ),
@@ -191,13 +160,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       ),
     );
   }
-
-  String _methodName(String id) => switch (id) {
-        'email' => 'Email',
-        'google' => 'Google',
-        'facebook' => 'Facebook',
-        _ => id,
-      };
 
   Widget _appearance() {
     final themeService = Provider.of<ThemeService>(context);
@@ -219,77 +181,11 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
 
-  Widget _signInMethods() {
-    final p = context.palette;
-    final enabled = _enabledProviders;
-
-    Widget status(bool? on) {
-      if (on == null) {
-        return SizedBox(
-          width: 16,
-          height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2, color: p.textTertiary),
-        );
-      }
-      return Pill(
-        label: on ? 'On' : 'Off',
-        icon: on ? Icons.check_rounded : Icons.remove_rounded,
-        color: on ? p.success : p.textTertiary,
-      );
-    }
-
-    Widget providerTile(SocialProvider provider, Widget logo) {
-      final on = enabled?.contains(provider);
-      return _LogoTile(
-        logo: logo,
-        title: provider.label,
-        subtitle: on == null
-            ? 'Checking...'
-            : on
-                ? 'Students see "${provider.label}" on the sign-in screen'
-                : 'Hidden from students until set up (README)',
-        trailing: status(on),
-      );
-    }
-
-    return AppListGroup(
-      title: 'Sign-in methods',
-      children: [
-        AppListTile(
-          icon: Icons.mail_rounded,
-          iconColor: p.primary,
-          title: 'Email and password',
-          subtitle: 'With the 6-digit email code',
-          trailing: status(true),
-        ),
-        providerTile(SocialProvider.google, const GoogleLogo(size: 19)),
-        providerTile(SocialProvider.facebook, const FacebookLogo(size: 20)),
-        if (_providerCheckFailed)
-          AppListTile(
-            icon: Icons.cloud_off_rounded,
-            iconColor: p.warning,
-            title: "Couldn't reach Supabase",
-            subtitle: 'Showing the last known status. Tap to check again.',
-            onTap: _checkProviders,
-          )
-        else
-          AppListTile(
-            icon: Icons.refresh_rounded,
-            iconColor: p.textSecondary,
-            title: 'Check again',
-            subtitle: 'After changing providers in the Supabase dashboard',
-            onTap: enabled == null ? null : _checkProviders,
-            showChevron: false,
-          ),
-      ],
-    );
-  }
-
   Widget _security() {
-    final p = context.palette;
-    final methods = SupabaseService.instance.signInMethods;
-    // Unknown (no session details yet) is treated as a password account.
-    final hasPassword = methods.isEmpty || SupabaseService.instance.hasPasswordSignIn;
+    // An account without a password (it signs in another way) has nothing
+    // to change; unknown (no session details yet) counts as a password one.
+    final hasPassword = SupabaseService.instance.signInMethods.isEmpty ||
+        SupabaseService.instance.hasPasswordSignIn;
     return AppListGroup(
       title: 'Security',
       children: [
@@ -302,13 +198,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               context,
               SlidePageRoute(page: const ChangePasswordScreen(), direction: SlideDirection.up),
             ),
-          )
-        else
-          AppListTile(
-            icon: Icons.verified_user_rounded,
-            iconColor: p.success,
-            title: 'No password on this account',
-            subtitle: 'You sign in with ${methods.map(_methodName).join(' or ')}',
           ),
         AppListTile(
           icon: Icons.logout_rounded,
@@ -355,57 +244,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         const SizedBox(height: 2),
         Text('Admin panel · Version $kAppVersion', style: text.bodySmall),
       ],
-    );
-  }
-}
-
-/// An [AppListTile]-style row with a brand logo instead of an icon badge.
-class _LogoTile extends StatelessWidget {
-  final Widget logo;
-  final String title;
-  final String subtitle;
-  final Widget trailing;
-
-  const _LogoTile({
-    required this.logo,
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final text = context.textStyles;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: p.surfaceAlt,
-              borderRadius: BorderRadius.circular(36 * 0.32),
-            ),
-            child: logo,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: text.titleSmall),
-                const SizedBox(height: 1),
-                Text(subtitle, style: text.bodySmall),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          trailing,
-        ],
-      ),
     );
   }
 }

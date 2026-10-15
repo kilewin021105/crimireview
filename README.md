@@ -20,7 +20,7 @@ App start
 - Sign up: a 6-digit email code (generated, verified, and emailed entirely server-side — see **Security** below), then the Supabase account is created and signed in.
 - Sign in merges local and cloud progress and handles account switching on shared devices.
 - Forgot password: the same server-side code flow, then a Supabase RPC (`reset_user_password`) applies the new password.
-- **Continue with Google / Facebook** (`lib/services/social_auth_service.dart`): Supabase OAuth with PKCE in the phone's browser, back into the app through `com.crimireview.crimireview://login-callback`. A Google/Facebook login with the same email as an existing account opens that same account. The buttons only appear for providers switched on in Supabase. Setup: **Google and Facebook sign-in** below.
+- **Continue with Google / Facebook** (`lib/services/social_auth_service.dart`): Supabase OAuth with PKCE in the phone's browser, back into the app through `com.crimireview.crimireview://login-callback`. A Google/Facebook login with the same email as an existing account opens that same account. They are offered on a page of their own, **"Decide how you sign in"** (`sign_in_choice_screen.dart`), shown before the email form and only for providers switched on in Supabase; with neither on, the app goes straight to the email form. They never appear inside the student or admin screens. Setup: **Google and Facebook sign-in** below.
 - Every sign-in method finishes through `PostSignInService` (cloud/local merge, account switching, admin routing).
 - **Dashboard setting required:** Authentication → Providers → Email → turn **off** "Confirm email". This app's own code-verification step replaces Supabase's built-in confirmation email; leaving both on causes sign-in to fail right after a successful signup.
 
@@ -206,7 +206,7 @@ The app side is done; these steps switch it on. They need your own Google and Fa
 
 **3. Let the app receive the result.** Supabase → *Authentication → URL Configuration → Redirect URLs* → add `com.crimireview.crimireview://login-callback`. Without it Supabase sends students to the Site URL instead of back into the app.
 
-**4. Check.** Open the app's sign-in screen (it checks Supabase each time): the Google/Facebook buttons appear only after step 1/2. Test with an email that already has a CrimiReview account; it should open the same account with the same progress. If Facebook doesn't share an email (some accounts are phone-only), the app explains it and the student can use Google or email.
+**4. Check.** Restart the app (it checks Supabase while the logo shows): after signing out, the **"Decide how you sign in"** page now appears before the email form, with a button for each provider you switched on. Test with an email that already has a CrimiReview account; it should open the same account with the same progress. If Facebook doesn't share an email (some accounts are phone-only), the app explains it and the student can use Google or email.
 
 Core tables used by the app:
 

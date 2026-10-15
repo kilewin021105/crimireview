@@ -722,10 +722,10 @@ You asked for "sign in with Google or Facebook" so students don't have to type, 
 You said the admin panel lacking settings was a gap, and asked for it on its own branch so you can take it or leave it. It is on branch `admin-settings`, built on top of `social-login-dashboard` (Session 44), with its own pull request. Merge it to add Settings to the admin panel; close it to keep the admin panel as it is. Nothing else depends on it.
 
 **What it adds:** a fourth admin tab, **Settings** (bottom bar on phones; side menu on wide screens), `lib/screens/admin/admin_settings_screen.dart`:
-- **Account:** name, email, an "Administrator" tag and how the admin signs in (Email / Google / Facebook).
+- **Account:** name, email and an "Administrator" tag.
 - **Appearance:** Light / Dark / Phone setting. The admin panel had no way to change the theme before.
-- **Sign-in methods:** whether Email, Google and Facebook are switched on in Supabase **right now**, read live from Supabase's public settings, with a "Check again" button. After following the README's Google/Facebook steps, the admin can confirm it worked here without opening the Supabase dashboard. If Supabase can't be reached it says so and shows the last known status.
-- **Security:** Change password (asks for the current one first; replaced by "No password on this account" for a Google/Facebook-only admin), and Sign out.
+- *(The first version also listed the sign-in methods (Email / Google / Facebook) with their on/off status, and the account card showed how the admin signs in. Both were removed in Session 46 at your request: sign-in methods appear only on their own page before signing in, never inside the admin or student screens.)*
+- **Security:** Change password (asks for the current one first; hidden for an admin account that has no password), and Sign out.
 - **About:** website, support email, version.
 
 **Moved:** on phones, Sign out used to be an icon in the dashboard's top bar; it now lives in Settings, where people look for it. The wide-screen side menu keeps its Sign out button. Both use the same confirm-and-sign-out code.
@@ -733,6 +733,25 @@ You said the admin panel lacking settings was a gap, and asked for it on its own
 **Small cleanup:** the version number shown in Settings is now one shared constant (`lib/utils/app_info.dart`) used by both the student and admin Settings, so the two can't disagree. In Session 41 the student Settings was still showing 1.0.0.
 
 **Verification:** `flutter analyze` 0 errors / 0 warnings; `flutter test` all pass; screenshots of the Settings tab (phone, light and dark) and the wide layout reviewed, no overflows.
+
+---
+
+## 2026-10-15 — Session 46: Google / Facebook moved to their own sign-in page
+
+You showed an app-setup page (a title, a short explanation, then large rounded choice buttons and an "I'm already a member" link) and asked for the Google/Facebook choice to look like that: on a page of its own, not inside the student or admin screens, and without Discord.
+
+- **New page, "Decide how you sign in to CrimiReview"** (`lib/screens/sign_in_choice_screen.dart`):
+  - It first explains in plain words what happens: one tap with Google or Facebook; the password is typed only on their own page; CrimiReview receives only the name, email address and profile photo; nothing is posted to the account; the same email opens the same account and progress.
+  - Below, in a grey band, are two large rounded buttons ("Google (use your Google account)" / "Facebook (use your Facebook account)"). They sit one above the other on phones and side by side on wider screens.
+  - A "Use my email instead" link opens the email form, which now has a back arrow.
+- **Removed from inside the app:**
+  - The email form no longer has the Google/Facebook buttons.
+  - The student Settings no longer says "Signed in with Google". For an account without a password, "Change password" is simply not shown.
+- **Only Google and Facebook.** No other providers (Discord etc.) are offered.
+- **When it shows:** after onboarding, at app start when signed out, and after signing out, but only when Google or Facebook is switched on in Supabase. The app checks that while the logo animates, waiting at most 3 more seconds, and uses the last saved answer when offline. With both off, which is the case today, the app goes straight to the email form as before.
+- **One shared "finish sign-in" step for both pages** (`lib/screens/sign_in_completion.dart`). Only the page on top reacts to a new session, so a Google sign-in can never be finished twice. Sign-up and forgot-password, opened on top, still finish their own. After sign-in, every sign-in page is removed from the back stack.
+- **Screenshot harness:** it used to report only overflow errors and hid all others. A first version of this page threw during layout and rendered blank, and the harness still passed. It now reports every layout error. The rest of the catalog was re-rendered with it, and the only remaining failure, `quiz_answered`, is older and test-only: the sound player has no audio device in a test. It fails the same way with the previous harness.
+- **Checks:** `flutter analyze` 0 errors / 0 warnings; `flutter test` 34 pass; screenshots of the new page reviewed (390 px light/dark, 320 px, Google only, 1280 px wide, and the email form opened from it), no layout problems.
 
 ---
 
@@ -747,6 +766,8 @@ You said the admin panel lacking settings was a gap, and asked for it on its own
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 46: `lib/screens/sign_in_choice_screen.dart`, `lib/screens/sign_in_completion.dart`.
 
 Session 45: `lib/screens/admin/admin_settings_screen.dart`, `lib/utils/app_info.dart`.
 
