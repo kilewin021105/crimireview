@@ -104,8 +104,10 @@ class SocialAuthService {
     final client = SupabaseService.instance.client;
     final opened = await client.auth.signInWithOAuth(
       provider.oauth,
-      // On the web the page itself is the way back; elsewhere, our link.
-      redirectTo: kIsWeb ? null : redirectUrl,
+      // On the web, come back to the address the app is running on (left
+      // empty, Supabase would send the student to its Site URL instead);
+      // on phones, our app link.
+      redirectTo: kIsWeb ? Uri.base.origin : redirectUrl,
       // Google and Facebook block sign-in inside embedded web views, so
       // mobile uses the real browser app.
       authScreenLaunchMode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,

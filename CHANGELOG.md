@@ -733,6 +733,8 @@ You showed an app-setup page (a title, a short explanation, then large rounded c
 - **One shared "finish sign-in" step for both pages** (`lib/screens/sign_in_completion.dart`). Only the page on top reacts to a new session, so a Google sign-in can never be finished twice. Sign-up and forgot-password, opened on top, still finish their own. After sign-in, every sign-in page is removed from the back stack.
 - **Screenshot harness:** it used to report only overflow errors and hid all others. A first version of this page threw during layout and rendered blank, and the harness still passed. It now reports every layout error. The rest of the catalog was re-rendered with it, and the only remaining failure, `quiz_answered`, is older and test-only: the sound player has no audio device in a test. It fails the same way with the previous harness.
 - **Checks:** `flutter analyze` 0 errors / 0 warnings; `flutter test` 34 pass; screenshots of the new page reviewed (390 px light/dark, 320 px, Google only, 1280 px wide, and the email form opened from it), no layout problems.
+- **Why you don't see the page yet:** you tested in Chrome and saw only the email form. That is expected: Google and Facebook are still switched off in Supabase (checked again: `google: false, facebook: false`), so the app skips the page. It appears once the README steps are done.
+- **Web fix found while checking that:** on the web, Google/Facebook sign-in would have returned to Supabase's Site URL instead of the page being tested. It now returns to the address the app runs on (`Uri.base.origin`). README step 3 says which address to add for testing in Chrome.
 
 ---
 
