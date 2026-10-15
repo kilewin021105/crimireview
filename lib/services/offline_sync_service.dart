@@ -113,7 +113,9 @@ class OfflineSyncService extends ChangeNotifier {
     _droppedCount = _prefs?.getInt(_droppedKey) ?? 0;
     await _loadQueue();
     _startListening();
-    await syncPendingOperations();
+    // In the background: on a slow or dead connection, uploading saved
+    // results used to hold the app on a blank screen before it opened.
+    unawaited(syncPendingOperations());
   }
 
   void _startListening() {

@@ -53,9 +53,10 @@ void main() {
     }
 
     try {
-      // Resolves whether the signed-in user is an admin (panel note 7) and
-      // keeps it in sync with sign-in/sign-out. Never blocks app start-up --
-      // a failed check just leaves the Admin Panel tile hidden.
+      // Whether the signed-in user is an admin (panel note 7), kept in sync
+      // with sign-in/sign-out. Starts from the role last confirmed on this
+      // phone and checks the server in the background, so start-up never
+      // waits on the network (the splash screen waits a few seconds at most).
       await AdminService.instance.init();
     } catch (e) {
       debugPrint('AdminService init failed: $e');

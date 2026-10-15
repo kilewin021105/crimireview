@@ -53,10 +53,10 @@ class _SplashScreenState extends State<SplashScreen>
     if (!hasCompletedOnboarding) {
       nextScreen = const OnboardingScreen();
     } else if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
-      // AdminService.init() (main.dart) runs to completion before runApp(),
-      // so isAdmin is already resolved for a restored session by the time
-      // we get here -- no extra await needed.
-      var isAdmin = AdminService.instance.isAdmin;
+      // The role check started in main.dart has had the whole logo
+      // animation to finish; this waits at most 3 more seconds, and offline
+      // uses the role last confirmed for this account.
+      var isAdmin = await AdminService.instance.resolvedRole();
 
       // A session this phone hasn't set up yet: a Google/Facebook sign-in
       // that finished while the app was closed (Android may close it while
