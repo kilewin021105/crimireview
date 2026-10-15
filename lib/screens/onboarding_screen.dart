@@ -4,7 +4,7 @@ import '../services/storage_service.dart';
 import '../utils/page_transitions.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/ui/ui.dart';
-import 'auth_screen.dart';
+import 'sign_in_choice_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -72,11 +72,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _completeOnboarding() async {
     final storageService = StorageService();
     await storageService.setOnboardingCompleted(true);
+    // "Decide how you sign in" when Google/Facebook are on, else the email form.
+    final signIn = await SignInChoiceScreen.entry();
 
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(
-      ScalePageRoute(page: const AuthScreen()),
+      ScalePageRoute(page: signIn),
     );
   }
 

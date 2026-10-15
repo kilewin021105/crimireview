@@ -717,6 +717,25 @@ You asked for "sign in with Google or Facebook" so students don't have to type, 
 
 ---
 
+## 2026-10-15 — Session 46: Google / Facebook moved to their own sign-in page
+
+You showed an app-setup page (a title, a short explanation, then large rounded choice buttons and an "I'm already a member" link) and asked for the Google/Facebook choice to look like that: on a page of its own, not inside the student or admin screens, and without Discord.
+
+- **New page, "Decide how you sign in to CrimiReview"** (`lib/screens/sign_in_choice_screen.dart`):
+  - It first explains in plain words what happens: one tap with Google or Facebook; the password is typed only on their own page; CrimiReview receives only the name, email address and profile photo; nothing is posted to the account; the same email opens the same account and progress.
+  - Below, in a grey band, are two large rounded buttons ("Google (use your Google account)" / "Facebook (use your Facebook account)"). They sit one above the other on phones and side by side on wider screens.
+  - A "Use my email instead" link opens the email form, which now has a back arrow.
+- **Removed from inside the app:**
+  - The email form no longer has the Google/Facebook buttons.
+  - The student Settings no longer says "Signed in with Google". For an account without a password, "Change password" is simply not shown.
+- **Only Google and Facebook.** No other providers (Discord etc.) are offered.
+- **When it shows:** after onboarding, at app start when signed out, and after signing out, but only when Google or Facebook is switched on in Supabase. The app checks that while the logo animates, waiting at most 3 more seconds, and uses the last saved answer when offline. With both off, which is the case today, the app goes straight to the email form as before.
+- **One shared "finish sign-in" step for both pages** (`lib/screens/sign_in_completion.dart`). Only the page on top reacts to a new session, so a Google sign-in can never be finished twice. Sign-up and forgot-password, opened on top, still finish their own. After sign-in, every sign-in page is removed from the back stack.
+- **Screenshot harness:** it used to report only overflow errors and hid all others. A first version of this page threw during layout and rendered blank, and the harness still passed. It now reports every layout error. The rest of the catalog was re-rendered with it, and the only remaining failure, `quiz_answered`, is older and test-only: the sound player has no audio device in a test. It fails the same way with the previous harness.
+- **Checks:** `flutter analyze` 0 errors / 0 warnings; `flutter test` 34 pass; screenshots of the new page reviewed (390 px light/dark, 320 px, Google only, 1280 px wide, and the email form opened from it), no layout problems.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
@@ -728,6 +747,8 @@ You asked for "sign in with Google or Facebook" so students don't have to type, 
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 46: `lib/screens/sign_in_choice_screen.dart`, `lib/screens/sign_in_completion.dart`.
 
 Session 44: `lib/services/social_auth_service.dart`, `lib/services/post_sign_in_service.dart`, `lib/screens/dashboard_view.dart`, `lib/utils/quiz_launcher.dart`, `lib/widgets/brand_logos.dart`, `supabase_social_login.sql`.
 

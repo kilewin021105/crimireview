@@ -1,23 +1,20 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthChangeEvent, AuthState;
 import '../widgets/app_logo.dart';
-import '../widgets/brand_logos.dart';
 import '../widgets/ui/ui.dart';
 import '../services/supabase_service.dart';
-import '../services/post_sign_in_service.dart';
-import '../services/social_auth_service.dart';
 import '../utils/error_messages.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import '../widgets/password_strength_indicator.dart';
-import 'home_screen.dart';
-import 'admin/admin_shell_screen.dart';
 import 'email_verification_screen.dart';
 import 'forgot_password_screen.dart';
+import 'sign_in_completion.dart';
 
+/// The email + password form (sign in / create account).
+///
+/// Google and Facebook are not on this page: they have their own page,
+/// `SignInChoiceScreen`, shown before this one when they are switched on.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -25,28 +22,12 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
+class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
   String _password = '';
-
-  /// Google / Facebook buttons to show: only providers switched on in
-  /// Supabase, so a student never taps into a "provider not enabled" page.
-  Set<SocialProvider> _socialProviders = {};
-
-  /// The provider whose browser page is open, until Supabase reports back.
-  SocialProvider? _pendingSocial;
-
-  /// Drives the spinner on that provider's button.
-  SocialProvider? _socialLoading;
-
-  /// Set while the after-sign-in sync runs, so it can only run once.
-  bool _finishing = false;
-
-  StreamSubscription<AuthState>? _authSubscription;
-  Timer? _resumeTimer;
 
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -55,35 +36,22 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
   final _lastNameController = TextEditingController();
   final _supabase = SupabaseService.instance;
 
-  bool get _busy => _isLoading || _socialLoading != null || _finishing;
+  @override
+  bool get signingInItself => _isLoading;
+
+  @override
+  void onSignInFailed(String message) => setState(() => _errorMessage = message);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    if (SocialAuthService.isSupportedPlatform) _loadSocialProviders();
-    if (SupabaseService.isInitialized) {
-      // Google / Facebook sign-in ends here: the browser sends the student
-      // back, Supabase swaps the one-time code for a session and reports it.
-      _authSubscription = _supabase.authStateChanges.listen(
-        _onAuthState,
-        onError: _onSocialError,
-      );
-    }
-  }
-
-  Future<void> _loadSocialProviders() async {
-    final cached = await SocialAuthService.instance.cachedEnabled();
-    if (mounted && cached.isNotEmpty) setState(() => _socialProviders = cached);
-    final fresh = await SocialAuthService.instance.refreshEnabled();
-    if (mounted && fresh != null) setState(() => _socialProviders = fresh);
+    // Catches a Google/Facebook sign-in that finishes while this page is
+    // the one showing (see SignInCompletion).
+    watchForSessions();
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _authSubscription?.cancel();
-    _resumeTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _firstNameController.dispose();
@@ -91,104 +59,9 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  void _onAuthState(AuthState state) {
-    if (state.event != AuthChangeEvent.signedIn || _finishing || !mounted) return;
-    final fromSocial = _pendingSocial != null;
-    // A session arriving by itself while this screen is the one showing: a
-    // Google/Facebook sign-in that finished after Android restarted the app
-    // (slower than the splash screen). Ignored while the password sign-in
-    // runs (_isLoading) or when sign-up / forgot-password is open on top,
-    // because those screens finish their own sign-in.
-    final arrivedOnItsOwn = !_isLoading &&
-        _supabase.isLoggedIn &&
-        (ModalRoute.of(context)?.isCurrent ?? false);
-    if (!fromSocial && !arrivedOnItsOwn) return;
-    _pendingSocial = null;
-    _resumeTimer?.cancel();
-    _finishSignIn();
-  }
-
-  void _onSocialError(Object error) {
-    final provider = _pendingSocial;
-    if (provider == null || !mounted) return;
-    _pendingSocial = null;
-    _resumeTimer?.cancel();
-    setState(() {
-      _socialLoading = null;
-      _errorMessage = SocialAuthService.instance.describeError(error, provider);
-    });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Back from the browser without finishing (closed it, pressed back):
-    // stop the spinner after a moment. The moment gives a real sign-in
-    // time to arrive; if it arrives later anyway, it still completes.
-    if (state != AppLifecycleState.resumed || _pendingSocial == null) return;
-    _resumeTimer?.cancel();
-    _resumeTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted && !_finishing && _socialLoading != null) {
-        setState(() => _socialLoading = null);
-      }
-    });
-  }
-
-  Future<void> _socialSignIn(SocialProvider provider) async {
-    if (_busy) return;
-    HapticFeedback.mediumImpact();
-    setState(() {
-      _socialLoading = provider;
-      _errorMessage = null;
-    });
-    try {
-      _pendingSocial = provider;
-      await SocialAuthService.instance.start(provider);
-    } catch (e) {
-      _pendingSocial = null;
-      if (!mounted) return;
-      setState(() {
-        _socialLoading = null;
-        _errorMessage = SocialAuthService.instance.describeError(e, provider);
-      });
-    }
-  }
-
-  /// Shared by every sign-in method: sync this account's data onto the
-  /// phone (PostSignInService), then open the admin or student home.
-  Future<void> _finishSignIn() async {
-    if (_finishing) return;
-    setState(() {
-      _finishing = true;
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final isAdmin = await PostSignInService.instance.run();
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        ScalePageRoute(page: isAdmin ? const AdminShellScreen() : const HomeScreen()),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = friendlyError(e, fallback: 'Sign in failed. Please try again.');
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _finishing = false;
-          _isLoading = false;
-          _socialLoading = null;
-        });
-      }
-    }
-  }
-
   Future<void> _submit() async {
-    if (_busy) return;
+    if (_isLoading || isCompletingSignIn) return;
     if (!_formKey.currentState!.validate()) return;
-    // Typing a password instead: forget an unfinished Google/Facebook try.
-    _pendingSocial = null;
 
     setState(() {
       _isLoading = true;
@@ -196,43 +69,47 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
     });
     HapticFeedback.mediumImpact();
 
-    try {
-      if (_isLogin) {
-        await _supabase.signIn(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-      } else {
-        // For signup, go to email verification first
-        setState(() => _isLoading = false);
-        Navigator.push(
-          context,
-          SlidePageRoute(
-            page: EmailVerificationScreen(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-              displayName: '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
-            ),
+    if (!_isLogin) {
+      // For signup, go to email verification first
+      setState(() => _isLoading = false);
+      Navigator.push(
+        context,
+        SlidePageRoute(
+          page: EmailVerificationScreen(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            displayName: '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
           ),
-        );
-        return;
-      }
-      
-      if (!mounted) return;
-      if (_supabase.isLoggedIn) {
-        await _finishSignIn();
-      } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Account created! Please sign in.';
-          _isLogin = true;
-        });
-      }
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _supabase.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = friendlyError(e, fallback: 'Sign in failed. Please try again.');
+      });
+      return;
+    }
+    if (!mounted) return;
+
+    if (_supabase.isLoggedIn) {
+      // Still "loading" while the shared sync runs, so the session event
+      // from this same sign-in isn't picked up a second time.
+      await completeSignIn();
+      if (mounted) setState(() => _isLoading = false);
+    } else {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Account created! Please sign in.';
+        _isLogin = true;
       });
     }
   }
@@ -283,7 +160,24 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          AppLogo(size: isSmall ? 44 : 52, showShadow: false),
+                          Row(
+                            children: [
+                              // Back to "Decide how you sign in" when opened from it.
+                              if (Navigator.of(context).canPop()) ...[
+                                IconButton(
+                                  tooltip: 'Back',
+                                  onPressed: () => Navigator.of(context).maybePop(),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.white.withValues(alpha: 0.14),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.arrow_back_rounded),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              AppLogo(size: isSmall ? 44 : 52, showShadow: false),
+                            ],
+                          ),
                           SizedBox(height: isSmall ? 14 : 20),
                           Text(
                             _isLogin ? 'Welcome back' : 'Create your account',
@@ -335,12 +229,6 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
                             onChanged: (i) => _toggleMode(i == 0),
                           ),
                           const SizedBox(height: 24),
-                          if (_socialProviders.isNotEmpty) ...[
-                            _buildSocialButtons(),
-                            const SizedBox(height: 20),
-                            _orDivider(),
-                            const SizedBox(height: 20),
-                          ],
                           if (!_isLogin) ...[
                             _buildNameFields(),
                             const SizedBox(height: 16),
@@ -427,8 +315,8 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
                           ],
                           PrimaryButton(
                             label: _isLogin ? 'Sign in' : 'Create account',
-                            loading: _isLoading && _socialLoading == null,
-                            onPressed: _busy ? null : _submit,
+                            loading: _isLoading || isCompletingSignIn,
+                            onPressed: _submit,
                           ),
                           const SizedBox(height: 20),
                           Wrap(
@@ -462,51 +350,6 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
-    );
-  }
-
-  /// "Google" and "Facebook" side by side (stacked on very narrow
-  /// screens). The same buttons create an account on first use, so they
-  /// appear on both tabs.
-  Widget _buildSocialButtons() {
-    final providers = SocialProvider.values.where(_socialProviders.contains).toList();
-    final buttons = [
-      for (final provider in providers)
-        _SocialButton(
-          provider: provider,
-          // One provider gets the room for the full label.
-          label: providers.length == 1 ? 'Continue with ${provider.label}' : provider.label,
-          loading: _socialLoading == provider,
-          onPressed: _busy ? null : () => _socialSignIn(provider),
-        ),
-    ];
-    return LayoutBuilder(builder: (context, c) {
-      if (buttons.length == 1) return buttons.first;
-      if (c.maxWidth < 300) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [buttons[0], const SizedBox(height: 10), buttons[1]],
-        );
-      }
-      return Row(children: [
-        Expanded(child: buttons[0]),
-        const SizedBox(width: 12),
-        Expanded(child: buttons[1]),
-      ]);
-    });
-  }
-
-  Widget _orDivider() {
-    final p = context.palette;
-    return Row(
-      children: [
-        Expanded(child: Divider(color: p.border, height: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text('or use your email', style: context.textStyles.bodySmall),
-        ),
-        Expanded(child: Divider(color: p.border, height: 1)),
-      ],
     );
   }
 
@@ -551,61 +394,4 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
         height: size,
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       );
-}
-
-/// Outlined button with the provider's own logo, styled like the app's
-/// [SecondaryButton] so it sits naturally next to the form.
-class _SocialButton extends StatelessWidget {
-  final SocialProvider provider;
-  final String label;
-  final bool loading;
-  final VoidCallback? onPressed;
-
-  const _SocialButton({
-    required this.provider,
-    required this.label,
-    required this.loading,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final logo = switch (provider) {
-      SocialProvider.google => const GoogleLogo(size: 20),
-      SocialProvider.facebook => const FacebookLogo(size: 21),
-    };
-    return Semantics(
-      button: true,
-      label: 'Continue with ${provider.label}',
-      excludeSemantics: true,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(64, 52),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          foregroundColor: p.textPrimary,
-          backgroundColor: p.surface,
-          disabledForegroundColor: p.textSecondary,
-          side: BorderSide(color: p.border, width: 1.2),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox.square(
-              dimension: 21,
-              child: loading
-                  ? Padding(
-                      padding: const EdgeInsets.all(1.5),
-                      child: CircularProgressIndicator(strokeWidth: 2.2, color: p.primary),
-                    )
-                  : Center(child: logo),
-            ),
-            const SizedBox(width: 10),
-            Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
-          ],
-        ),
-      ),
-    );
-  }
 }

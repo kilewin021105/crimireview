@@ -7,10 +7,11 @@ import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/admin_service.dart';
 import '../services/post_sign_in_service.dart';
+import '../services/social_auth_service.dart';
 import '../utils/responsive.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
-import 'auth_screen.dart';
+import 'sign_in_choice_screen.dart';
 import 'admin/admin_shell_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -36,6 +37,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateToNext() async {
+    // Ask Supabase whether Google/Facebook are switched on while the logo
+    // animates, so the right sign-in page opens (see SignInChoiceScreen).
+    final providerCheck = SocialAuthService.instance.refreshEnabled();
     await Future.delayed(const Duration(milliseconds: 2500));
     
     if (!mounted) return;
@@ -68,7 +72,9 @@ class _SplashScreenState extends State<SplashScreen>
       }
       nextScreen = isAdmin ? const AdminShellScreen() : const HomeScreen();
     } else {
-      nextScreen = const AuthScreen();
+      // Waits at most 3 more seconds; offline, the last saved answer is used.
+      await providerCheck.timeout(const Duration(seconds: 3), onTimeout: () => null);
+      nextScreen = await SignInChoiceScreen.entry();
     }
 
     if (!mounted) return;

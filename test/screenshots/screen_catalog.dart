@@ -15,6 +15,8 @@ import 'package:crimireview/screens/admin/admin_shell_screen.dart';
 import 'package:crimireview/screens/admin/admin_students_screen.dart';
 import 'package:crimireview/screens/admin/admin_template_generation_screen.dart';
 import 'package:crimireview/screens/auth_screen.dart';
+import 'package:crimireview/screens/sign_in_choice_screen.dart';
+import 'package:crimireview/services/social_auth_service.dart';
 import 'package:crimireview/screens/change_password_screen.dart';
 import 'package:crimireview/screens/daily_challenge_screen.dart';
 import 'package:crimireview/screens/flashcard_screen.dart';
@@ -107,9 +109,7 @@ Map<String, Object> questionBankPrefs() => {
       QuestionRepository.cacheTimestampKey: DateTime.now().toIso8601String(),
     };
 
-const Map<String, Object> _socialOn = {
-  'social_providers_enabled': ['google', 'facebook'],
-};
+const Set<SocialProvider> _both = {SocialProvider.google, SocialProvider.facebook};
 
 List<Shot> screenCatalog() => [
       Shot('splash', (_) => const SplashScreen(), seeded: false, pumps: 6),
@@ -119,14 +119,19 @@ List<Shot> screenCatalog() => [
           seeded: false, dark: false, size: const Size(320, 568)),
       Shot('auth_signup', (_) => const AuthScreen(),
           seeded: false, act: (t) => tapText(t, 'Create account')),
-      // Google + Facebook switched on (the last check is saved on the phone).
-      Shot('auth_social', (_) => const AuthScreen(), seeded: false, prefs: _socialOn),
-      Shot('auth_social_small', (_) => const AuthScreen(),
-          seeded: false, dark: false, size: const Size(320, 568), prefs: _socialOn),
-      Shot('auth_social_signup', (_) => const AuthScreen(),
-          seeded: false, dark: false, prefs: _socialOn, act: (t) => tapText(t, 'Create account')),
-      Shot('auth_social_google_only', (_) => const AuthScreen(),
-          seeded: false, dark: false, prefs: const {'social_providers_enabled': ['google']}),
+      // "Decide how you sign in": shown before the email form once Google
+      // or Facebook is switched on (the last check is saved on the phone).
+      Shot('sign_in_choice', (_) => const SignInChoiceScreen(initialProviders: _both), seeded: false),
+      Shot('sign_in_choice_small', (_) => const SignInChoiceScreen(initialProviders: _both),
+          seeded: false, dark: false, size: const Size(320, 568)),
+      Shot('sign_in_choice_google_only',
+          (_) => const SignInChoiceScreen(initialProviders: {SocialProvider.google}),
+          seeded: false, dark: false),
+      Shot('sign_in_choice_wide', (_) => const SignInChoiceScreen(initialProviders: _both),
+          seeded: false, dark: false, size: const Size(1280, 800)),
+      // The email form opened from it (with a back arrow).
+      Shot('sign_in_choice_email', (_) => const SignInChoiceScreen(initialProviders: _both),
+          seeded: false, dark: false, act: (t) => tapText(t, 'Use my email instead')),
       Shot('forgot_password', (_) => const ForgotPasswordScreen(), seeded: false),
       Shot(
         'email_verification',

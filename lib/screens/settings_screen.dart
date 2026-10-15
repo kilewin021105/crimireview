@@ -14,7 +14,7 @@ import '../utils/responsive.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/ui/ui.dart';
 import 'profile_screen.dart';
-import 'auth_screen.dart';
+import 'sign_in_choice_screen.dart';
 import 'change_password_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -151,9 +151,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await SupabaseService.instance.signOut();
     // Keep local quiz progress, only clear auth/profile data
     await StorageService().clearAuthData();
+    final signIn = await SignInChoiceScreen.entry();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      SlidePageRoute(page: const AuthScreen()),
+      SlidePageRoute(page: signIn),
       (route) => false,
     );
   }
@@ -281,13 +282,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             context,
                             SlidePageRoute(page: const ChangePasswordScreen(), direction: SlideDirection.up),
                           ),
-                        )
-                      else
-                        AppListTile(
-                          icon: Icons.verified_user_rounded,
-                          iconColor: p.success,
-                          title: 'Signed in with ${_methodLabel()}',
-                          subtitle: 'Your password is managed by ${_methodLabel()}',
                         ),
                       AppListTile(
                         icon: Icons.logout_rounded,
@@ -301,10 +295,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.login_rounded,
                         title: 'Sign in',
                         subtitle: 'Sync your progress to the cloud',
-                        onTap: () {
+                        onTap: () async {
+                          final signIn = await SignInChoiceScreen.entry();
+                          if (!context.mounted) return;
                           Navigator.pushReplacement(
                             context,
-                            SlidePageRoute(page: const AuthScreen()),
+                            SlidePageRoute(page: signIn),
                           );
                         },
                       ),
@@ -353,15 +349,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
-  }
-
-  /// "Google", "Facebook" or "Google and Facebook" for a no-password account.
-  String _methodLabel() {
-    final names = [
-      for (final m in SupabaseService.instance.signInMethods)
-        if (m == 'google') 'Google' else if (m == 'facebook') 'Facebook',
-    ];
-    return names.isEmpty ? 'a social account' : names.join(' and ');
   }
 
   Future<void> _setNotifications(bool value) async {
