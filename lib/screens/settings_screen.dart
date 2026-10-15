@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../services/feedback_service.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
+import '../utils/app_info.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import '../widgets/app_logo.dart';
@@ -35,8 +36,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _hapticFeedbackEnabled = true;
   bool _isLoggedIn = false;
 
-  /// Shown in the About card; keep in step with `version:` in pubspec.yaml.
-  static const String _appVersion = '1.0.1';
 
   @override
   void initState() {
@@ -341,7 +340,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 14),
                       const AppWordmark(fontSize: 20),
                       const SizedBox(height: 4),
-                      Text('Version $_appVersion', style: text.bodySmall),
+                      Text('Version $kAppVersion', style: text.bodySmall),
                       const SizedBox(height: 10),
                       Pill(label: 'For future criminologists', icon: Icons.balance_rounded, color: p.gold),
                     ],
