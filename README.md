@@ -206,6 +206,8 @@ The app side is done; these steps switch it on. They need your own Google and Fa
 
 **3. Let the app receive the result.** Supabase → *Authentication → URL Configuration → Redirect URLs* → add `com.crimireview.crimireview://login-callback`. Without it Supabase sends students to the Site URL instead of back into the app. **Testing in Chrome (web):** also add the web address, e.g. run with `flutter run -d chrome --web-port 3000` and add `http://localhost:3000/**` (for the published web app, its own address).
 
+**Preview before setting anything up:** `flutter run -d chrome --dart-define=PREVIEW_SIGN_IN_CHOICE=true` (or with your phone instead of `-d chrome`), then sign out. The "Decide how you sign in" page opens with a "Preview mode" note; tapping a provider that isn't switched on yet just says so. Normal builds never show preview mode.
+
 **4. Check.** Restart the app (it checks Supabase while the logo shows): after signing out, the **"Decide how you sign in"** page now appears before the email form, with a button for each provider you switched on. Test with an email that already has a CrimiReview account; it should open the same account with the same progress. If Facebook doesn't share an email (some accounts are phone-only), the app explains it and the student can use Google or email.
 
 Core tables used by the app:

@@ -27,10 +27,22 @@ class SignInChoiceScreen extends StatefulWidget {
 
   const SignInChoiceScreen({super.key, required this.initialProviders});
 
+  /// `flutter run --dart-define=PREVIEW_SIGN_IN_CHOICE=true` shows this
+  /// page even while Google and Facebook are still switched off in
+  /// Supabase, to see how it looks before setting them up. A button for a
+  /// provider that isn't on yet then says so instead of opening a broken
+  /// page. Always off in a normal build.
+  static const bool previewMode = bool.fromEnvironment('PREVIEW_SIGN_IN_CHOICE');
+
   /// The first sign-in page to show: this one when Google or Facebook is
   /// switched on (as last checked), otherwise the email form.
   static Future<Widget> entry() async {
     if (!SocialAuthService.isSupportedPlatform) return const AuthScreen();
+    if (previewMode) {
+      return const SignInChoiceScreen(
+        initialProviders: {SocialProvider.google, SocialProvider.facebook},
+      );
+    }
     final enabled = await SocialAuthService.instance.cachedEnabled();
     if (enabled.isEmpty) return const AuthScreen();
     return SignInChoiceScreen(initialProviders: enabled);
@@ -53,6 +65,9 @@ class _SignInChoiceScreenState extends State<SignInChoiceScreen>
   String? _errorMessage;
   Timer? _resumeTimer;
 
+  /// Preview mode only: what Supabase really has switched on.
+  Set<SocialProvider> _reallyEnabled = const {};
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +88,10 @@ class _SignInChoiceScreenState extends State<SignInChoiceScreen>
   Future<void> _refreshProviders() async {
     final fresh = await SocialAuthService.instance.refreshEnabled();
     if (!mounted || fresh == null) return;
+    if (SignInChoiceScreen.previewMode) {
+      setState(() => _reallyEnabled = fresh);
+      return;
+    }
     if (fresh.isEmpty) {
       // Only while this page is the one showing (not under the email form).
       if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
@@ -89,6 +108,12 @@ class _SignInChoiceScreenState extends State<SignInChoiceScreen>
 
   Future<void> _choose(SocialProvider provider) async {
     if (_busy) return;
+    if (SignInChoiceScreen.previewMode && !_reallyEnabled.contains(provider)) {
+      setState(() => _errorMessage =
+          'Preview only: ${provider.label} sign-in is not switched on in Supabase yet. '
+          'See README "Google and Facebook sign-in".');
+      return;
+    }
     HapticFeedback.mediumImpact();
     setState(() {
       _loading = provider;
@@ -302,6 +327,15 @@ class _SignInChoiceScreenState extends State<SignInChoiceScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (SignInChoiceScreen.previewMode) ...[
+              const InlineBanner(
+                message: 'Preview mode: this page is shown even though Google and Facebook '
+                    'may not be switched on in Supabase yet.',
+                tone: BannerTone.neutral,
+                icon: Icons.visibility_rounded,
+              ),
+              const SizedBox(height: 16),
+            ],
             if (_errorMessage != null) ...[
               InlineBanner(message: _errorMessage!, tone: BannerTone.danger),
               const SizedBox(height: 16),
