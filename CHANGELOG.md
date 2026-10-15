@@ -735,6 +735,7 @@ You showed an app-setup page (a title, a short explanation, then large rounded c
 - **Checks:** `flutter analyze` 0 errors / 0 warnings; `flutter test` 34 pass; screenshots of the new page reviewed (390 px light/dark, 320 px, Google only, 1280 px wide, and the email form opened from it), no layout problems.
 - **Why you don't see the page yet:** you tested in Chrome and saw only the email form. That is expected: Google and Facebook are still switched off in Supabase (checked again: `google: false, facebook: false`), so the app skips the page. It appears once the README steps are done.
 - **Web fix found while checking that:** on the web, Google/Facebook sign-in would have returned to Supabase's Site URL instead of the page being tested. It now returns to the address the app runs on (`Uri.base.origin`). README step 3 says which address to add for testing in Chrome.
+- **Preview switch:** `flutter run --dart-define=PREVIEW_SIGN_IN_CHOICE=true` shows the page before Google/Facebook are set up, so you can see it now. It carries a "Preview mode" note, and a provider that isn't switched on just says so. It is a build-time switch that is off unless you type it, so the APK you publish can never be in preview mode.
 
 ---
 
