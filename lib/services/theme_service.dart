@@ -100,21 +100,26 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.shadow,
   });
 
-  // Brand: the app icon's navy and gold. Royal blue is the interactive
-  // colour (buttons, links, selection), deep navy anchors the hero cards,
-  // and gold marks points, ranks and achievements.
+  // Brand: the CrimiReview logo -- black, red and white. The logo's red is
+  // the interactive colour (buttons, links, tabs), the hero cards go from
+  // that red to the logo's black, and greys are neutral (no blue tint) so
+  // black and white read as in the logo. Gold still marks points, ranks
+  // and achievements; green / amber / red still mean right / so-so / wrong.
+  //
+  // Contrast (WCAG): white on primary 5.3:1 (light) and 4.6:1 (dark);
+  // primary text on the page background 4.9:1 (light) and 4.3:1 (dark).
   static const light = AppPalette(
-    background: Color(0xFFF4F6FB),
+    background: Color(0xFFF6F6F7),
     surface: Color(0xFFFFFFFF),
-    surfaceAlt: Color(0xFFEEF1F7),
-    border: Color(0xFFE2E6EF),
-    textPrimary: Color(0xFF0D1530),
-    textSecondary: Color(0xFF556079),
-    textTertiary: Color(0xFF8F98AE),
-    primary: Color(0xFF2449D8),
-    primaryStrong: Color(0xFF1A36A8),
-    primarySoft: Color(0xFFE8EDFD),
-    onPrimarySoft: Color(0xFF1A36A8),
+    surfaceAlt: Color(0xFFF0F0F2),
+    border: Color(0xFFE4E4E7),
+    textPrimary: Color(0xFF111113),
+    textSecondary: Color(0xFF5B5B63),
+    textTertiary: Color(0xFF93939B),
+    primary: Color(0xFFD7101F),
+    primaryStrong: Color(0xFFA8000F),
+    primarySoft: Color(0xFFFDEBED),
+    onPrimarySoft: Color(0xFFA8000F),
     success: Color(0xFF12A150),
     successSoft: Color(0xFFE6F6ED),
     warning: Color(0xFFD98506),
@@ -128,25 +133,25 @@ class AppPalette extends ThemeExtension<AppPalette> {
     gold: Color(0xFFC08A0E),
     goldSoft: Color(0xFFFBF3DC),
     heroGradient: LinearGradient(
-      colors: [Color(0xFF2C55E8), Color(0xFF13286E)],
+      colors: [Color(0xFFC80E1C), Color(0xFF1A0204)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
-    shadow: Color(0x140D1530),
+    shadow: Color(0x14111113),
   );
 
   static const dark = AppPalette(
-    background: Color(0xFF090C15),
-    surface: Color(0xFF121724),
-    surfaceAlt: Color(0xFF1A2031),
-    border: Color(0xFF242B3F),
-    textPrimary: Color(0xFFF1F4FA),
-    textSecondary: Color(0xFFA2ABC0),
-    textTertiary: Color(0xFF6A7389),
-    primary: Color(0xFF6E8BFF),
-    primaryStrong: Color(0xFF4F6EF0),
-    primarySoft: Color(0xFF17224A),
-    onPrimarySoft: Color(0xFFC0CCFF),
+    background: Color(0xFF0A0A0B),
+    surface: Color(0xFF151517),
+    surfaceAlt: Color(0xFF1E1E21),
+    border: Color(0xFF2A2A2E),
+    textPrimary: Color(0xFFF4F4F5),
+    textSecondary: Color(0xFFA6A6AE),
+    textTertiary: Color(0xFF6E6E76),
+    primary: Color(0xFFE8192C),
+    primaryStrong: Color(0xFFC20F1F),
+    primarySoft: Color(0xFF3A0D12),
+    onPrimarySoft: Color(0xFFFFB3B9),
     success: Color(0xFF2FCB72),
     successSoft: Color(0xFF11291C),
     warning: Color(0xFFF5A524),
@@ -160,7 +165,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     gold: Color(0xFFF2C14E),
     goldSoft: Color(0xFF2C2512),
     heroGradient: LinearGradient(
-      colors: [Color(0xFF3459E6), Color(0xFF111F55)],
+      colors: [Color(0xFFB00D19), Color(0xFF120203)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -260,23 +265,23 @@ class AppSpace {
 // use `context.palette` instead.
 // ----------------------------------------------------------------
 class CrimiColors {
-  static const Color deepNavy = Color(0xFF090C15);
-  static const Color navyBlue = Color(0xFF121724);
-  static const Color darkNavy = Color(0xFF090C15);
-  static const Color purple = Color(0xFF2449D8);
-  static const Color lightPurple = Color(0xFF6E8BFF);
-  static const Color darkPurple = Color(0xFF1A36A8);
+  static const Color deepNavy = Color(0xFF0A0A0B);
+  static const Color navyBlue = Color(0xFF151517);
+  static const Color darkNavy = Color(0xFF0A0A0B);
+  static const Color purple = Color(0xFFD7101F);
+  static const Color lightPurple = Color(0xFFE8192C);
+  static const Color darkPurple = Color(0xFFA8000F);
   static const Color gold = Color(0xFFC08A0E);
   static const Color emerald = Color(0xFF12A150);
 
   static const LinearGradient goldGradient = LinearGradient(
-    colors: [Color(0xFF2C55E8), Color(0xFF13286E)],
+    colors: [Color(0xFFC80E1C), Color(0xFF1A0204)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
   static const LinearGradient purpleGradient = goldGradient;
   static const LinearGradient backgroundGradient = LinearGradient(
-    colors: [Color(0xFF090C15), Color(0xFF121724)],
+    colors: [Color(0xFF0A0A0B), Color(0xFF151517)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -284,16 +289,16 @@ class CrimiColors {
 }
 
 class AppColors {
-  static const Color primary = Color(0xFF2449D8);
-  static const Color primaryLight = Color(0xFF6E8BFF);
-  static const Color primaryDark = Color(0xFF1A36A8);
+  static const Color primary = Color(0xFFD7101F);
+  static const Color primaryLight = Color(0xFFE8192C);
+  static const Color primaryDark = Color(0xFFA8000F);
 
-  static const Color accent = Color(0xFF2449D8);
-  static const Color accentLight = Color(0xFF6E8BFF);
-  static const Color accentDark = Color(0xFF1A36A8);
+  static const Color accent = Color(0xFFD7101F);
+  static const Color accentLight = Color(0xFFE8192C);
+  static const Color accentDark = Color(0xFFA8000F);
 
   static const Color secondary = Color(0xFF0B8FD9);
-  static const Color tertiary = Color(0xFF8F98AE);
+  static const Color tertiary = Color(0xFF93939B);
 
   static const Color success = Color(0xFF12A150);
   static const Color successLight = Color(0xFF2FCB72);
@@ -301,26 +306,26 @@ class AppColors {
   static const Color errorLight = Color(0xFFF26D70);
   static const Color warning = Color(0xFFD98506);
 
-  static const Color darkBg = Color(0xFF090C15);
-  static const Color darkCard = Color(0xFF121724);
-  static const Color darkSurface = Color(0xFF1A2031);
-  static const Color lightBg = Color(0xFFF4F6FB);
+  static const Color darkBg = Color(0xFF0A0A0B);
+  static const Color darkCard = Color(0xFF151517);
+  static const Color darkSurface = Color(0xFF1E1E21);
+  static const Color lightBg = Color(0xFFF6F6F7);
   static const Color lightCard = Colors.white;
-  static const Color lightSurface = Color(0xFFEEF1F7);
+  static const Color lightSurface = Color(0xFFF0F0F2);
 
-  static const Color textDark = Color(0xFF0D1530);
-  static const Color textLight = Color(0xFFF1F4FA);
-  static const Color textMuted = Color(0xFF8F98AE);
+  static const Color textDark = Color(0xFF111113);
+  static const Color textLight = Color(0xFFF4F4F5);
+  static const Color textMuted = Color(0xFF93939B);
 
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF2C55E8), Color(0xFF13286E)],
+    colors: [Color(0xFFC80E1C), Color(0xFF1A0204)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
   static const LinearGradient accentGradient = primaryGradient;
   static const LinearGradient goldGradient = primaryGradient;
   static const LinearGradient darkGradient = LinearGradient(
-    colors: [Color(0xFF121724), Color(0xFF090C15)],
+    colors: [Color(0xFF151517), Color(0xFF0A0A0B)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -346,7 +351,7 @@ class AppColors {
   };
 
   static Color subjectColor(String id) =>
-      subjectColors[id] ?? const Color(0xFF2449D8);
+      subjectColors[id] ?? const Color(0xFFD7101F);
 
   static final Map<String, LinearGradient> subjectGradients = {
     for (final e in subjectColors.entries)
@@ -614,7 +619,7 @@ class AppTheme {
         elevation: 0,
         backgroundColor: isDark ? p.surfaceAlt : p.textPrimary,
         contentTextStyle: text.bodyMedium?.copyWith(color: isDark ? p.textPrimary : Colors.white),
-        actionTextColor: isDark ? p.primary : const Color(0xFF9DB2FF),
+        actionTextColor: isDark ? p.primary : const Color(0xFFFF8A94),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpace.radiusMd)),
       ),
       listTileTheme: ListTileThemeData(

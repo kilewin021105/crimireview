@@ -65,11 +65,11 @@ Layer summary:
 
 The whole UI (student app and admin panel) is built from one design system, introduced in the 2026-10 redesign:
 
-- **Brand:** the app icon's navy and gold. Royal blue is the interactive colour (buttons, links, selection), deep navy anchors the hero cards, gold marks points, ranks and achievements. Each board subject has its own accent colour (`AppColors.subjectColors`).
+- **Brand:** the logo's black, red and white (since Session 48). The logo's red (`#D7101F`, dark mode `#E8192C`) is the interactive colour (buttons, links, tabs). Hero cards go from that red to black, greys are neutral, and the splash screen is the logo's black with a red glow. A quiz answer that has been tapped but not yet checked shows in ink (black/white), never red, so it can't be mistaken for "wrong". Gold still marks points, ranks and achievements; green / amber / red still mean right / so-so / wrong. Each board subject keeps its own accent colour (`AppColors.subjectColors`).
 - **Tokens:** `lib/services/theme_service.dart` defines `AppPalette` (light and dark colour sets), spacing/radii (`AppSpace`) and the full Material 3 theme. Screens read colours with `context.palette` instead of hard-coding them, so dark mode comes from one place.
 - **Typeface:** Plus Jakarta Sans, bundled in `assets/fonts/` (SIL Open Font License), so text renders correctly even on a first launch offline.
 - **Components:** `lib/widgets/ui/` — import `widgets/ui/ui.dart` to get `AppCard`, `GradientCard`, `StatTile`, `PageHeader`/`SectionHeader`/`AppTopBar`, `PrimaryButton`/`SecondaryButton`, `AppTextField`, `CodeInput`, `PillTabs`, `Pill`, `IconBadge`, `InlineBanner`, `AppListGroup`, `RingProgress`, `AppProgressBar`, `EmptyState`, `LoadingView`, `UserAvatar`, `showConfirmDialog` and `showAppSnack`.
-- **Logo:** `lib/widgets/app_logo.dart` renders the real logo (`assets/images/logo_mark.png`, cropped from the app icon) and the "CrimiReview" wordmark.
+- **Logo:** the source is `assets/icon/logo_original.png`. `lib/widgets/app_logo.dart` shows it on a black rounded tile (`assets/images/logo_mark.png`, cropped close to the artwork) next to the wordmark ("Crimi" in ink, "Review" in red, like the logo's C and R). App icons for Android, iOS, Windows and macOS come from `assets/icon/app_icon.png` via `dart run flutter_launcher_icons` (settings in `pubspec.yaml`). Web icons, the favicon and the website's logo are made from the same source.
 
 ## Setup on New Laptop (Windows)
 

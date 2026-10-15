@@ -173,6 +173,17 @@ List<Shot> screenCatalog() => [
           segmentIndex: 0,
         ),
       ),
+      // An answer tapped but not checked yet: ink, not red.
+      Shot(
+        'quiz_selected',
+        (_) => QuizScreen(
+          subject: _subject,
+          questions: sampleQuestions(),
+          difficulty: Difficulty.easy,
+          segmentIndex: 0,
+        ),
+        act: (t) => tapText(t, 'Self-defense'),
+      ),
       Shot(
         'quiz_answered',
         (_) => QuizScreen(

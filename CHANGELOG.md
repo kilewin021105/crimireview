@@ -777,6 +777,47 @@ You asked whether every feature works offline. I checked: studying works offline
 
 ---
 
+## 2026-10-15 — Session 48: new logo, and the app's colours now follow it
+
+You gave a new logo (white C, red R, graduation cap, scales of justice and an open book, on black) and asked for it everywhere: the app, its colours, the website and anything else that shows the logo. App changes are on branch `new-logo` with their own pull request; the website change is on a `new-logo` branch in `crimireview-landing` with its own pull request. Nothing is live until you merge.
+
+**Logo files** (all made from your image by one script, so they match exactly):
+- `assets/icon/logo_original.png`: your logo, kept as the master copy.
+- **App icons:** `assets/icon/app_icon.png` + `app_icon_foreground.png`, then `dart run flutter_launcher_icons` regenerated the Android icons (all sizes, plus the adaptive icon on a black background), iOS (all sizes) and, for the first time, **Windows** (`app_icon.ico`) and **macOS**. Those two still had Flutter's default icon.
+  - Android launchers cut icons to a circle or rounded square. The adaptive icon keeps a 20% margin, so the whole logo, book corners included, stays inside the safe area: the farthest point is at 0.283 of the size, the limit is 0.306. Checked with a simulated circle and rounded square.
+- **In-app logo:** `assets/images/logo_mark.png` (cropped close to the artwork), shown by `AppLogo` on a black rounded tile; it used to be a white tile.
+- **Web app:** `web/favicon.png`, `web/icons/Icon-192/512` and the maskable versions (scaled so a round crop doesn't cut the logo); `manifest.json` colours are now black.
+- **Removed:** the old navy/gold logo files `logo_original.jpg`, `graduation_cap.png`, `graduation_cap_splash.png`, `splash_logo.png`. Nothing used them, and they are still in git history.
+
+**Colours: navy, blue and gold become the logo's black, red and white** (`AppPalette` in `theme_service.dart`; every screen reads from it):
+- The logo's red is the interactive colour (buttons, links, tabs): `#D7101F` in light mode and `#E8192C` in dark mode. Both were checked for readability: white text on them scores 5.3:1 and 4.6:1.
+- Hero cards (dashboard goal card, sign-in header, admin question-bank card) go from that red to black.
+- Greys are neutral now (the old ones were tinted blue), so black and white look like the logo. Dark mode is near-black.
+- Unchanged on purpose: gold for points and achievements, green / amber / red for right / so-so / wrong, blue for information, and each subject's own colour.
+- The wordmark is "Crimi" in ink and "Review" in red, like the logo's white C and red R.
+- **Splash and launch screens:**
+  - The in-app splash is now the logo's black with a soft red glow.
+  - The phone's own launch screen (Android, including Android 12+) is black too, so there is no jump in colour when the app starts. It used to be navy.
+
+**Places where red would have meant the wrong thing, fixed:**
+- **Quiz:** a tapped answer that hasn't been checked yet showed in the brand colour. In red it would look like a wrong answer before checking. It now shows in ink (black, or white in dark mode); red stays for wrong answers only.
+- **Topic mastery bar** under each answer used the brand colour, so a good 72% looked red. It now uses green / amber / red by level, like every other score.
+- Achievement progress is now gold (like all achievements). "Subjects attempted" on the results screen is now neutral blue, so it doesn't read as a warning.
+- Leftover fixed colours (navy shadow on the logo tile, navy tick on the week strip, gold goal ring, blue first onboarding page, blue snackbar action) were switched to the new palette.
+
+**Website** (`crimireview-landing`, branch `new-logo`):
+- New `logo.png`, `favicon.png` and an `apple-touch-icon.png` (iPhone home-screen icon).
+- The violet accent became the logo's red, and the navy background became black. The mock phone screenshot uses the same colours.
+- A `theme-color` tag makes the phone browser bar black.
+- Merging that pull request publishes it through Vercel as before.
+
+**Checks:**
+- `flutter analyze`: 0 errors / 0 warnings. `flutter test`: 34 pass.
+- All 70 screens re-rendered in light and dark; no layout problems. `quiz_answered` still fails only for the old test-only sound reason.
+- The website was rendered in Chrome.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
@@ -788,6 +829,8 @@ You asked whether every feature works offline. I checked: studying works offline
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 48: `assets/icon/logo_original.png` (new logo master); Windows and macOS app icons.
 
 Session 46: `lib/screens/sign_in_choice_screen.dart`, `lib/screens/sign_in_completion.dart`.
 
@@ -804,3 +847,5 @@ Session 41 (redesign): `lib/widgets/ui/` (design-system components), `assets/fon
 `lib/screens/admin/admin_document_generation_screen.dart`, `lib/services/document_generation_service.dart`, `supabase/functions/generate-questions-from-document/`, `supabase_document_generation.sql` — the PDF → AI generation path (added Session 12), removed in Session 28.
 
 Session 41: `lib/widgets/animated_widgets.dart`, `lib/widgets/streak_widget.dart`, `lib/widgets/sync_status_indicator.dart` (unused by any screen), `test/fonts/` (Poppins, replaced by the bundled app font).
+
+Session 48: `assets/icon/logo_original.jpg`, `graduation_cap.png`, `graduation_cap_splash.png`, `splash_logo.png` (the old navy/gold logo artwork; nothing used them).

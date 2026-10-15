@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launch splash: plain brand navy, matching the first frame of the
+<!-- Launch splash: plain black (the logo's background), matching the first frame of the
      in-app SplashScreen (lib/screens/splash_screen.dart). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/launch_background" />

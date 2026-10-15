@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#6C5CE7</color>
-    <!-- Brand navy (the dark end of the app's hero gradient). Shown by the
-         system while the app starts, so there's no white flash before the
-         in-app splash screen. -->
-    <color name="launch_background">#13286E</color>
+    <color name="ic_launcher_background">#000000</color>
+    <!-- Black, the logo's own background. Shown by the system while the
+         app starts, so there's no white flash before the in-app splash. -->
+    <color name="launch_background">#000000</color>
 </resources>

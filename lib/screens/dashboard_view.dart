@@ -255,7 +255,8 @@ class _DashboardViewState extends State<DashboardView> with WidgetsBindingObserv
     final ratio = _dailyGoal == 0 ? 0.0 : answeredToday / _dailyGoal;
     final reached = answeredToday >= _dailyGoal;
     final left = _dailyGoal - answeredToday;
-    const accent = Color(0xFFFFC266);
+    // White ring on the red-to-black card, like the logo's white C.
+    const accent = Colors.white;
     final soft = Colors.white.withValues(alpha: 0.72);
 
     return GradientCard(
@@ -1105,7 +1106,8 @@ class _WeekStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = context.textStyles;
-    const navy = Color(0xFF13286E);
+    // Tick in the logo's deep red on the white day dots.
+    const tick = Color(0xFFA8000F);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -1135,7 +1137,7 @@ class _WeekStrip extends StatelessWidget {
                         ? Border.all(color: Colors.white, width: 1.6)
                         : null,
                   ),
-                  child: d.studied ? const Icon(Icons.check_rounded, size: 18, color: navy) : null,
+                  child: d.studied ? const Icon(Icons.check_rounded, size: 18, color: tick) : null,
                 ),
               ],
             ),
