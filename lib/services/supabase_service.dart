@@ -124,9 +124,21 @@ class SupabaseService {
     return response;
   }
 
+  /// Signs out on this phone, then tells the server.
+  ///
+  /// Supabase removes the login from the phone first and only then calls
+  /// the server. Offline, that call failed and the error stopped the
+  /// screens from going back to sign-in, so "Sign out" seemed to do
+  /// nothing although the student was already signed out. Now a failed
+  /// or slow (5 s) server call is skipped: the login is gone from the
+  /// phone either way, and the session token on the server simply expires.
   Future<void> signOut() async {
     if (!_isInitialized) return;
-    await client.auth.signOut();
+    try {
+      await client.auth.signOut().timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('Sign-out: server not reached, signed out on this phone only ($e)');
+    }
   }
 
   Future<void> resetPassword(String email) async {

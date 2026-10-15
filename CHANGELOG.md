@@ -739,6 +739,25 @@ You showed an app-setup page (a title, a short explanation, then large rounded c
 
 ---
 
+## 2026-10-15 — Session 47: three offline fixes
+
+You asked whether every feature works offline. I checked: studying works offline (quiz, Daily Challenge, flashcards, modules, dashboard, progress, achievements, profile edits); sign-in, change password, the leaderboard and the admin panel need internet. I also found three offline problems, which you asked me to fix:
+
+1. **Sign out did nothing visible while offline.** Supabase removes the login from the phone first, then calls the server. Offline, that call failed and the error stopped the app before it went back to the sign-in page. The student was really signed out, but the app looked frozen on Settings. `SupabaseService.signOut()` now skips a failed or slow (5-second) server call. The phone is signed out either way, and the token on the server simply expires.
+2. **An admin who opened the app offline got the student screens.** The admin check needs the server, and a failed check counted as "student". The app now remembers the last role the server confirmed **for that account** (`admin_role_cache_v1`) and uses it when the server can't be reached. A role saved for a different account is ignored. This only decides which screens open: every admin action is still checked by the database's own rules (`is_admin()`), so a wrong value on the phone can't unlock anything.
+3. **Start-up could hang on Wi-Fi without internet.** Before the first screen appeared, the app waited for the admin check and for uploading results saved offline. Each server call can take up to 25 seconds to give up. Both now run in the background: the admin check starts from the saved role, and the splash screen waits at most 3 more seconds for the server's answer. Pending results upload after the app opens, and the top banner shows the sync as before.
+
+**Checks:**
+- `flutter analyze`: 0 errors / 0 warnings. `flutter test`: 34 pass.
+- A throwaway test with the server unreachable (every request fails in the test environment) confirmed 3/3:
+  - an admin falls back to their saved role;
+  - another account's saved role is ignored;
+  - sign-out no longer errors and the phone is signed out.
+  The old sign-out error is visible in that run's log. The test was deleted afterwards because it needs the live project's settings.
+- Not tested on a phone in airplane mode yet.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/question.dart';
@@ -46,6 +48,12 @@ class AdminService extends ChangeNotifier {
   StreamSubscription<AuthState>? _authSub;
   Object? _lastError;
 
+  /// The role check started at app start-up, still running or finished.
+  Future<bool>? _startupCheck;
+
+  /// Last role the server confirmed, with the account it belongs to.
+  static const String _roleCacheKey = 'admin_role_cache_v1';
+
   /// True once a role check has completed at least once (including a failed
   /// one). Lets the UI distinguish "still loading" from "confirmed student".
   bool get isReady => _roleChecked;
@@ -55,37 +63,90 @@ class AdminService extends ChangeNotifier {
 
   Object? get lastError => _lastError;
 
-  /// Call once at app start-up (after [SupabaseService.initialize]). Resolves
-  /// the current role and then keeps it in sync with sign-in/sign-out.
+  /// Call once at app start-up (after [SupabaseService.initialize]). Starts
+  /// from the role last confirmed for this account on this phone, checks the
+  /// server in the background, and then keeps it in sync with sign-in/out.
+  ///
+  /// It no longer waits for the server: on Wi-Fi with no internet that wait
+  /// could hold the app on a blank screen for up to 25 seconds. The splash
+  /// screen asks [resolvedRole], which waits a few seconds at most.
   Future<void> init() async {
     if (!SupabaseService.isInitialized) return;
-    await refreshRole();
+    final cached = await _cachedRoleFor(SupabaseService.instance.userId);
+    if (cached != null) _setAdmin(cached);
+    _startupCheck = refreshRole();
     _authSub ??= SupabaseService.instance.authStateChanges.listen((_) {
       unawaited(refreshRole());
     });
   }
 
+  /// The role to route by at start-up: the server's answer if it arrives
+  /// within [wait], otherwise the last confirmed one (offline).
+  Future<bool> resolvedRole({Duration wait = const Duration(seconds: 3)}) async {
+    final check = _startupCheck;
+    if (check == null) return isAdmin;
+    try {
+      return await check.timeout(wait);
+    } on TimeoutException {
+      return isAdmin;
+    }
+  }
+
   /// Re-resolves [isAdmin] against the database. Call after sign-in/sign-out
   /// and after promoting/demoting a user, so a stale cached role can never
   /// hide or wrongly expose the admin screens.
+  ///
+  /// When the server can't be reached (offline), the role last confirmed
+  /// for this same account is used, so an admin opening the app offline
+  /// still gets the admin panel instead of the student screens. This only
+  /// chooses which screens open: every admin action is still checked by the
+  /// database itself (`is_admin()` in its row-level security), so a wrong
+  /// value on the phone can't unlock anything.
   Future<bool> refreshRole() async {
     if (!SupabaseService.isInitialized || !SupabaseService.instance.isLoggedIn) {
       _roleChecked = true;
       _setAdmin(false);
       return false;
     }
+    final userId = SupabaseService.instance.userId;
     try {
       final result = await SupabaseService.instance.client.rpc('is_admin');
       _lastError = null;
       _roleChecked = true;
       _setAdmin(result == true);
+      await _saveRole(userId, _isAdmin);
       return _isAdmin;
     } catch (e) {
       debugPrint('AdminService.refreshRole failed: $e');
       _lastError = e;
       _roleChecked = true;
-      _setAdmin(false);
-      return false;
+      _setAdmin(await _cachedRoleFor(userId) ?? false);
+      return _isAdmin;
+    }
+  }
+
+  Future<bool?> _cachedRoleFor(String? userId) async {
+    if (userId == null) return null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_roleCacheKey);
+      if (raw == null) return null;
+      final saved = jsonDecode(raw) as Map<String, dynamic>;
+      // Another account's role never applies to this one.
+      if (saved['userId'] != userId) return null;
+      return saved['isAdmin'] == true;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveRole(String? userId, bool isAdmin) async {
+    if (userId == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_roleCacheKey, jsonEncode({'userId': userId, 'isAdmin': isAdmin}));
+    } catch (e) {
+      debugPrint('AdminService role cache not saved: $e');
     }
   }
 
