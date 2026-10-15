@@ -135,12 +135,18 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
       child: Scaffold(
+        // Same colour as the form sheet, so the space below a short form
+        // simply continues the sheet.
+        backgroundColor: p.background,
         body: SingleChildScrollView(
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Brand header
+              // Brand header: at least its usual height, taller when the
+              // title wraps (large system text, narrow phones) instead of
+              // being cut off under the form sheet.
               Container(
-                height: headerHeight,
+                constraints: BoxConstraints(minHeight: headerHeight),
                 width: double.infinity,
                 decoration: BoxDecoration(gradient: p.heroGradient),
                 child: Stack(
@@ -156,7 +162,8 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
                       child: _circle(140, Colors.white.withValues(alpha: 0.05)),
                     ),
                     Padding(
-                      padding: EdgeInsets.fromLTRB(24, topInset + (isSmall ? 20 : 30), 24, 0),
+                      // Bottom: room for the sheet's 28 px overlap below.
+                      padding: EdgeInsets.fromLTRB(24, topInset + (isSmall ? 20 : 30), 24, 28 + 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -199,148 +206,152 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
                 ),
               ),
 
-              // Form sheet
-              Container(
-                margin: EdgeInsets.only(top: headerHeight - 28),
-                constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height - headerHeight + 28,
-                ),
-                decoration: BoxDecoration(
-                  color: p.background,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSpace.radiusXl)),
-                ),
-                child: ContentWidth(
-                  maxWidth: 480,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      isSmall ? 18 : 24,
-                      24,
-                      isSmall ? 18 : 24,
-                      24 + MediaQuery.of(context).padding.bottom,
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          PillTabs(
-                            labels: const ['Sign in', 'Create account'],
-                            index: _isLogin ? 0 : 1,
-                            onChanged: (i) => _toggleMode(i == 0),
-                          ),
-                          const SizedBox(height: 24),
-                          if (!_isLogin) ...[
-                            _buildNameFields(),
-                            const SizedBox(height: 16),
-                          ],
-                          AppTextField(
-                            controller: _emailController,
-                            label: 'Email',
-                            hint: 'you@example.com',
-                            icon: Icons.mail_outline_rounded,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            autofillHints: const [AutofillHints.email],
-                            validator: (v) {
-                              if (v!.isEmpty) return 'Enter your email';
-                              if (!v.contains('@')) return 'Invalid email';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            controller: _passwordController,
-                            label: 'Password',
-                            hint: _isLogin ? 'Enter your password' : '8 to 16 characters',
-                            icon: Icons.lock_outline_rounded,
-                            obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.done,
-                            autofillHints: [
-                              _isLogin ? AutofillHints.password : AutofillHints.newPassword,
+              // Form sheet, pulled up 28 px so its rounded top overlaps the
+              // header.
+              Transform.translate(
+                offset: const Offset(0, -28),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: p.background,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(AppSpace.radiusXl)),
+                  ),
+                  child: ContentWidth(
+                    maxWidth: 480,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        isSmall ? 18 : 24,
+                        24,
+                        isSmall ? 18 : 24,
+                        24 + MediaQuery.of(context).padding.bottom,
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            PillTabs(
+                              labels: const ['Sign in', 'Create account'],
+                              index: _isLogin ? 0 : 1,
+                              onChanged: (i) => _toggleMode(i == 0),
+                            ),
+                            const SizedBox(height: 24),
+                            if (!_isLogin) ...[
+                              _buildNameFields(),
+                              const SizedBox(height: 16),
                             ],
-                            onChanged: (v) => setState(() => _password = v),
-                            onSubmitted: (_) {
-                              if (!_isLoading) _submit();
-                            },
-                            suffix: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 20,
-                              ),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                            ),
-                            validator: (v) {
-                              if (v!.isEmpty) return 'Enter your password';
-                              if (!_isLogin) {
-                                final result = PasswordStrengthChecker.check(v);
-                                if (!result.hasMinLength) return 'At least 8 characters required';
-                                if (!result.hasMaxLength) return 'Max 16 characters allowed';
-                                if (!result.hasUppercase) return 'Add an uppercase letter';
-                                if (!result.hasLowercase) return 'Add a lowercase letter';
-                                if (!result.hasNumber) return 'Add a number';
-                              } else {
-                                if (v.length < 6) return 'Min 6 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          if (_isLogin)
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const ForgotPasswordScreen(),
-                                    ),
-                                  );
-                                },
-                                child: const Text('Forgot password?'),
-                              ),
-                            )
-                          else
-                            PasswordStrengthIndicator(
-                              password: _password,
-                              showRequirements: true,
-                            ),
-                          SizedBox(height: _isLogin ? 8 : 20),
-                          if (_errorMessage != null) ...[
-                            InlineBanner(
-                              message: _errorMessage!,
-                              tone: isSuccessMessage ? BannerTone.success : BannerTone.danger,
+                            AppTextField(
+                              controller: _emailController,
+                              label: 'Email',
+                              hint: 'you@example.com',
+                              icon: Icons.mail_outline_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [AutofillHints.email],
+                              validator: (v) {
+                                if (v!.isEmpty) return 'Enter your email';
+                                if (!v.contains('@')) return 'Invalid email';
+                                return null;
+                              },
                             ),
                             const SizedBox(height: 16),
-                          ],
-                          PrimaryButton(
-                            label: _isLogin ? 'Sign in' : 'Create account',
-                            loading: _isLoading || isCompletingSignIn,
-                            onPressed: _submit,
-                          ),
-                          const SizedBox(height: 20),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                _isLogin ? "Don't have an account? " : 'Already have an account? ',
-                                style: text.bodyMedium,
+                            AppTextField(
+                              controller: _passwordController,
+                              label: 'Password',
+                              hint: _isLogin ? 'Enter your password' : '8 to 16 characters',
+                              icon: Icons.lock_outline_rounded,
+                              obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: [
+                                _isLogin ? AutofillHints.password : AutofillHints.newPassword,
+                              ],
+                              onChanged: (v) => setState(() => _password = v),
+                              onSubmitted: (_) {
+                                if (!_isLoading) _submit();
+                              },
+                              suffix: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  size: 20,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _obscurePassword = !_obscurePassword),
                               ),
-                              InkWell(
-                                onTap: () => _toggleMode(!_isLogin),
-                                borderRadius: BorderRadius.circular(6),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                                  child: Text(
-                                    _isLogin ? 'Create one' : 'Sign in',
-                                    style: text.labelLarge?.copyWith(color: p.primary),
+                              validator: (v) {
+                                if (v!.isEmpty) return 'Enter your password';
+                                if (!_isLogin) {
+                                  final result = PasswordStrengthChecker.check(v);
+                                  if (!result.hasMinLength) return 'At least 8 characters required';
+                                  if (!result.hasMaxLength) return 'Max 16 characters allowed';
+                                  if (!result.hasUppercase) return 'Add an uppercase letter';
+                                  if (!result.hasLowercase) return 'Add a lowercase letter';
+                                  if (!result.hasNumber) return 'Add a number';
+                                } else {
+                                  if (v.length < 6) return 'Min 6 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                            if (_isLogin)
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const ForgotPasswordScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text('Forgot password?'),
+                                ),
+                              )
+                            else
+                              PasswordStrengthIndicator(
+                                password: _password,
+                                showRequirements: true,
+                              ),
+                            SizedBox(height: _isLogin ? 8 : 20),
+                            if (_errorMessage != null) ...[
+                              InlineBanner(
+                                message: _errorMessage!,
+                                tone: isSuccessMessage ? BannerTone.success : BannerTone.danger,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            PrimaryButton(
+                              label: _isLogin ? 'Sign in' : 'Create account',
+                              loading: _isLoading || isCompletingSignIn,
+                              onPressed: _submit,
+                            ),
+                            const SizedBox(height: 20),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  _isLogin
+                                      ? "Don't have an account? "
+                                      : 'Already have an account? ',
+                                  style: text.bodyMedium,
+                                ),
+                                InkWell(
+                                  onTap: () => _toggleMode(!_isLogin),
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                                    child: Text(
+                                      _isLogin ? 'Create one' : 'Sign in',
+                                      style: text.labelLarge?.copyWith(color: p.primary),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

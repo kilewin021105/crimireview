@@ -26,7 +26,7 @@ App start
 
 ### Main Navigation
 
-Five bottom tabs (students):
+Five tabs (students): a bottom bar on phones, a side navigation rail on tablets in landscape and computers (840 px wide and up); the Home dashboard switches to two columns from about 1000 px. Text follows the phone's text-size setting up to 130%.
 
 - **Home** (`dashboard_view.dart`): greeting, streak and leaderboard; **today's goal** (questions answered today against a goal the student picks: 10/20/30/50) with this week's study days; **continue learning** (most recent subject at the level and segment the student is on, one tap to start); Daily Challenge with a "done today" state; totals; board-exam readiness from the ML model; **topics to review** (lowest BKT mastery); shortcuts; study modules.
 - **Quiz:** subjects → difficulty lock/unlock → study notes → quiz → results. Item selection goes through `QuestionSelectionService` (unseen-first, weighted toward weak topics per the BKT model in `MasteryService`) so a retry never repeats the same set.
@@ -138,6 +138,11 @@ flutter test
 flutter test test/screenshots --dart-define=SHOTS=build/screenshots
 # ...or only some screens:
 flutter test test/screenshots --dart-define=SHOTS=build/screenshots --dart-define=ONLY=home,quiz
+# Responsive check: every screen on 12 devices (small/large phones, landscape,
+# 7-12 inch tablets, desktop, and 130% system text); prints any layout problem
+flutter test test/screenshots --dart-define=SWEEP=true
+# ...add --dart-define=SHOTS=<dir> to save images of problems (ALL_IMAGES=true
+# for every render) and --dart-define=DETAILS=true for which widget overflowed
 
 # Run in release mode on connected device
 flutter run --release

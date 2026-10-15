@@ -191,25 +191,28 @@ class _SignInChoiceScreenState extends State<SignInChoiceScreen>
         // phone is too short for everything.
         body: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
+            // At least one screen tall, with the explanation at the top and
+            // the choices at the bottom; taller content simply scrolls. (No
+            // IntrinsicHeight: it measured the text at the full screen width
+            // instead of the narrower column, so on a landscape phone the
+            // page came out 22 px too short.)
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: IntrinsicHeight(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        side,
-                        MediaQuery.of(context).padding.top + (isSmall ? 18 : 28),
-                        side,
-                        24,
-                      ),
-                      child: ContentWidth(maxWidth: _contentWidth, child: _buildExplanation(isSmall)),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      side,
+                      MediaQuery.of(context).padding.top + (isSmall ? 18 : 28),
+                      side,
+                      24,
                     ),
-                    const Spacer(),
-                    _buildChoices(side),
-                  ],
-                ),
+                    child: ContentWidth(maxWidth: _contentWidth, child: _buildExplanation(isSmall)),
+                  ),
+                  _buildChoices(side),
+                ],
               ),
             ),
           ),
@@ -349,8 +352,7 @@ class _SignInChoiceScreenState extends State<SignInChoiceScreen>
               const SizedBox(height: 16),
             ],
             // Wide pills one above the other on phones; side by side on wider
-            // screens. Measured from the screen width: a LayoutBuilder can't
-            // sit inside the page's fill-the-screen layout (IntrinsicHeight).
+            // screens, decided from the screen width.
             if (buttons.length == 1)
               buttons.first
             else if (math.min(MediaQuery.sizeOf(context).width - 2 * side, _contentWidth) < 520)

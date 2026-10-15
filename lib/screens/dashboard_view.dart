@@ -143,28 +143,76 @@ class _DashboardViewState extends State<DashboardView> with WidgetsBindingObserv
           bottom: false,
           child: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(padding, 12, padding, 28),
-            child: ContentWidth(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Appear(index: 0, child: _buildHeader(progress)),
-                  const SizedBox(height: 20),
-                  Appear(index: 1, child: _buildTodayCard(progress)),
-                  const SizedBox(height: 14),
-                  Appear(index: 2, child: _buildContinueCard(progress)),
-                  const SizedBox(height: 12),
-                  Appear(index: 3, child: _buildChallengeCard()),
-                  const SizedBox(height: 12),
-                  Appear(index: 4, child: _buildTotals(progress)),
-                  SizedBox(height: gap),
-                  Appear(index: 5, child: _buildReadiness(service)),
-                  Appear(index: 6, child: _buildReviewTopics()),
-                  Appear(index: 7, child: _buildShortcuts()),
-                  SizedBox(height: gap),
-                  Appear(index: 8, child: _buildModules(progress)),
-                ],
-              ),
-            ),
+            child: LayoutBuilder(builder: (context, c) {
+              // Today, continue, challenge, totals and shortcuts; then the
+              // readiness and topics-to-review analysis.
+              final today = [
+                Appear(index: 1, child: _buildTodayCard(progress)),
+                const SizedBox(height: 14),
+                Appear(index: 2, child: _buildContinueCard(progress)),
+                const SizedBox(height: 12),
+                Appear(index: 3, child: _buildChallengeCard()),
+                const SizedBox(height: 12),
+                Appear(index: 4, child: _buildTotals(progress)),
+                SizedBox(height: gap),
+              ];
+              final analysis = [
+                Appear(index: 5, child: _buildReadiness(service)),
+                Appear(index: 6, child: _buildReviewTopics()),
+              ];
+              final shortcuts = Appear(index: 7, child: _buildShortcuts());
+              final modules = Appear(index: 8, child: _buildModules(progress));
+
+              // Landscape tablets and computers: two columns side by side
+              // instead of one phone-width column in the middle.
+              if (c.maxWidth >= 1000) {
+                return ContentWidth(
+                  maxWidth: 1180,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Appear(index: 0, child: _buildHeader(progress)),
+                      const SizedBox(height: 20),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [...today, shortcuts],
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: analysis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: gap),
+                      modules,
+                    ],
+                  ),
+                );
+              }
+
+              return ContentWidth(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Appear(index: 0, child: _buildHeader(progress)),
+                    const SizedBox(height: 20),
+                    ...today,
+                    ...analysis,
+                    shortcuts,
+                    SizedBox(height: gap),
+                    modules,
+                  ],
+                ),
+              );
+            }),
           ),
         ),
         if (_preparingQuiz) _buildPreparingOverlay(),

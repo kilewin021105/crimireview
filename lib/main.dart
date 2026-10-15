@@ -15,6 +15,7 @@ import 'services/admin_service.dart';
 import 'services/mastery_service.dart';
 import 'services/question_selection_service.dart';
 import 'screens/splash_screen.dart';
+import 'utils/responsive.dart';
 //import 'screens/home_screen.dart';
 
 void main() {
@@ -185,9 +186,19 @@ class CrimiReviewApp extends StatelessWidget {
               statusBarColor: Colors.transparent,
               systemNavigationBarColor: Colors.transparent,
             );
-            return AnnotatedRegion<SystemUiOverlayStyle>(
-              value: overlay,
-              child: child ?? const SizedBox.shrink(),
+            // Follows the phone's text-size setting up to 130%, then stops,
+            // so very large system text (up to 200% on newer Android) can't
+            // push buttons and cards apart. Every screen is checked at 130%
+            // on small and normal phones (screenshot sweep).
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: media.textScaler.clamp(maxScaleFactor: kMaxTextScale),
+              ),
+              child: AnnotatedRegion<SystemUiOverlayStyle>(
+                value: overlay,
+                child: child ?? const SizedBox.shrink(),
+              ),
             );
           },
         );

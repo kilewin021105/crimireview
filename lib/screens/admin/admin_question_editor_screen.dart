@@ -374,7 +374,8 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
             children: [
               IconBadge(icon: icon, size: 32, iconSize: 17),
               const SizedBox(width: 10),
-              Text(title, style: text.titleMedium),
+              // Wraps instead of running off the card with large text.
+              Expanded(child: Text(title, style: text.titleMedium)),
             ],
           ),
           if (subtitle != null) ...[

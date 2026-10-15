@@ -826,6 +826,42 @@ You gave a new logo (white C, red R, graduation cap, scales of justice and an op
 
 ---
 
+## 2026-10-16 — Session 49: overflow error fixed, app responsive on phones, tablets and computers
+
+You saw "A RenderFlex overflowed by 5.8 pixels on the bottom" and asked for the app to work on every device, tablets included.
+
+**How the problems were found:** the screenshot tests got a **sweep mode** (`--dart-define=SWEEP=true`, see README). It renders every screen on 12 devices and reports any layout error:
+- small phone 320×568, 360×640, 390×844, 430×932;
+- a phone held sideways (844×390);
+- 7-inch, 10-inch, landscape and 12-inch tablets;
+- desktop 1440×900;
+- small and normal phones with the system text size at 130%.
+
+The first run found **15 problems on 6 screens**. After the fixes: **0 problems in all 420 renders**.
+
+**The overflows and what fixed each:**
+1. **Admin dashboard, the six number tiles** (your error). The tiles had a fixed shape, so on phones 320-360 px wide they were too short for their content: 6.2 px at 360 px wide (yours was 5.8 px), 18 px at 320 px, up to 20 px with larger text. It also showed while the Settings tab was open, because the dashboard stays laid out behind it. The tiles now sit in a new kit component, `AdaptiveGrid`, whose rows are as tall as their tallest tile.
+2. **Admin side menu on a short screen** (a phone held sideways), 49 px. The menu couldn't scroll. It now scrolls when needed; "Sign out" stays at the bottom when there's room.
+3. **"Decide how you sign in" page, phone held sideways**, 22 px. The fill-the-screen layout measured the text at the full screen width, but drew it in a narrower column, so the page came out too short. Replaced with a layout that needs no measuring: at least one screen tall, explanation on top, choices at the bottom, scrolls if longer.
+4. **Sign-up page with larger text**, 2 px. The red header had a fixed height; "Create your account" wrapped to two lines and no longer fit. The header now grows with its text. Normal phones look exactly as before (checked).
+5. **Question editor with larger text**, 7 px to the right. A section title couldn't wrap; now it can.
+
+**Tablets and computers:**
+- The student app now uses a **side navigation rail** (logo on top, the same five tabs) when the screen is at least 840 px wide and 480 px tall: tablets in landscape, computers and the web. This matches the admin panel. Phones, including a phone held sideways (too short for five rail items), keep the bottom bar.
+- The **Home dashboard uses two columns** from about 1000 px: today's goal, continue learning, Daily Challenge, totals and shortcuts on the left; readiness and topics to review on the right. Before, it was one phone-width column in the middle of a large screen.
+- The 840 px breakpoint is now one shared constant (`kWideLayoutWidth`) for the student and admin layouts.
+
+**Very large system text:** text now follows the phone's text-size setting **up to 130%**, then stops (`kMaxTextScale`, applied once in `main.dart`). Newer Android phones allow up to 200%, which would push buttons and cards apart on any screen. Every screen is checked at 130% on small and normal phones.
+
+**Screenshot harness:** besides `SWEEP`, it now has `DETAILS=true` (prints which widget overflowed, with file and line) and `ALL_IMAGES=true` (keeps every render, not only the ones with problems).
+
+**Checks:**
+- `flutter analyze`: 0 errors / 0 warnings. `flutter test`: 34 pass.
+- Sweep: 0 layout problems in 420 renders.
+- Reviewed images: tablet landscape (rail + two columns), the smallest phone (admin tiles), the sign-up page at 130% text, and the normal sign-in page (unchanged).
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
