@@ -10,16 +10,15 @@ import '../utils/page_transitions.dart';
 import 'admin/admin_shell_screen.dart';
 import 'home_screen.dart';
 
-/// How a sign-in screen finishes signing in. Used by both the
-/// "Decide how you sign in" page (Google / Facebook) and the email form,
-/// so both end the same way: sync this account's data onto the phone
-/// (PostSignInService), then open the admin or student home.
+/// How the sign-in page (`AuthScreen`) finishes signing in, for its email
+/// button and for a Google/Facebook sign-in started from its icons, so
+/// every method ends the same way: sync this account's data onto the
+/// phone (PostSignInService), then open the admin or student home.
 ///
 /// It also picks up a session that arrives by itself: a Google/Facebook
 /// sign-in finishing when the student comes back from the browser, or
 /// after Android restarted the app. Only the screen on top reacts, so
-/// two screens never finish the same sign-in, and sign-up / forgot
-/// password (opened on top) keep handling their own.
+/// sign-up / forgot password (opened on top) keep handling their own.
 mixin SignInCompletion<T extends StatefulWidget> on State<T> {
   StreamSubscription<AuthState>? _sessionSubscription;
   bool _completing = false;
@@ -34,10 +33,6 @@ mixin SignInCompletion<T extends StatefulWidget> on State<T> {
   /// Shows [message] when the sync after sign-in fails.
   void onSignInFailed(String message);
 
-  /// An error Supabase reports back from the browser (cancelled, no email
-  /// shared, expired). Screens that start a browser sign-in override it.
-  void onBrowserSignInError(Object error) {}
-
   void watchForSessions() {
     if (!SupabaseService.isInitialized) return;
     _sessionSubscription = SupabaseService.instance.authStateChanges.listen(
@@ -48,9 +43,9 @@ mixin SignInCompletion<T extends StatefulWidget> on State<T> {
         if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
         completeSignIn();
       },
-      onError: (Object error) {
-        if (mounted) onBrowserSignInError(error);
-      },
+      // Errors from the browser (cancelled, no email shared, expired) are
+      // shown by SocialSignInIcons, which started that sign-in.
+      onError: (Object _) {},
     );
   }
 
@@ -66,8 +61,7 @@ mixin SignInCompletion<T extends StatefulWidget> on State<T> {
     try {
       final isAdmin = await PostSignInService.instance.run();
       if (!mounted) return;
-      // Removes the sign-in pages underneath too (the email form can be
-      // open on top of the choice page).
+      // Removes the sign-in page underneath too, so Back can't return to it.
       Navigator.of(context).pushAndRemoveUntil(
         ScalePageRoute(page: isAdmin ? const AdminShellScreen() : const HomeScreen()),
         (route) => false,

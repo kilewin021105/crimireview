@@ -12,10 +12,8 @@ import 'forgot_password_screen.dart';
 import 'sign_in_completion.dart';
 import 'social_sign_in_icons.dart';
 
-/// The email + password form (sign in / create account), with a Google
-/// and a Facebook icon under it ([SocialSignInIcons]). Those are also
-/// offered on their own page, `SignInChoiceScreen`, shown before this one
-/// once they are switched on in Supabase.
+/// The sign-in page: the email + password form (sign in / create account),
+/// with a Google and a Facebook icon under it ([SocialSignInIcons]).
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -168,24 +166,7 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              // Back to "Decide how you sign in" when opened from it.
-                              if (Navigator.of(context).canPop()) ...[
-                                IconButton(
-                                  tooltip: 'Back',
-                                  onPressed: () => Navigator.of(context).maybePop(),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.white.withValues(alpha: 0.14),
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  icon: const Icon(Icons.arrow_back_rounded),
-                                ),
-                                const SizedBox(width: 12),
-                              ],
-                              AppLogo(size: isSmall ? 44 : 52, showShadow: false),
-                            ],
-                          ),
+                          AppLogo(size: isSmall ? 44 : 52, showShadow: false),
                           SizedBox(height: isSmall ? 14 : 20),
                           Text(
                             _isLogin ? 'Welcome back' : 'Create your account',

@@ -989,6 +989,35 @@ You ran the app, didn't see the icons (Google and Facebook are still switched of
 
 ---
 
+## 2026-10-17 — Session 54: "Decide how you sign in" page removed
+
+You asked to remove the separate "Decide how you sign in" page, because students already know they can sign in with Google or Facebook from the icons on the log-in page.
+
+**What changed** (same branch, PR #5):
+- **Deleted `lib/screens/sign_in_choice_screen.dart`.** Every place that opened it now opens the log-in page directly:
+  - the splash screen;
+  - the end of onboarding;
+  - signing out from student Settings, the Admin Panel's Settings tab and the admin side menu;
+  - the "Sign in" button in Settings.
+- **Faster start when signed out.** The splash screen no longer waits up to 3 seconds to ask Supabase which providers are on; that question existed only for the deleted page. The icons on the log-in page ask on their own, and again on a tap if needed.
+- **Log-in page header back to its original look.** The back arrow existed only for returning to the deleted page, so it was removed.
+- **The `PREVIEW_SIGN_IN_CHOICE` preview setting is gone,** since the icons are always shown and need no preview. The VS Code run option for it was removed too.
+- **Shared sign-in code tidied** (`sign_in_completion.dart`): the error hook only the deleted page used was removed. Browser errors are shown by the icons.
+- Comments and README updated. The deleted page's five screenshot shots were removed from the screenshot catalog.
+- **Manuscript updated** (same page, version 20). These passages no longer describe the deleted page:
+  - Chapter 3, 9.2;
+  - Table 14 (Log In);
+  - Section 4.12 and Tables 20, 29 and 30.
+  - The release status now also says the email-verification rule was applied on October 16, and that #5 is pending merge. A dated note was added to the revision notes.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings.
+- `flutter test`: 45 pass.
+- Splash, onboarding, sign-in and settings screens re-rendered in light and dark: no layout problems.
+- Sign-in and onboarding swept on 12 devices: 48 renders, 0 problems.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
@@ -1020,5 +1049,7 @@ Session 41 (redesign): `lib/widgets/ui/` (design-system components), `assets/fon
 `lib/screens/admin/admin_document_generation_screen.dart`, `lib/services/document_generation_service.dart`, `supabase/functions/generate-questions-from-document/`, `supabase_document_generation.sql` — the PDF → AI generation path (added Session 12), removed in Session 28.
 
 Session 41: `lib/widgets/animated_widgets.dart`, `lib/widgets/streak_widget.dart`, `lib/widgets/sync_status_indicator.dart` (unused by any screen), `test/fonts/` (Poppins, replaced by the bundled app font).
+
+Session 54: `lib/screens/sign_in_choice_screen.dart` (the "Decide how you sign in" page from Session 46; Google and Facebook are icons on the log-in page instead).
 
 Session 48: `assets/icon/logo_original.jpg`, `graduation_cap.png`, `graduation_cap_splash.png`, `splash_logo.png` (the old navy/gold logo artwork; nothing used them).

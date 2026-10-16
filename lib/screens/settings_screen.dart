@@ -15,7 +15,7 @@ import '../utils/responsive.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/ui/ui.dart';
 import 'profile_screen.dart';
-import 'sign_in_choice_screen.dart';
+import 'auth_screen.dart';
 import 'change_password_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -150,10 +150,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await SupabaseService.instance.signOut();
     // Keep local quiz progress, only clear auth/profile data
     await StorageService().clearAuthData();
-    final signIn = await SignInChoiceScreen.entry();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      SlidePageRoute(page: signIn),
+      SlidePageRoute(page: const AuthScreen()),
       (route) => false,
     );
   }
@@ -294,14 +293,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.login_rounded,
                         title: 'Sign in',
                         subtitle: 'Sync your progress to the cloud',
-                        onTap: () async {
-                          final signIn = await SignInChoiceScreen.entry();
-                          if (!context.mounted) return;
-                          Navigator.pushReplacement(
-                            context,
-                            SlidePageRoute(page: signIn),
-                          );
-                        },
+                        onTap: () => Navigator.pushReplacement(
+                          context,
+                          SlidePageRoute(page: const AuthScreen()),
+                        ),
                       ),
                   ],
                 ),
