@@ -22,15 +22,20 @@ class Subject {
   });
 }
 
-// 2026 PRC Board Exam subjects with actual weights
+// The six Criminologist Licensure Examination subjects and their weights,
+// per PRC Board of Criminology Resolution No. 01, s. 2021 (in force since
+// the 2nd exam of 2022; confirmed by the PRC Program of Examination for
+// February 4-6, 2026). RA 11131 Sec. 15 (2018) had an older table.
+// The ids are internal keys used by saved progress and the question bank;
+// they stay the same even where the official names changed.
 class CriminologySubjects {
   static const List<Subject> all = [
     // Day 1
     Subject(
       id: 'criminal_jurisprudence',
-      name: 'Criminal Jurisprudence',
-      shortName: 'Crim Juris',
-      description: 'Criminal Law Book I & II, Criminal Procedure, Evidence and Court Testimony',
+      name: 'Criminal Law and Jurisprudence',
+      shortName: 'Crim Law',
+      description: 'Criminal Law Books 1 & 2, Evidence, Criminal Procedure and Court Testimony, Human Rights, the Philippine Criminal Justice System',
       icon: Icons.gavel,
       color: Color(0xFF1E3A5F),
       weight: 20,
@@ -51,10 +56,10 @@ class CriminologySubjects {
       id: 'law_enforcement',
       name: 'Law Enforcement Administration',
       shortName: 'Law Enforce',
-      description: 'Police Organization, Operations, Intelligence, and Comparative Police System',
+      description: 'Law Enforcement Organization, Comparative Models in Policing, Industrial Security, Operations and Planning with Crime Mapping',
       icon: Icons.local_police,
       color: Color(0xFF1E3A5F),
-      weight: 20,
+      weight: 15,
       topics: [
         'Police Organization and Administration',
         'Police Planning',
@@ -70,12 +75,12 @@ class CriminologySubjects {
     // Day 2
     Subject(
       id: 'criminalistics',
-      name: 'Criminalistics',
-      shortName: 'Criminalistics',
-      description: 'Personal Identification, Forensic Ballistics, Questioned Documents, Polygraph',
+      name: 'Forensic Science',
+      shortName: 'Forensic Sci',
+      description: 'Forensic Photography, Personal Identification, Forensic Chemistry and Toxicology, Questioned Documents, Lie Detection, Ballistics',
       icon: Icons.fingerprint,
       color: Color(0xFF1E3A5F),
-      weight: 20,
+      weight: 15,
       topics: [
         'Personal Identification',
         'Police Photography',
@@ -92,10 +97,10 @@ class CriminologySubjects {
       id: 'crime_detection',
       name: 'Crime Detection and Investigation',
       shortName: 'CDI',
-      description: 'Criminal Investigation, Traffic Management, Special Crime Investigation',
+      description: 'Criminal Investigation and Intelligence, Specialized Crime Investigation, Traffic, Fire and Arson, Drugs, Cybercrime',
       icon: Icons.search,
       color: Color(0xFF1E3A5F),
-      weight: 15,
+      weight: 20,
       topics: [
         'Fundamentals of Criminal Investigation',
         'Traffic Management',
@@ -108,15 +113,15 @@ class CriminologySubjects {
         'Crime Scene Investigation',
       ],
     ),
-    // Day 3 - Updated based on 2026 TOS
+    // Day 3
     Subject(
       id: 'criminology',
       name: 'Criminology',
       shortName: 'Criminology',
-      description: 'Theories, Human Behavior, Ethics, Juvenile Justice, Research',
+      description: 'Theories of Crime Causation, Human Behavior and Victimology, Ethics, Juvenile Justice, Criminological Research',
       icon: Icons.psychology,
       color: Color(0xFF1E3A5F),
-      weight: 15,
+      weight: 20,
       topics: [
         'Introduction to Criminology',
         'Theories of Crime Causation',
@@ -132,7 +137,7 @@ class CriminologySubjects {
       id: 'corrections',
       name: 'Correctional Administration',
       shortName: 'Corrections',
-      description: 'Institutional and Non-Institutional Corrections, Rehabilitation',
+      description: 'Institutional and Non-Institutional Corrections, Therapeutic Modalities',
       icon: Icons.account_balance,
       color: Color(0xFF1E3A5F),
       weight: 10,

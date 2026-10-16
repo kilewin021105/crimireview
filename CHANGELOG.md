@@ -862,6 +862,45 @@ The first run found **15 problems on 6 screens**. After the fixes: **0 problems 
 
 ---
 
+## 2026-10-16 — Session 50: exam subjects corrected to the official 2021 table; research for Chapters 1–4
+
+You asked for Chapters 1–4 of the capstone manuscript to be rebuilt precisely, including a study of competing review apps.
+
+**Research done first** (deep research, six tracks). Notes are in `research_notes/CrimiReview capstone chapters 1 to 4/`, and the report is in `reports/CrimiReview capstone chapters 1 to 4.md`. Both folders are kept out of git with `.git/info/exclude`. The six tracks:
+- competing CLE and other review apps;
+- the Philippine Criminologist Licensure Examination;
+- the adaptive-learning literature;
+- mobile learning, gamification, local studies and data privacy;
+- methodology and evaluation standards;
+- a code-checked audit of the Oct 7 manuscript draft (61 findings).
+
+**App fix found by that research: the six subjects showed the wrong weights.**
+- `lib/models/subject.dart` said "2026 PRC Board Exam subjects with actual weights" but held the RA 11131 Sec. 15 table from 2018.
+- The official table since the 2nd exam of 2022 is PRC Board of Criminology Resolution No. 01, s. 2021, confirmed by the PRC Program of Examination for February 4–6, 2026:
+
+  | Subject | Weight |
+  |---|---|
+  | Criminal Law and Jurisprudence | 20% |
+  | Law Enforcement Administration | 15% |
+  | Crime Detection and Investigation | 20% |
+  | Forensic Science | 15% |
+  | Criminology | 20% |
+  | Correctional Administration | 10% |
+
+- Fixed:
+  - Names: "Criminal Jurisprudence" is now "Criminal Law and Jurisprudence", and "Criminalistics" is now "Forensic Science".
+  - Short names, the component-course descriptions and the weights. LEA 20→15, CDI 15→20, Criminology 15→20, Forensic Science 20→15.
+  - The two study-module titles that used the old names.
+- The internal subject ids (`criminal_jurisprudence`, `criminalistics`, ...) are unchanged. Saved progress, the question bank and the cloud tables use them, so no data moves.
+- The weights are shown to students ("% of exam") but no calculation uses them.
+- **Not changed:** the bundled readiness model was trained with a 50% per-subject floor, while the law says no subject below 60%. Fixing that means retraining the model. It is noted as a limitation for the manuscript.
+
+**Checks:**
+- `flutter analyze`: 0 errors / 0 warnings. `flutter test`: 34 pass.
+- Screenshot sweep: 0 layout problems in 420 renders (the longer subject name fits everywhere).
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
