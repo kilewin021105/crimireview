@@ -18,9 +18,10 @@ import 'sign_in_completion.dart';
 /// to use email instead. Laid out like an app-setup consent page: what
 /// happens is explained in plain words first, then the choices.
 ///
-/// Google and Facebook live only here, not inside the student or admin
-/// screens. When neither is switched on in Supabase, this page is skipped
-/// and the email form opens directly (see [entry]).
+/// Google and Facebook live here and as icons under the email form
+/// (`SocialSignInIcons`), never inside the student or admin screens. When
+/// neither is switched on in Supabase, this page is skipped and the email
+/// form opens directly, without the icons (see [entry]).
 class SignInChoiceScreen extends StatefulWidget {
   /// Providers known to be switched on when this page was opened.
   final Set<SocialProvider> initialProviders;

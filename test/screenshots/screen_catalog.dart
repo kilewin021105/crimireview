@@ -112,6 +112,11 @@ Map<String, Object> questionBankPrefs() => {
 
 const Set<SocialProvider> _both = {SocialProvider.google, SocialProvider.facebook};
 
+/// The phone's last check says Google and Facebook are switched on.
+const Map<String, Object> _socialOn = {
+  SocialAuthService.enabledCacheKey: ['google', 'facebook'],
+};
+
 List<Shot> screenCatalog() => [
       Shot('splash', (_) => const SplashScreen(), seeded: false, pumps: 6),
       Shot('onboarding', (_) => const OnboardingScreen(), seeded: false),
@@ -120,6 +125,12 @@ List<Shot> screenCatalog() => [
           seeded: false, dark: false, size: const Size(320, 568)),
       Shot('auth_signup', (_) => const AuthScreen(),
           seeded: false, act: (t) => tapText(t, 'Create account')),
+      // With Google and Facebook switched on: their icons under the form.
+      Shot('auth_login_social', (_) => const AuthScreen(), seeded: false, prefs: _socialOn),
+      Shot('auth_login_social_small', (_) => const AuthScreen(),
+          seeded: false, dark: false, size: const Size(320, 568), prefs: _socialOn),
+      Shot('auth_signup_social', (_) => const AuthScreen(),
+          seeded: false, prefs: _socialOn, act: (t) => tapText(t, 'Create account')),
       // "Decide how you sign in": shown before the email form once Google
       // or Facebook is switched on (the last check is saved on the phone).
       Shot('sign_in_choice', (_) => const SignInChoiceScreen(initialProviders: _both), seeded: false),
@@ -132,7 +143,8 @@ List<Shot> screenCatalog() => [
           seeded: false, dark: false, size: const Size(1280, 800)),
       // The email form opened from it (with a back arrow).
       Shot('sign_in_choice_email', (_) => const SignInChoiceScreen(initialProviders: _both),
-          seeded: false, dark: false, act: (t) => tapText(t, 'Use my email instead')),
+          seeded: false, dark: false, prefs: _socialOn,
+          act: (t) => tapText(t, 'Use my email instead')),
       Shot('forgot_password', (_) => const ForgotPasswordScreen(), seeded: false),
       Shot(
         'email_verification',

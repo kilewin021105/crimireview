@@ -10,10 +10,11 @@ import '../widgets/password_strength_indicator.dart';
 import 'email_verification_screen.dart';
 import 'forgot_password_screen.dart';
 import 'sign_in_completion.dart';
+import 'social_sign_in_icons.dart';
 
-/// The email + password form (sign in / create account).
-///
-/// Google and Facebook are not on this page: they have their own page,
+/// The email + password form (sign in / create account), with a Google
+/// and a Facebook icon under it ([SocialSignInIcons]) for the providers
+/// switched on in Supabase. Those are also offered on their own page,
 /// `SignInChoiceScreen`, shown before this one when they are switched on.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -325,6 +326,13 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
                               label: _isLogin ? 'Sign in' : 'Create account',
                               loading: _isLoading || isCompletingSignIn,
                               onPressed: _submit,
+                            ),
+                            // A Google or Facebook sign-in finishes through
+                            // watchForSessions above; while the email button
+                            // signs in (_isLoading), the icons wait.
+                            SocialSignInIcons(
+                              enabled: !_isLoading,
+                              completing: isCompletingSignIn && !_isLoading,
                             ),
                             const SizedBox(height: 20),
                             Wrap(

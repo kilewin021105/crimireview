@@ -6,9 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../utils/error_messages.dart';
+import 'connectivity_service.dart';
 import 'supabase_service.dart';
 
-/// The social sign-in options on the login screen.
+/// The social sign-in options: the "Decide how you sign in" page and the
+/// icons under the email form.
 enum SocialProvider {
   google('google', 'Google'),
   facebook('facebook', 'Facebook');
@@ -44,7 +46,8 @@ enum SocialProvider {
 ///     from a Google or Facebook profile.
 ///
 /// The student's choice comes back through Supabase's auth listener, not
-/// as the return value here -- see `AuthScreen` and `SplashScreen`.
+/// as the return value here -- see `SignInCompletion` (and `SplashScreen`,
+/// when Android restarted the app while the browser was open).
 class SocialAuthService {
   SocialAuthService._();
   static final SocialAuthService instance = SocialAuthService._();
@@ -55,7 +58,9 @@ class SocialAuthService {
   /// type in ios/Runner/Info.plist.
   static const String redirectUrl = 'com.crimireview.crimireview://login-callback';
 
-  static const String _enabledCacheKey = 'social_providers_enabled';
+  /// Where the last check of switched-on providers is saved on the phone
+  /// (tests use it to show the buttons).
+  static const String enabledCacheKey = 'social_providers_enabled';
 
   /// Browser sign-in needs a way back into the app: Android, iOS and the
   /// web have one; the desktop builds don't, so they hide the buttons.
@@ -69,7 +74,7 @@ class SocialAuthService {
   /// instantly, then [refreshEnabled] corrects it from the server.
   Future<Set<SocialProvider>> cachedEnabled() async {
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList(_enabledCacheKey) ?? const [];
+    final saved = prefs.getStringList(enabledCacheKey) ?? const [];
     return SocialProvider.values.where((p) => saved.contains(p.id)).toSet();
   }
 
@@ -90,7 +95,7 @@ class SocialAuthService {
       if (external is! Map) return null;
       final enabled = SocialProvider.values.where((p) => external[p.id] == true).toSet();
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(_enabledCacheKey, [for (final p in enabled) p.id]);
+      await prefs.setStringList(enabledCacheKey, [for (final p in enabled) p.id]);
       return enabled;
     } catch (e) {
       debugPrint('Sign-in provider check skipped: $e');
@@ -101,6 +106,10 @@ class SocialAuthService {
   /// Opens the provider's sign-in page. Returns once the browser is open;
   /// throws if it couldn't be opened.
   Future<void> start(SocialProvider provider) async {
+    // Offline, the browser would only show its own "no internet" page.
+    if (!await ConnectivityService.instance.checkConnectivity()) {
+      throw Exception("You're offline. Connect to the internet to sign in with ${provider.label}.");
+    }
     final client = SupabaseService.instance.client;
     final opened = await client.auth.signInWithOAuth(
       provider.oauth,

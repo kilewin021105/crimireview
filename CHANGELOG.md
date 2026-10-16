@@ -927,6 +927,42 @@ Published to the same manuscript page as before: https://claude.ai/artifact/5dtw
 
 ---
 
+## 2026-10-16 — Session 52: Google and Facebook icons under the email sign-in form
+
+You asked for Google and Facebook icons below the log-in form, in the style of a sample screen but keeping CrimiReview's own design, on a separate branch (`login-social-icons`, stacked on `new-logo`).
+
+**What changed:**
+- **New `lib/screens/social_sign_in_icons.dart`.** It sits under the Sign in / Create account button and shows:
+  - an "or continue with" line;
+  - a rounded tile with just the Google logo and one with just the Facebook logo, in the app's own card style, light and dark;
+  - a short note: "Your password stays with Google or Facebook. CrimiReview only receives your name, email address and profile photo."
+  - The tiles have no text, so screen readers and a long press say "Continue with Google / Facebook".
+- **How a tap works.** It uses the same sign-in path as the "Decide how you sign in" page:
+  - `SocialAuthService.start`, which keeps PKCE and Google's account chooser;
+  - then `SignInCompletion` and `PostSignInService`. That step does the account-switch cleanup, the cloud sync and the admin/student role check.
+  - So the email button, the choice page and the icons all finish a sign-in the same way.
+- **Only providers switched on in Supabase are shown,** the same rule as the choice page. While both are off, which is the case on 2026-10-16, the page looks exactly as before. `--dart-define=PREVIEW_SIGN_IN_CHOICE=true` shows the icons for a preview.
+- **Guarded against double sign-ins:**
+  - the icons are disabled while the email button signs in, and while a Google/Facebook sign-in is being finished;
+  - a cancelled or failed browser sign-in shows its reason under the icons;
+  - coming back from the browser without finishing stops the spinner after 4 seconds.
+- **`SocialAuthService.start` now checks the connection first.** Offline, it says "You're offline. Connect to the internet to sign in with Google." instead of opening a browser page that can't load. This also applies to the choice page.
+- Comments that said Google/Facebook appear only on the choice page were corrected: `auth_screen.dart`, `sign_in_choice_screen.dart`, `admin_settings_screen.dart`, `social_auth_service.dart` and README.
+
+**Checked on the live project (2026-10-16):**
+- Google and Facebook are still switched off in Supabase.
+- `supabase_enforce_email_verification.sql` is **not installed yet** (the only applied migration is `social_login_handle_new_user`). It must be run before either provider is switched on. It stops anyone from pre-creating an email/password account for another student's Gmail address, which Supabase would later join to that student's Google sign-in.
+- The app's own sign-up verifies the emailed code before creating the account, so it is compatible with that file.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings.
+- `flutter test`: 46 pass, 12 of them new:
+  - 6 for the icons: hidden when off, one or both providers, disabled while busy, the "finishing" message, hidden on Windows;
+  - 6 for log-in and sign-up with the icons on 320, 360 and 412 px phones.
+- Screenshot sweep of every sign-in screen on 12 devices (phones, tablets, desktop, 130% text): 84 renders, 0 layout problems.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
@@ -938,6 +974,8 @@ Published to the same manuscript page as before: https://claude.ai/artifact/5dtw
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 52: `lib/screens/social_sign_in_icons.dart`, `test/social_sign_in_icons_test.dart`.
 
 Session 48: `assets/icon/logo_original.png` (new logo master); Windows and macOS app icons.
 
