@@ -13,9 +13,9 @@ import 'sign_in_completion.dart';
 import 'social_sign_in_icons.dart';
 
 /// The email + password form (sign in / create account), with a Google
-/// and a Facebook icon under it ([SocialSignInIcons]) for the providers
-/// switched on in Supabase. Those are also offered on their own page,
-/// `SignInChoiceScreen`, shown before this one when they are switched on.
+/// and a Facebook icon under it ([SocialSignInIcons]). Those are also
+/// offered on their own page, `SignInChoiceScreen`, shown before this one
+/// once they are switched on in Supabase.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 

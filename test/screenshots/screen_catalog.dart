@@ -68,6 +68,14 @@ Future<void> tapText(WidgetTester tester, String text) async {
   }
 }
 
+/// Taps a control by its screen-reader name, for icon-only buttons.
+Future<void> tapSemantics(WidgetTester tester, String label) async {
+  final finder = find.bySemanticsLabel(label);
+  if (finder.evaluate().isNotEmpty) {
+    await tester.tap(finder.first, warnIfMissed: false);
+  }
+}
+
 final _subject = CriminologySubjects.all.first;
 
 List<Question> sampleQuestions() => [
@@ -125,12 +133,9 @@ List<Shot> screenCatalog() => [
           seeded: false, dark: false, size: const Size(320, 568)),
       Shot('auth_signup', (_) => const AuthScreen(),
           seeded: false, act: (t) => tapText(t, 'Create account')),
-      // With Google and Facebook switched on: their icons under the form.
-      Shot('auth_login_social', (_) => const AuthScreen(), seeded: false, prefs: _socialOn),
-      Shot('auth_login_social_small', (_) => const AuthScreen(),
-          seeded: false, dark: false, size: const Size(320, 568), prefs: _socialOn),
-      Shot('auth_signup_social', (_) => const AuthScreen(),
-          seeded: false, prefs: _socialOn, act: (t) => tapText(t, 'Create account')),
+      // Not switched on yet: tapping the Google icon under the form says so.
+      Shot('auth_login_google_off', (_) => const AuthScreen(),
+          seeded: false, dark: false, act: (t) => tapSemantics(t, 'Continue with Google')),
       // "Decide how you sign in": shown before the email form once Google
       // or Facebook is switched on (the last check is saved on the phone).
       Shot('sign_in_choice', (_) => const SignInChoiceScreen(initialProviders: _both), seeded: false),

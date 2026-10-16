@@ -22,7 +22,6 @@ import 'package:crimireview/screens/change_password_screen.dart';
 import 'package:crimireview/screens/email_verification_screen.dart';
 import 'package:crimireview/screens/forgot_password_screen.dart';
 import 'package:crimireview/screens/onboarding_screen.dart';
-import 'package:crimireview/services/social_auth_service.dart';
 import 'package:crimireview/services/theme_service.dart';
 
 /// Phone widths in logical pixels: a small older phone, a common Android
@@ -114,14 +113,11 @@ void main() {
     }
   }
 
-  // Google and Facebook switched on: their icons sit under the form.
+  // The Google and Facebook icons sit under the form on both tabs.
   for (final size in sizes.entries) {
     for (final signUp in [false, true]) {
       testWidgets('${signUp ? 'Sign up' : 'Log in'} with Google and Facebook icons fits at ${size.key}',
           (tester) async {
-        SharedPreferences.setMockInitialValues({
-          SocialAuthService.enabledCacheKey: ['google', 'facebook'],
-        });
         final overflows = await _overflowsFor(
           tester,
           const AuthScreen(),

@@ -3,8 +3,9 @@
 // Run: flutter test test/social_sign_in_icons_test.dart
 //
 // Supabase isn't connected in tests, so these check what the student sees
-// for each saved "which providers are switched on" answer; tapping an icon
-// (which opens the browser) is not exercised here.
+// for each saved "which providers are switched on" answer, and what
+// tapping a provider that isn't switched on does. Opening the browser for
+// a provider that is on is not exercised here.
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -36,15 +37,8 @@ Future<void> _show(
 }
 
 void main() {
-  testWidgets('shows nothing while neither provider is switched on', (tester) async {
+  testWidgets('shows both icons even before Google and Facebook are switched on', (tester) async {
     await _show(tester);
-    expect(find.text('or continue with'), findsNothing);
-    expect(find.byType(GoogleLogo), findsNothing);
-    expect(find.byType(FacebookLogo), findsNothing);
-  });
-
-  testWidgets('shows a Google and a Facebook icon when both are on', (tester) async {
-    await _show(tester, enabled: ['google', 'facebook']);
     expect(find.text('or continue with'), findsOneWidget);
     expect(find.byType(GoogleLogo), findsOneWidget);
     expect(find.byType(FacebookLogo), findsOneWidget);
@@ -58,11 +52,17 @@ void main() {
     );
   });
 
-  testWidgets('shows only the provider that is on', (tester) async {
-    await _show(tester, enabled: ['google']);
-    expect(find.byType(GoogleLogo), findsOneWidget);
-    expect(find.byType(FacebookLogo), findsNothing);
-    expect(find.textContaining('Your password stays with Google.'), findsOneWidget);
+  testWidgets('tapping a provider that is not switched on says so', (tester) async {
+    await _show(tester, enabled: ['facebook']);
+    await tester.tap(find.bySemanticsLabel('Continue with Google'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text("Google sign-in isn't available yet. Please sign in with your email."),
+      findsOneWidget,
+    );
+    // The icons work again for the next try.
+    final inkWells = tester.widgetList<InkWell>(find.byType(InkWell));
+    expect(inkWells.every((inkWell) => inkWell.onTap != null), isTrue);
   });
 
   testWidgets('icons cannot be tapped while the email form signs in', (tester) async {
@@ -75,7 +75,8 @@ void main() {
   testWidgets('says the sign-in is being finished', (tester) async {
     await _show(tester, enabled: ['google'], completing: true);
     expect(find.text('Signed in. Getting your progress ready...'), findsOneWidget);
-    expect(tester.widget<InkWell>(find.byType(InkWell)).onTap, isNull);
+    final inkWells = tester.widgetList<InkWell>(find.byType(InkWell));
+    expect(inkWells.every((inkWell) => inkWell.onTap == null), isTrue);
   });
 
   testWidgets('hidden on Windows, which has no way back from the browser', (tester) async {

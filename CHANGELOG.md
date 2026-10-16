@@ -967,6 +967,28 @@ You asked for Google and Facebook icons below the log-in form, in the style of a
 
 ---
 
+## 2026-10-17 — Session 53: the Google and Facebook icons are always on the log-in page
+
+You ran the app, didn't see the icons (Google and Facebook are still switched off in Supabase, so Session 52 hid them), and chose to always show them.
+
+**What changed** (`lib/screens/social_sign_in_icons.dart`, same branch, PR #5):
+- **On Android, iPhone and the web, the log-in page always shows** "or continue with", the Google and Facebook icons, and the note about what they share. This is on both the Sign in and Create account tabs. Nothing is needed in Supabase, and no preview setting.
+- **Tapping a provider that isn't switched on yet:**
+  1. The icon spins while the app checks Supabase again, in case it was just switched on.
+  2. If it's still off, it says "Google sign-in isn't available yet. Please sign in with your email." No browser page opens.
+- **Once a provider is switched on,** the same tap opens its sign-in page, as in Session 52.
+- **Unchanged:**
+  - The desktop apps still don't show the icons; they can't receive the browser's answer.
+  - The "Decide how you sign in" page still appears only once a provider is switched on. You chose to keep it on 2026-10-17.
+- Comments, README and tests were updated to match.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings.
+- `flutter test`: 45 pass. One icon test was replaced, because "hidden while switched off" no longer applies, and a new one covers the "isn't available yet" message.
+- Sweep of every sign-in screen on 12 devices: 72 renders, 0 layout problems.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.

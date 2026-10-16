@@ -8,7 +8,6 @@ import '../services/social_auth_service.dart';
 import '../services/supabase_service.dart';
 import '../widgets/brand_logos.dart';
 import '../widgets/ui/ui.dart';
-import 'sign_in_choice_screen.dart';
 
 /// "or continue with" and a Google and a Facebook icon, under the email
 /// sign-in form.
@@ -19,9 +18,12 @@ import 'sign_in_choice_screen.dart';
 /// student comes back signed in, the screen it sits in finishes the
 /// sign-in through `SignInCompletion`, exactly like its email button.
 ///
-/// Only the providers switched on in Supabase are shown, so a student
-/// never taps an icon that opens an error page. With neither switched on,
-/// this shows nothing.
+/// Both icons are always shown on Android, iPhone and the web, so the page
+/// looks the same before and after Google and Facebook are set up. Until a
+/// provider is switched on in Supabase, tapping it says so instead of
+/// opening an error page. The desktop apps can't receive the browser's
+/// answer (see [SocialAuthService.isSupportedPlatform]), so they don't
+/// show the icons.
 class SocialSignInIcons extends StatefulWidget {
   /// False while the email form is signing in.
   final bool enabled;
@@ -37,10 +39,8 @@ class SocialSignInIcons extends StatefulWidget {
 }
 
 class _SocialSignInIconsState extends State<SocialSignInIcons> {
-  Set<SocialProvider> _providers = const {};
-
-  /// Preview mode only: what Supabase really has switched on.
-  Set<SocialProvider> _reallyEnabled = const {};
+  /// Providers switched on in Supabase, as last checked.
+  Set<SocialProvider> _enabled = const {};
 
   /// The provider whose page is open in the browser, until Supabase answers.
   SocialProvider? _pending;
@@ -63,8 +63,7 @@ class _SocialSignInIconsState extends State<SocialSignInIcons> {
         onError: _onBrowserSignInError,
       );
     }
-    if (SignInChoiceScreen.previewMode) _providers = SocialProvider.values.toSet();
-    _loadProviders();
+    _loadEnabled();
   }
 
   @override
@@ -75,41 +74,40 @@ class _SocialSignInIconsState extends State<SocialSignInIcons> {
     super.dispose();
   }
 
-  /// The last check saved on this phone first, so the icons appear
-  /// instantly, then a fresh check from Supabase.
-  Future<void> _loadProviders() async {
+  /// Which providers are switched on: the last check saved on this phone,
+  /// then a fresh one from Supabase.
+  Future<void> _loadEnabled() async {
     if (!SocialAuthService.isSupportedPlatform) return;
-    if (!SignInChoiceScreen.previewMode) {
-      final cached = await SocialAuthService.instance.cachedEnabled();
-      if (!mounted) return;
-      setState(() => _providers = cached);
-    }
+    final cached = await SocialAuthService.instance.cachedEnabled();
+    if (!mounted) return;
+    _enabled = cached;
     final fresh = await SocialAuthService.instance.refreshEnabled();
-    if (!mounted || fresh == null) return;
-    setState(() {
-      if (SignInChoiceScreen.previewMode) {
-        _reallyEnabled = fresh;
-      } else {
-        _providers = fresh;
-      }
-    });
+    if (mounted && fresh != null) _enabled = fresh;
   }
 
   bool get _busy => !widget.enabled || widget.completing || _loading != null;
 
   Future<void> _start(SocialProvider provider) async {
     if (_busy) return;
-    if (SignInChoiceScreen.previewMode && !_reallyEnabled.contains(provider)) {
-      setState(() => _errorMessage =
-          'Preview only: ${provider.label} sign-in is not switched on in Supabase yet. '
-          'See README "Google and Facebook sign-in".');
-      return;
-    }
     HapticFeedback.mediumImpact();
     setState(() {
       _loading = provider;
       _errorMessage = null;
     });
+    if (!_enabled.contains(provider)) {
+      // It may have been switched on since the last check.
+      final fresh = await SocialAuthService.instance.refreshEnabled();
+      if (!mounted) return;
+      if (fresh != null) _enabled = fresh;
+      if (!_enabled.contains(provider)) {
+        setState(() {
+          _loading = null;
+          _errorMessage =
+              "${provider.label} sign-in isn't available yet. Please sign in with your email.";
+        });
+        return;
+      }
+    }
     _pending = provider;
     try {
       await SocialAuthService.instance.start(provider);
@@ -158,8 +156,8 @@ class _SocialSignInIconsState extends State<SocialSignInIcons> {
 
   @override
   Widget build(BuildContext context) {
-    final providers = SocialProvider.values.where(_providers.contains).toList();
-    if (providers.isEmpty) return const SizedBox.shrink();
+    if (!SocialAuthService.isSupportedPlatform) return const SizedBox.shrink();
+    const providers = SocialProvider.values;
     final text = context.textStyles;
     final names = providers.map((provider) => provider.label).join(' or ');
 

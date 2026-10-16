@@ -21,7 +21,8 @@ import 'sign_in_completion.dart';
 /// Google and Facebook live here and as icons under the email form
 /// (`SocialSignInIcons`), never inside the student or admin screens. When
 /// neither is switched on in Supabase, this page is skipped and the email
-/// form opens directly, without the icons (see [entry]).
+/// form opens directly; its icons then say they aren't available yet
+/// (see [entry]).
 class SignInChoiceScreen extends StatefulWidget {
   /// Providers known to be switched on when this page was opened.
   final Set<SocialProvider> initialProviders;
