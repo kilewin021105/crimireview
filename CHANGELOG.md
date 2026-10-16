@@ -951,8 +951,12 @@ You asked for Google and Facebook icons below the log-in form, in the style of a
 
 **Checked on the live project (2026-10-16):**
 - Google and Facebook are still switched off in Supabase.
-- `supabase_enforce_email_verification.sql` is **not installed yet** (the only applied migration is `social_login_handle_new_user`). It must be run before either provider is switched on. It stops anyone from pre-creating an email/password account for another student's Gmail address, which Supabase would later join to that student's Google sign-in.
-- The app's own sign-up verifies the emailed code before creating the account, so it is compatible with that file.
+- `supabase_enforce_email_verification.sql` was not installed, so you ran it in the SQL Editor the same day. It stops anyone from pre-creating an email/password account for another student's Gmail address, which Supabase would later join to that student's Google sign-in.
+- Checked on the live database afterwards:
+  - the `require_verified_email_before_signup` trigger is on (BEFORE INSERT on `auth.users`), and its code matches the file;
+  - nobody outside the database can run `require_verified_email()` or `cleanup_expired_verifications()`;
+  - the Supabase security advisor no longer flags `cleanup_expired_verifications`.
+- The app's own sign-up verifies the emailed code before creating the account, so it is compatible with the trigger. Still to do: one real sign-up in the app to confirm.
 
 **Checks:**
 - `flutter analyze`: 0 errors, 0 warnings.
@@ -969,7 +973,7 @@ You asked for Google and Facebook icons below the log-in form, in the style of a
 
 - **Daily Challenge** shows an explanation either way (better than the old Quiz screen was), but still uses the plain overall `explanation` field, not the richer per-option "why THIS specific wrong choice fails" rationale, and does not call `MasteryService.recordAttempt()`. Only the main Quiz flow does, as of Session 9.
 - **The quiz Results screen** has no per-question answer review at all (Daily Challenge's own separate results screen does have one). A student who wants to see *why* they missed something after finishing has to remember it from the quiz itself.
-- **Google / Facebook sign-in is built but switched off** until the README "Google and Facebook sign-in" steps are done. Run `supabase_enforce_email_verification.sql` before that (Session 44).
+- **Google / Facebook sign-in is built but switched off** until the README "Google and Facebook sign-in" steps are done. `supabase_enforce_email_verification.sql`, which had to come first, is installed (Session 52).
 
 ## Files this project gained that didn't exist before Session 1
 
