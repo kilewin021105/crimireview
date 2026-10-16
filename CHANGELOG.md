@@ -901,6 +901,32 @@ You asked for Chapters 1–4 of the capstone manuscript to be rebuilt precisely,
 
 ---
 
+## 2026-10-16 — Session 51: Chapters 1–4 manuscript rebuilt from the Session 50 research — no app code touched
+
+Published to the same manuscript page as before: https://claude.ai/artifact/5dtwfNPojdeZoCnhjy9RvB (version 19). The page's own "Revision notes — October 16, 2026" section lists every change and every open item; the main ones:
+
+- **Facts corrected against the code and PRC sources:**
+  - Subjects and weights now follow Res. No. 01, s. 2021 (Table 1). National results from June 2022 to August 2026 were added (Table 2).
+  - The removed PDF/AI question generator is gone from every chapter. Template generation is described exactly, including its 21-question ceiling.
+  - "Adaptive difficulty" was corrected: students pick unlocked levels, and BKT steers which questions appear.
+  - "No machine learning" was replaced by a description of the readiness model.
+  - Android 7.0 (API 24), not Android 10.
+- **Chapter 1:** added Statement of the Problem, Significance of the Study and Definition of Terms. The limitations now list the real ones.
+- **Chapter 2:** unverifiable sources were replaced with verified ones. A Review of Related Systems compares competing CLE review apps in a dated feature matrix (Table 3).
+- **Chapter 4:** all twelve activity diagrams were redrawn to match the app as built. Sections 4.8 Development Model, 4.9 Testing, 4.10 Evaluation Method (ISO/IEC 25010:2023, SUS), 4.11 Results and Discussion (placeholders) and 4.12 Implementation Plan were drafted.
+- **Numbering:** Tables 1–30 in page order (the old Tables 1–12 are now 8–19). Figures 1–16 keep their numbers; Figure 17 is new.
+- **References:** one APA 7 list for all four chapters (145 entries, plus 8 legal bases and official issuances listed separately). 16 references that could not be verified were removed.
+- **Open items for the team** (also listed on the page):
+  - adviser name and title-page date;
+  - Chapter 4 heading per the manual;
+  - six items tagged "verify";
+  - evaluation results and Scrum roles, which are placeholders;
+  - five exam results sourced from an aggregator;
+  - the readiness model's 50% subject floor.
+- The untracked `docs/manuscript_*.md` files are older drafts and are now out of date. The published page is the current manuscript.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
