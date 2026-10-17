@@ -476,6 +476,8 @@ class AdaptiveLearningService extends ChangeNotifier {
 
     // Save progress locally
     await _storageService.saveProgress(_userProgress);
+    // Today's count for the dashboard's daily goal and week strip.
+    await _storageService.addDailyActivity(questions.length);
 
     // Sync to cloud or queue for retry if needed
     if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {

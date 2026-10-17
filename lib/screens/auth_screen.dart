@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/app_logo.dart';
-import '../models/user_progress.dart';
 import '../widgets/ui/ui.dart';
-import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
-import '../services/offline_sync_service.dart';
-import '../services/admin_service.dart';
 import '../utils/error_messages.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import '../widgets/password_strength_indicator.dart';
-import 'home_screen.dart';
-import 'admin/admin_shell_screen.dart';
 import 'email_verification_screen.dart';
 import 'forgot_password_screen.dart';
+import 'sign_in_completion.dart';
 
+/// The email + password form (sign in / create account).
+///
+/// Google and Facebook are not on this page: they have their own page,
+/// `SignInChoiceScreen`, shown before this one when they are switched on.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -23,20 +22,34 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
   String _password = '';
-  
+
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _supabase = SupabaseService.instance;
-  
+
+  @override
+  bool get signingInItself => _isLoading;
+
+  @override
+  void onSignInFailed(String message) => setState(() => _errorMessage = message);
+
+  @override
+  void initState() {
+    super.initState();
+    // Catches a Google/Facebook sign-in that finishes while this page is
+    // the one showing (see SignInCompletion).
+    watchForSessions();
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -47,258 +60,56 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isLoading || isCompletingSignIn) return;
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     HapticFeedback.mediumImpact();
-    
-    try {
-      if (_isLogin) {
-        await _supabase.signIn(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-      } else {
-        // For signup, go to email verification first
-        setState(() => _isLoading = false);
-        Navigator.push(
-          context,
-          SlidePageRoute(
-            page: EmailVerificationScreen(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-              displayName: '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
-            ),
+
+    if (!_isLogin) {
+      // For signup, go to email verification first
+      setState(() => _isLoading = false);
+      Navigator.push(
+        context,
+        SlidePageRoute(
+          page: EmailVerificationScreen(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            displayName: '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
           ),
-        );
-        return;
-      }
-      
-      if (mounted && _supabase.isLoggedIn) {
-        final storage = StorageService();
-        final currentUserId = _supabase.userId;
-        final lastUserId = await storage.getLastUserId();
-        
-        // Check if switching accounts
-        if (lastUserId != null && lastUserId != currentUserId) {
-          // Different user logging in - sync old user's pending data first
-          if (OfflineSyncService.instance.hasPendingSync) {
-            await OfflineSyncService.instance.syncPendingOperations();
-          }
-          // Clear old user's local quiz progress so new user starts fresh
-          await storage.clearQuizProgress();
-        }
-        
-        // Save current user ID
-        if (currentUserId != null) {
-          await storage.setLastUserId(currentUserId);
-        }
-        
-        // Load full cloud progress (profile + subject progress + achievements)
-        final cloudData = await _supabase.loadFullCloudProgress();
-        final cloudProfile = cloudData?['profile'];
-        
-        if (cloudProfile != null) {
-          // Sync cloud profile data to local storage
-          if (cloudProfile['display_name'] != null) {
-            await storage.setUserName(cloudProfile['display_name']);
-          }
-          if (cloudProfile['email'] != null) {
-            await storage.setUserEmail(cloudProfile['email']);
-          }
-          if (cloudProfile['school'] != null) {
-            await storage.setSchool(cloudProfile['school']);
-          }
-          if (cloudProfile['current_streak'] != null) {
-            await storage.setDailyStreak(cloudProfile['current_streak']);
-          }
-          if (cloudProfile['avatar_url'] != null) {
-            await storage.setAvatarUrl(cloudProfile['avatar_url']);
-          }
-        }
-        
-        await storage.setOnboardingCompleted(true);
-        
-        // Load local progress for merging
-        final localProgress = await storage.loadProgress();
-        int localQuizzes = 0;
-        int localCorrect = 0;
-        for (final sp in localProgress.subjectProgress.values) {
-          localQuizzes += sp.totalQuizzesTaken;
-          localCorrect += sp.totalCorrectAnswers;
-        }
-        
-        // Sync cloud subject progress to local
-        final cloudSubjectProgress = cloudData?['subjectProgress'] as List<Map<String, dynamic>>?;
-        if (cloudSubjectProgress != null && cloudSubjectProgress.isNotEmpty) {
-          for (final cloudSp in cloudSubjectProgress) {
-            final subjectId = cloudSp['subject_id'] as String?;
-            if (subjectId == null) continue;
-            
-            final cloudAnswered = cloudSp['questions_answered'] as int? ?? 0;
-            final cloudCorrectAnswers = cloudSp['correct_answers'] as int? ?? 0;
-            final easyCorrect = cloudSp['easy_correct'] as int? ?? 0;
-            final easyTotal = cloudSp['easy_total'] as int? ?? 0;
-            final mediumCorrect = cloudSp['medium_correct'] as int? ?? 0;
-            final mediumTotal = cloudSp['medium_total'] as int? ?? 0;
-            final hardCorrect = cloudSp['hard_correct'] as int? ?? 0;
-            final hardTotal = cloudSp['hard_total'] as int? ?? 0;
-            final cloudEasySegments = cloudSp['easy_segments'] as List<dynamic>?;
-            final cloudMediumSegments = cloudSp['medium_segments'] as List<dynamic>?;
-            final cloudHardSegments = cloudSp['hard_segments'] as List<dynamic>?;
-            
-            // Get or create local subject progress
-            final localSp = localProgress.subjectProgress[subjectId];
-            
-            // Compare cloud vs local and take higher values
-            final mergedAnswered = (localSp?.totalQuestionsAnswered ?? 0) > cloudAnswered 
-                ? (localSp?.totalQuestionsAnswered ?? 0) : cloudAnswered;
-            final mergedCorrect = (localSp?.totalCorrectAnswers ?? 0) > cloudCorrectAnswers 
-                ? (localSp?.totalCorrectAnswers ?? 0) : cloudCorrectAnswers;
+        ),
+      );
+      return;
+    }
 
-            List<SegmentProgress> mergeSegments(List<SegmentProgress>? local, List<dynamic>? cloud) {
-              return List.generate(SegmentProgress.segmentCount, (i) {
-                final localSeg = local?[i];
-                final cloudSegJson = cloud != null && i < cloud.length
-                    ? Map<String, dynamic>.from(cloud[i] as Map)
-                    : null;
-                final cloudSeg = cloudSegJson != null
-                    ? SegmentProgress.fromJson(cloudSegJson)
-                    : null;
-
-                if (localSeg == null) return cloudSeg ?? SegmentProgress(segmentIndex: i);
-                if (cloudSeg == null) return localSeg;
-
-                if (cloudSeg.questionsAnswered > localSeg.questionsAnswered) {
-                  return cloudSeg;
-                }
-                if (localSeg.questionsAnswered > cloudSeg.questionsAnswered) {
-                  return localSeg;
-                }
-
-                return SegmentProgress(
-                  segmentIndex: i,
-                  questionsAnswered: localSeg.questionsAnswered,
-                  correctAnswers: localSeg.correctAnswers > cloudSeg.correctAnswers
-                      ? localSeg.correctAnswers
-                      : cloudSeg.correctAnswers,
-                );
-              });
-            }
-
-            final mergedEasySegments = mergeSegments(localSp?.easySegments, cloudEasySegments);
-            final mergedMediumSegments = mergeSegments(localSp?.mediumSegments, cloudMediumSegments);
-            final mergedHardSegments = mergeSegments(localSp?.hardSegments, cloudHardSegments);
-            
-            // Determine if difficulty levels are passed (all segments must be passed)
-            final easyPassed = mergedEasySegments.every((segment) => segment.isPassed);
-            final mediumPassed = mergedMediumSegments.every((segment) => segment.isPassed);
-            final hardPassed = mergedHardSegments.every((segment) => segment.isPassed);
-            
-            // Create merged subject progress
-            localProgress.subjectProgress[subjectId] = SubjectProgress(
-              subjectId: subjectId,
-              topicProgress: localSp?.topicProgress ?? {},
-              totalQuizzesTaken: localSp?.totalQuizzesTaken ?? 0,
-              totalQuestionsAnswered: mergedAnswered,
-              totalCorrectAnswers: mergedCorrect,
-              lastStudyDate: cloudSp['last_study_date'] != null 
-                  ? DateTime.tryParse(cloudSp['last_study_date']) 
-                  : localSp?.lastStudyDate,
-                easyPassed: easyPassed,
-                mediumPassed: mediumPassed,
-                hardPassed: hardPassed,
-              wrongQuestionIds: localSp?.wrongQuestionIds ?? {},
-                easyCorrect: easyCorrect > (localSp?.easyCorrect ?? 0)
-                  ? easyCorrect
-                  : (localSp?.easyCorrect ?? 0),
-                easyTotal: easyTotal > (localSp?.easyTotal ?? 0)
-                  ? easyTotal
-                  : (localSp?.easyTotal ?? 0),
-                mediumCorrect: mediumCorrect > (localSp?.mediumCorrect ?? 0)
-                  ? mediumCorrect
-                  : (localSp?.mediumCorrect ?? 0),
-                mediumTotal: mediumTotal > (localSp?.mediumTotal ?? 0)
-                  ? mediumTotal
-                  : (localSp?.mediumTotal ?? 0),
-                hardCorrect: hardCorrect > (localSp?.hardCorrect ?? 0)
-                  ? hardCorrect
-                  : (localSp?.hardCorrect ?? 0),
-                hardTotal: hardTotal > (localSp?.hardTotal ?? 0)
-                  ? hardTotal
-                  : (localSp?.hardTotal ?? 0),
-                easySegments: mergedEasySegments,
-                mediumSegments: mergedMediumSegments,
-                hardSegments: mergedHardSegments,
-            );
-          }
-        }
-        
-        // Sync cloud achievements to local
-        final cloudAchievements = cloudData?['achievements'] as List<String>?;
-        if (cloudAchievements != null && cloudAchievements.isNotEmpty) {
-          // Merge cloud achievements with local (union of both)
-          final mergedAchievements = <String>{
-            ...localProgress.unlockedAchievements,
-            ...cloudAchievements,
-          };
-          localProgress.unlockedAchievements = mergedAchievements.toList();
-        }
-        
-        // Update streak from cloud if higher
-        if (cloudProfile != null) {
-          final cloudStreak = cloudProfile['current_streak'] as int? ?? 0;
-          final cloudBestStreak = cloudProfile['best_streak'] as int? ?? 0;
-          if (cloudStreak > localProgress.currentStreak) {
-            localProgress.currentStreak = cloudStreak;
-          }
-          if (cloudBestStreak > localProgress.longestStreak) {
-            localProgress.longestStreak = cloudBestStreak;
-          }
-        }
-        
-        // Save merged progress to local storage
-        await storage.saveProgress(localProgress);
-        
-        final cloudQuizzes = cloudProfile?['total_quizzes'] ?? 0;
-        final cloudCorrect = cloudProfile?['total_correct'] ?? 0;
-        final cloudPoints = cloudProfile?['total_points'] ?? 0;
-        
-        // Sync the higher values to cloud
-        await _supabase.syncLocalProgress(
-          totalPoints: (localCorrect * 10) > cloudPoints ? (localCorrect * 10) : cloudPoints,
-          totalQuizzes: localQuizzes > cloudQuizzes ? localQuizzes : cloudQuizzes,
-          totalCorrect: localCorrect > cloudCorrect ? localCorrect : cloudCorrect,
-          currentStreak: localProgress.currentStreak,
-          bestStreak: localProgress.longestStreak,
-        );
-        
-        // Explicitly refreshed (not just left to the reactive listener) so
-        // routing here can never race the network call it depends on --
-        // this is the moment a role check must be certain, not eventual.
-        final isAdmin = await AdminService.instance.refreshRole();
-        if (!mounted) return;
-
-        setState(() => _isLoading = false);
-
-        Navigator.of(context).pushReplacement(
-          ScalePageRoute(page: isAdmin ? const AdminShellScreen() : const HomeScreen()),
-        );
-      } else if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Account created! Please sign in.';
-          _isLogin = true;
-        });
-      }
+    try {
+      await _supabase.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = friendlyError(e, fallback: 'Sign in failed. Please try again.');
+      });
+      return;
+    }
+    if (!mounted) return;
+
+    if (_supabase.isLoggedIn) {
+      // Still "loading" while the shared sync runs, so the session event
+      // from this same sign-in isn't picked up a second time.
+      await completeSignIn();
+      if (mounted) setState(() => _isLoading = false);
+    } else {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Account created! Please sign in.';
+        _isLogin = true;
       });
     }
   }
@@ -349,7 +160,24 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          AppLogo(size: isSmall ? 44 : 52, showShadow: false),
+                          Row(
+                            children: [
+                              // Back to "Decide how you sign in" when opened from it.
+                              if (Navigator.of(context).canPop()) ...[
+                                IconButton(
+                                  tooltip: 'Back',
+                                  onPressed: () => Navigator.of(context).maybePop(),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.white.withValues(alpha: 0.14),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.arrow_back_rounded),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              AppLogo(size: isSmall ? 44 : 52, showShadow: false),
+                            ],
+                          ),
                           SizedBox(height: isSmall ? 14 : 20),
                           Text(
                             _isLogin ? 'Welcome back' : 'Create your account',
@@ -487,7 +315,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           ],
                           PrimaryButton(
                             label: _isLogin ? 'Sign in' : 'Create account',
-                            loading: _isLoading,
+                            loading: _isLoading || isCompletingSignIn,
                             onPressed: _submit,
                           ),
                           const SizedBox(height: 20),

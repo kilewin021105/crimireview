@@ -6,10 +6,12 @@ import '../widgets/app_logo.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/admin_service.dart';
+import '../services/post_sign_in_service.dart';
+import '../services/social_auth_service.dart';
 import '../utils/responsive.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
-import 'auth_screen.dart';
+import 'sign_in_choice_screen.dart';
 import 'admin/admin_shell_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -35,6 +37,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateToNext() async {
+    // Ask Supabase whether Google/Facebook are switched on while the logo
+    // animates, so the right sign-in page opens (see SignInChoiceScreen).
+    final providerCheck = SocialAuthService.instance.refreshEnabled();
     await Future.delayed(const Duration(milliseconds: 2500));
     
     if (!mounted) return;
@@ -48,16 +53,31 @@ class _SplashScreenState extends State<SplashScreen>
     if (!hasCompletedOnboarding) {
       nextScreen = const OnboardingScreen();
     } else if (SupabaseService.isInitialized && SupabaseService.instance.isLoggedIn) {
-      // AdminService.init() (main.dart) runs to completion before runApp(),
-      // so isAdmin is already resolved for a restored session by the time
-      // we get here -- no extra await needed.
-      nextScreen = AdminService.instance.isAdmin
-          ? const AdminShellScreen()
-          : const HomeScreen();
+      // The role check started in main.dart has had the whole logo
+      // animation to finish; this waits at most 3 more seconds, and offline
+      // uses the role last confirmed for this account.
+      var isAdmin = await AdminService.instance.resolvedRole();
+
+      // A session this phone hasn't set up yet: a Google/Facebook sign-in
+      // that finished while the app was closed (Android may close it while
+      // the browser is open), or a web sign-in that reloaded the page.
+      // Run the same sync the login screen runs, so the right account's
+      // data is on the phone before Home opens.
+      if (await PostSignInService.instance.needsSetup()) {
+        try {
+          isAdmin = await PostSignInService.instance.run();
+        } catch (e) {
+          debugPrint('Post sign-in sync failed at start-up: $e');
+        }
+      }
+      nextScreen = isAdmin ? const AdminShellScreen() : const HomeScreen();
     } else {
-      nextScreen = const AuthScreen();
+      // Waits at most 3 more seconds; offline, the last saved answer is used.
+      await providerCheck.timeout(const Duration(seconds: 3), onTimeout: () => null);
+      nextScreen = await SignInChoiceScreen.entry();
     }
-    
+
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => nextScreen,

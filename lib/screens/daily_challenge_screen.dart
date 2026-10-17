@@ -181,6 +181,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
     final today = DateTime.now().toIso8601String().split('T')[0];
     await _storage.setLastDailyChallengeDate(today);
     await _storage.addDailyChallengeScore(totalScore);
+    await _storage.addDailyActivity(_questions.length);
 
     // Sync to cloud (with offline support)
     await _syncToCloud(totalScore, _correctCount);

@@ -44,7 +44,11 @@ class SupabaseService {
   /// The project's base URL, used by `ConnectivityService` to test whether
   /// this app's own backend is reachable.
   static String get projectUrl => _supabaseUrl;
-  
+
+  /// The public (anon) key. It ships inside the app by design; row-level
+  /// security is what protects the data.
+  static String get publicKey => _supabaseAnonKey;
+
   SupabaseClient get client {
     if (!_isInitialized) {
       throw Exception('Supabase not initialized');
@@ -63,6 +67,20 @@ class SupabaseService {
   
   bool get isLoggedIn => _isInitialized && currentUser != null;
   String? get userId => currentUser?.id;
+
+  /// How this account can sign in: 'email', 'google', 'facebook'. Set by
+  /// Supabase Auth (app_metadata), not by the app. One account can have
+  /// several when a student used both email and Google with one address.
+  List<String> get signInMethods {
+    final providers = currentUser?.appMetadata['providers'];
+    if (providers is List) return providers.map((e) => e.toString()).toList();
+    final single = currentUser?.appMetadata['provider'];
+    return single == null ? const [] : [single.toString()];
+  }
+
+  /// False for an account that only ever used Google or Facebook: it has
+  /// no password, so "Change password" doesn't apply to it.
+  bool get hasPasswordSignIn => signInMethods.contains('email');
 
   static Future<void> initialize() async {
     if (_isInitialized) return;
@@ -106,9 +124,21 @@ class SupabaseService {
     return response;
   }
 
+  /// Signs out on this phone, then tells the server.
+  ///
+  /// Supabase removes the login from the phone first and only then calls
+  /// the server. Offline, that call failed and the error stopped the
+  /// screens from going back to sign-in, so "Sign out" seemed to do
+  /// nothing although the student was already signed out. Now a failed
+  /// or slow (5 s) server call is skipped: the login is gone from the
+  /// phone either way, and the session token on the server simply expires.
   Future<void> signOut() async {
     if (!_isInitialized) return;
-    await client.auth.signOut();
+    try {
+      await client.auth.signOut().timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('Sign-out: server not reached, signed out on this phone only ($e)');
+    }
   }
 
   Future<void> resetPassword(String email) async {
@@ -212,9 +242,12 @@ class SupabaseService {
       
       // Create new profile
       final user = currentUser!;
-      final name = displayName ?? 
-                   user.userMetadata?['display_name'] ?? 
-                   user.email?.split('@')[0] ?? 
+      // display_name: email sign-up; full_name / name: Google, Facebook.
+      final name = displayName ??
+                   user.userMetadata?['display_name'] ??
+                   user.userMetadata?['full_name'] ??
+                   user.userMetadata?['name'] ??
+                   user.email?.split('@')[0] ??
                    'User';
       
       await client.from('user_profiles').insert({

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_progress.dart';
@@ -25,6 +27,16 @@ class StorageService {
   static const String _lastDailyChallengeKey = 'last_daily_challenge';
   static const String _dailyChallengeScoreKey = 'daily_challenge_score';
   static const String _lastUserIdKey = 'last_user_id';
+  static const String _dailyActivityKey = 'daily_activity';
+  static const String _dailyGoalKey = 'daily_goal';
+
+  /// Daily goal choices offered on the dashboard (questions per day).
+  static const List<int> dailyGoalOptions = [10, 20, 30, 50];
+  static const int defaultDailyGoal = 20;
+
+  /// Local calendar day as 'YYYY-MM-DD', the same format the Daily
+  /// Challenge uses.
+  static String dayKey(DateTime date) => date.toIso8601String().split('T')[0];
 
   void _notifyProfileChanged() {
     profileChangeNotifier.value++;
@@ -84,6 +96,46 @@ class StorageService {
     await prefs.remove(_totalStudyTimeKey);
     await prefs.remove(_lastDailyChallengeKey);
     await prefs.remove(_dailyChallengeScoreKey);
+    await prefs.remove(_dailyActivityKey);
+  }
+
+  // Daily activity (dashboard goal ring and week strip)
+
+  /// Questions answered on this phone per day ('2026-10-15' -> 23).
+  Future<Map<String, int>> getDailyActivity() async {
+    final prefs = await _getPrefs();
+    final raw = prefs.getString(_dailyActivityKey);
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded.map((k, v) => MapEntry(k, (v as num).toInt()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Adds [questions] to today's count. Keeps only the last 60 days, so the
+  /// record stays tiny.
+  Future<void> addDailyActivity(int questions, {DateTime? now}) async {
+    if (questions <= 0) return;
+    final today = now ?? DateTime.now();
+    final activity = await getDailyActivity();
+    final key = dayKey(today);
+    activity[key] = (activity[key] ?? 0) + questions;
+    final cutoff = dayKey(today.subtract(const Duration(days: 60)));
+    activity.removeWhere((day, _) => day.compareTo(cutoff) < 0);
+    final prefs = await _getPrefs();
+    await prefs.setString(_dailyActivityKey, jsonEncode(activity));
+  }
+
+  Future<int> getDailyGoal() async {
+    final prefs = await _getPrefs();
+    return prefs.getInt(_dailyGoalKey) ?? defaultDailyGoal;
+  }
+
+  Future<void> setDailyGoal(int questions) async {
+    final prefs = await _getPrefs();
+    await prefs.setInt(_dailyGoalKey, questions);
   }
 
   // Onboarding
@@ -295,6 +347,9 @@ class StorageService {
     await prefs.remove(_totalStudyTimeKey);
     await prefs.remove(_lastDailyChallengeKey);
     await prefs.remove(_dailyChallengeScoreKey);
+    // The previous account's study days must not show on the new account's
+    // dashboard.
+    await prefs.remove(_dailyActivityKey);
   }
 
   // School/University
@@ -371,6 +426,7 @@ class StorageService {
     await prefs.remove(_dailyStreakKey);
     await prefs.remove(_lastStudyDateKey);
     await prefs.remove(_totalStudyTimeKey);
+    await prefs.remove(_dailyActivityKey);
   }
 
   // Daily Challenge
