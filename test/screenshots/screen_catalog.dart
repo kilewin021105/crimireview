@@ -16,8 +16,6 @@ import 'package:crimireview/screens/admin/admin_shell_screen.dart';
 import 'package:crimireview/screens/admin/admin_students_screen.dart';
 import 'package:crimireview/screens/admin/admin_template_generation_screen.dart';
 import 'package:crimireview/screens/auth_screen.dart';
-import 'package:crimireview/screens/sign_in_choice_screen.dart';
-import 'package:crimireview/services/social_auth_service.dart';
 import 'package:crimireview/screens/change_password_screen.dart';
 import 'package:crimireview/screens/daily_challenge_screen.dart';
 import 'package:crimireview/screens/flashcard_screen.dart';
@@ -68,6 +66,14 @@ Future<void> tapText(WidgetTester tester, String text) async {
   }
 }
 
+/// Taps a control by its screen-reader name, for icon-only buttons.
+Future<void> tapSemantics(WidgetTester tester, String label) async {
+  final finder = find.bySemanticsLabel(label);
+  if (finder.evaluate().isNotEmpty) {
+    await tester.tap(finder.first, warnIfMissed: false);
+  }
+}
+
 final _subject = CriminologySubjects.all.first;
 
 List<Question> sampleQuestions() => [
@@ -110,8 +116,6 @@ Map<String, Object> questionBankPrefs() => {
       QuestionRepository.cacheTimestampKey: DateTime.now().toIso8601String(),
     };
 
-const Set<SocialProvider> _both = {SocialProvider.google, SocialProvider.facebook};
-
 List<Shot> screenCatalog() => [
       Shot('splash', (_) => const SplashScreen(), seeded: false, pumps: 6),
       Shot('onboarding', (_) => const OnboardingScreen(), seeded: false),
@@ -120,19 +124,9 @@ List<Shot> screenCatalog() => [
           seeded: false, dark: false, size: const Size(320, 568)),
       Shot('auth_signup', (_) => const AuthScreen(),
           seeded: false, act: (t) => tapText(t, 'Create account')),
-      // "Decide how you sign in": shown before the email form once Google
-      // or Facebook is switched on (the last check is saved on the phone).
-      Shot('sign_in_choice', (_) => const SignInChoiceScreen(initialProviders: _both), seeded: false),
-      Shot('sign_in_choice_small', (_) => const SignInChoiceScreen(initialProviders: _both),
-          seeded: false, dark: false, size: const Size(320, 568)),
-      Shot('sign_in_choice_google_only',
-          (_) => const SignInChoiceScreen(initialProviders: {SocialProvider.google}),
-          seeded: false, dark: false),
-      Shot('sign_in_choice_wide', (_) => const SignInChoiceScreen(initialProviders: _both),
-          seeded: false, dark: false, size: const Size(1280, 800)),
-      // The email form opened from it (with a back arrow).
-      Shot('sign_in_choice_email', (_) => const SignInChoiceScreen(initialProviders: _both),
-          seeded: false, dark: false, act: (t) => tapText(t, 'Use my email instead')),
+      // Not switched on yet: tapping the Google icon under the form says so.
+      Shot('auth_login_google_off', (_) => const AuthScreen(),
+          seeded: false, dark: false, act: (t) => tapSemantics(t, 'Continue with Google')),
       Shot('forgot_password', (_) => const ForgotPasswordScreen(), seeded: false),
       Shot(
         'email_verification',

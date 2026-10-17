@@ -927,17 +927,138 @@ Published to the same manuscript page as before: https://claude.ai/artifact/5dtw
 
 ---
 
+## 2026-10-16 — Session 52: Google and Facebook icons under the email sign-in form
+
+You asked for Google and Facebook icons below the log-in form, in the style of a sample screen but keeping CrimiReview's own design, on a separate branch (`login-social-icons`, stacked on `new-logo`).
+
+**What changed:**
+- **New `lib/screens/social_sign_in_icons.dart`.** It sits under the Sign in / Create account button and shows:
+  - an "or continue with" line;
+  - a rounded tile with just the Google logo and one with just the Facebook logo, in the app's own card style, light and dark;
+  - a short note: "Your password stays with Google or Facebook. CrimiReview only receives your name, email address and profile photo."
+  - The tiles have no text, so screen readers and a long press say "Continue with Google / Facebook".
+- **How a tap works.** It uses the same sign-in path as the "Decide how you sign in" page:
+  - `SocialAuthService.start`, which keeps PKCE and Google's account chooser;
+  - then `SignInCompletion` and `PostSignInService`. That step does the account-switch cleanup, the cloud sync and the admin/student role check.
+  - So the email button, the choice page and the icons all finish a sign-in the same way.
+- **Only providers switched on in Supabase are shown,** the same rule as the choice page. While both are off, which is the case on 2026-10-16, the page looks exactly as before. `--dart-define=PREVIEW_SIGN_IN_CHOICE=true` shows the icons for a preview.
+- **Guarded against double sign-ins:**
+  - the icons are disabled while the email button signs in, and while a Google/Facebook sign-in is being finished;
+  - a cancelled or failed browser sign-in shows its reason under the icons;
+  - coming back from the browser without finishing stops the spinner after 4 seconds.
+- **`SocialAuthService.start` now checks the connection first.** Offline, it says "You're offline. Connect to the internet to sign in with Google." instead of opening a browser page that can't load. This also applies to the choice page.
+- Comments that said Google/Facebook appear only on the choice page were corrected: `auth_screen.dart`, `sign_in_choice_screen.dart`, `admin_settings_screen.dart`, `social_auth_service.dart` and README.
+
+**Checked on the live project (2026-10-16):**
+- Google and Facebook are still switched off in Supabase.
+- `supabase_enforce_email_verification.sql` was not installed, so you ran it in the SQL Editor the same day. It stops anyone from pre-creating an email/password account for another student's Gmail address, which Supabase would later join to that student's Google sign-in.
+- Checked on the live database afterwards:
+  - the `require_verified_email_before_signup` trigger is on (BEFORE INSERT on `auth.users`), and its code matches the file;
+  - nobody outside the database can run `require_verified_email()` or `cleanup_expired_verifications()`;
+  - the Supabase security advisor no longer flags `cleanup_expired_verifications`.
+- The app's own sign-up verifies the emailed code before creating the account, so it is compatible with the trigger. Still to do: one real sign-up in the app to confirm.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings.
+- `flutter test`: 46 pass, 12 of them new:
+  - 6 for the icons: hidden when off, one or both providers, disabled while busy, the "finishing" message, hidden on Windows;
+  - 6 for log-in and sign-up with the icons on 320, 360 and 412 px phones.
+- Screenshot sweep of every sign-in screen on 12 devices (phones, tablets, desktop, 130% text): 84 renders, 0 layout problems.
+
+---
+
+## 2026-10-17 — Session 53: the Google and Facebook icons are always on the log-in page
+
+You ran the app, didn't see the icons (Google and Facebook are still switched off in Supabase, so Session 52 hid them), and chose to always show them.
+
+**What changed** (`lib/screens/social_sign_in_icons.dart`, same branch, PR #5):
+- **On Android, iPhone and the web, the log-in page always shows** "or continue with", the Google and Facebook icons, and the note about what they share. This is on both the Sign in and Create account tabs. Nothing is needed in Supabase, and no preview setting.
+- **Tapping a provider that isn't switched on yet:**
+  1. The icon spins while the app checks Supabase again, in case it was just switched on.
+  2. If it's still off, it says "Google sign-in isn't available yet. Please sign in with your email." No browser page opens.
+- **Once a provider is switched on,** the same tap opens its sign-in page, as in Session 52.
+- **Unchanged:**
+  - The desktop apps still don't show the icons; they can't receive the browser's answer.
+  - The "Decide how you sign in" page still appears only once a provider is switched on. You chose to keep it on 2026-10-17.
+- Comments, README and tests were updated to match.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings.
+- `flutter test`: 45 pass. One icon test was replaced, because "hidden while switched off" no longer applies, and a new one covers the "isn't available yet" message.
+- Sweep of every sign-in screen on 12 devices: 72 renders, 0 layout problems.
+
+---
+
+## 2026-10-17 — Session 54: "Decide how you sign in" page removed
+
+You asked to remove the separate "Decide how you sign in" page, because students already know they can sign in with Google or Facebook from the icons on the log-in page.
+
+**What changed** (same branch, PR #5):
+- **Deleted `lib/screens/sign_in_choice_screen.dart`.** Every place that opened it now opens the log-in page directly:
+  - the splash screen;
+  - the end of onboarding;
+  - signing out from student Settings, the Admin Panel's Settings tab and the admin side menu;
+  - the "Sign in" button in Settings.
+- **Faster start when signed out.** The splash screen no longer waits up to 3 seconds to ask Supabase which providers are on; that question existed only for the deleted page. The icons on the log-in page ask on their own, and again on a tap if needed.
+- **Log-in page header back to its original look.** The back arrow existed only for returning to the deleted page, so it was removed.
+- **The `PREVIEW_SIGN_IN_CHOICE` preview setting is gone,** since the icons are always shown and need no preview. The VS Code run option for it was removed too.
+- **Shared sign-in code tidied** (`sign_in_completion.dart`): the error hook only the deleted page used was removed. Browser errors are shown by the icons.
+- Comments and README updated. The deleted page's five screenshot shots were removed from the screenshot catalog.
+- **Manuscript updated** (same page, version 20). These passages no longer describe the deleted page:
+  - Chapter 3, 9.2;
+  - Table 14 (Log In);
+  - Section 4.12 and Tables 20, 29 and 30.
+  - The release status now also says the email-verification rule was applied on October 16, and that #5 is pending merge. A dated note was added to the revision notes.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings.
+- `flutter test`: 45 pass.
+- Splash, onboarding, sign-in and settings screens re-rendered in light and dark: no layout problems.
+- Sign-in and onboarding swept on 12 devices: 48 renders, 0 problems.
+
+---
+
+## 2026-10-17 — Session 55: Privacy Policy and Terms of Service pages on the website (for Google and Facebook sign-in)
+
+You were setting up Google sign-in. In Google Auth Platform, **"Publish app" stayed greyed out** ("you must complete your configuration on the Branding page"). Publishing needs a home page and privacy policy link on an authorized domain, and the website had neither. Facebook also requires a privacy policy and data deletion instructions before its sign-in can go live.
+
+**What changed:**
+- **Website** (repo `crimireview-landing`, branch `privacy-terms`, **website PR #2**, merge after website PR #1):
+  - new pages `privacy.html` and `terms.html`, styled like the site;
+  - Privacy / Terms links in the footer.
+- **Privacy policy:** written from what the app and database really do. It covers:
+  - what is collected (including answer times and seen questions) and what isn't (no location, contacts, ads or third-party analytics);
+  - who sees what: the leaderboard shows name, photo, points and rank; faculty see name, email, points and mastery, read-only; profile photos have public links;
+  - service providers: Supabase (Singapore, as the project's region `ap-southeast-1` confirms) and Resend;
+  - how to delete your data (`#delete-your-data`, for Facebook);
+  - the rights under RA 10173.
+- **Terms of service:** not affiliated with the PRC; content may contain mistakes; no guarantee of passing; fair use; Philippine law.
+- **README updated** with the exact links to type into Google (home page, privacy, terms, authorized domain `crimireview.app`) and Facebook (privacy, terms, data deletion).
+
+**Still to do (you):**
+- Check that **support@crimireview.app receives mail**; deletion requests go there.
+- Keep the **30-day** deletion promise only if the team can honour it.
+- Have your adviser look at the two pages. They were drafted by an AI assistant and are not legal advice.
+- Merge website PRs #1 and #2.
+- Fill in Google's Branding page with the links, then **Publish app**. Meanwhile, Google sign-in works for **test users** you add in Audience.
+
+**Checks:** pages rendered in Edge at 1280, 390 and 320 px wide: no horizontal scrolling, and the links work.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
 
 - **Daily Challenge** shows an explanation either way (better than the old Quiz screen was), but still uses the plain overall `explanation` field, not the richer per-option "why THIS specific wrong choice fails" rationale, and does not call `MasteryService.recordAttempt()`. Only the main Quiz flow does, as of Session 9.
 - **The quiz Results screen** has no per-question answer review at all (Daily Challenge's own separate results screen does have one). A student who wants to see *why* they missed something after finishing has to remember it from the quiz itself.
-- **Google / Facebook sign-in is built but switched off** until the README "Google and Facebook sign-in" steps are done. Run `supabase_enforce_email_verification.sql` before that (Session 44).
+- **Google / Facebook sign-in is built but switched off** until the README "Google and Facebook sign-in" steps are done. `supabase_enforce_email_verification.sql`, which had to come first, is installed (Session 52).
 
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 52: `lib/screens/social_sign_in_icons.dart`, `test/social_sign_in_icons_test.dart`.
 
 Session 48: `assets/icon/logo_original.png` (new logo master); Windows and macOS app icons.
 
@@ -956,5 +1077,7 @@ Session 41 (redesign): `lib/widgets/ui/` (design-system components), `assets/fon
 `lib/screens/admin/admin_document_generation_screen.dart`, `lib/services/document_generation_service.dart`, `supabase/functions/generate-questions-from-document/`, `supabase_document_generation.sql` — the PDF → AI generation path (added Session 12), removed in Session 28.
 
 Session 41: `lib/widgets/animated_widgets.dart`, `lib/widgets/streak_widget.dart`, `lib/widgets/sync_status_indicator.dart` (unused by any screen), `test/fonts/` (Poppins, replaced by the bundled app font).
+
+Session 54: `lib/screens/sign_in_choice_screen.dart` (the "Decide how you sign in" page from Session 46; Google and Facebook are icons on the log-in page instead).
 
 Session 48: `assets/icon/logo_original.jpg`, `graduation_cap.png`, `graduation_cap_splash.png`, `splash_logo.png` (the old navy/gold logo artwork; nothing used them).

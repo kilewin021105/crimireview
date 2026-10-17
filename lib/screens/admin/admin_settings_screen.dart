@@ -9,7 +9,7 @@ import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/ui/ui.dart';
-import '../sign_in_choice_screen.dart';
+import '../auth_screen.dart';
 import '../change_password_screen.dart';
 
 /// Settings tab of the admin panel.
@@ -25,8 +25,8 @@ import '../change_password_screen.dart';
 ///   * About: version, website, support email.
 ///
 /// Nothing here changes data other students see. Sign-in methods (email,
-/// Google, Facebook) are deliberately not shown here: they have their own
-/// page before sign-in (`SignInChoiceScreen`).
+/// Google, Facebook) are deliberately not shown here: they are offered
+/// before sign-in, as icons under the email form.
 class AdminSettingsScreen extends StatefulWidget {
   /// Signs out and returns to the login screen. The shell passes its own
   /// so the wide-screen side menu and this tab do exactly the same thing.
@@ -88,10 +88,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     if (!confirmed) return;
     await SupabaseService.instance.signOut();
     await StorageService().clearAuthData();
-    final signIn = await SignInChoiceScreen.entry();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      SlidePageRoute(page: signIn),
+      SlidePageRoute(page: const AuthScreen()),
       (route) => false,
     );
   }

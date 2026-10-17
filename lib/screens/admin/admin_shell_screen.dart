@@ -7,7 +7,7 @@ import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/ui/ui.dart';
-import '../sign_in_choice_screen.dart';
+import '../auth_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_questions_screen.dart';
 import 'admin_settings_screen.dart';
@@ -71,10 +71,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
 
     await SupabaseService.instance.signOut();
     await StorageService().clearAuthData();
-    final signIn = await SignInChoiceScreen.entry();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      SlidePageRoute(page: signIn),
+      SlidePageRoute(page: const AuthScreen()),
       (route) => false,
     );
   }

@@ -20,7 +20,7 @@ App start
 - Sign up: a 6-digit email code (generated, verified, and emailed entirely server-side — see **Security** below), then the Supabase account is created and signed in.
 - Sign in merges local and cloud progress and handles account switching on shared devices.
 - Forgot password: the same server-side code flow, then a Supabase RPC (`reset_user_password`) applies the new password.
-- **Continue with Google / Facebook** (`lib/services/social_auth_service.dart`): Supabase OAuth with PKCE in the phone's browser, back into the app through `com.crimireview.crimireview://login-callback`. A Google/Facebook login with the same email as an existing account opens that same account. They are offered on a page of their own, **"Decide how you sign in"** (`sign_in_choice_screen.dart`), shown before the email form and only for providers switched on in Supabase; with neither on, the app goes straight to the email form. They never appear inside the student or admin screens. Setup: **Google and Facebook sign-in** below.
+- **Continue with Google / Facebook** (`lib/services/social_auth_service.dart`): Supabase OAuth with PKCE in the phone's browser, back into the app through `com.crimireview.crimireview://login-callback`. A Google/Facebook login with the same email as an existing account opens that same account. They are offered as Google and Facebook icons under the sign-in form ("or continue with", `social_sign_in_icons.dart`). The icons are always there (Android, iPhone, web); until a provider is switched on in Supabase, tapping it says "Google sign-in isn't available yet. Please sign in with your email." They never appear inside the student or admin screens. Setup: **Google and Facebook sign-in** below.
 - Every sign-in method finishes through `PostSignInService` (cloud/local merge, account switching, admin routing).
 - **Dashboard setting required:** Authentication → Providers → Email → turn **off** "Confirm email". This app's own code-verification step replaces Supabase's built-in confirmation email; leaving both on causes sign-in to fail right after a successful signup.
 
@@ -197,23 +197,21 @@ The app side is done; these steps switch it on. They need your own Google and Fa
 **0. Security first.** Run `supabase_enforce_email_verification.sql` (Supabase step 9) **before** switching either provider on. Supabase joins a Google login to an existing account with the same email; without step 9, someone could pre-create an email/password account for another student's Gmail (skipping the code) and later get into that student's account.
 
 **1. Google** ([console.cloud.google.com](https://console.cloud.google.com), any project):
-1. *Google Auth Platform → Branding*: app name `CrimiReview`, your support email. Under *Authorized domains* add `wbhobbehgqlzfborscvx.supabase.co`.
-2. *Audience*: External, then **Publish app** (otherwise only listed test users can sign in). Only the basic `openid`, `email`, `profile` scopes are used, so no Google review is needed.
+1. *Google Auth Platform → Branding*: app name `CrimiReview`, your support email, developer contact email. No logo (a logo makes Google review the app first). App home page `https://www.crimireview.app`, privacy policy `https://www.crimireview.app/privacy.html`, terms of service `https://www.crimireview.app/terms.html` (the pages come from the website's privacy-terms PR, which must be merged first). Under *Authorized domains* add `wbhobbehgqlzfborscvx.supabase.co` and `crimireview.app`.
+2. *Audience*: External, then **Publish app**; it stays greyed out until the Branding page is complete. Until then, add your own Gmail under *Test users* to test. Only the basic `openid`, `email`, `profile` scopes are used, so no Google review is needed.
 3. *Clients → Create client*: type **Web application**; *Authorized redirect URIs*: the callback URL above. Copy the **Client ID** and **Client secret**.
 4. Supabase dashboard → *Authentication → Sign In / Providers → Google*: enable, paste both, save.
 
 **2. Facebook** ([developers.facebook.com](https://developers.facebook.com) → My Apps → Create app):
 1. Use case **Authenticate and request data from users with Facebook Login**. In that use case's permissions, add **email** (public_profile is there by default).
 2. *Facebook Login → Settings → Valid OAuth Redirect URIs*: the callback URL above.
-3. *App settings → Basic*: copy the **App ID** and **App secret**; fill in a Privacy Policy URL (Facebook requires one to go live).
+3. *App settings → Basic*: copy the **App ID** and **App secret**; Privacy Policy URL `https://www.crimireview.app/privacy.html`, Terms of Service URL `https://www.crimireview.app/terms.html`, User data deletion: instructions URL `https://www.crimireview.app/privacy.html#delete-your-data` (Facebook requires these to go live).
 4. Switch the app to **Live** (in Development mode only you and listed testers can log in).
 5. Supabase → *Sign In / Providers → Facebook*: enable, App ID as Client ID, App secret as secret, save.
 
 **3. Let the app receive the result.** Supabase → *Authentication → URL Configuration → Redirect URLs* → add `com.crimireview.crimireview://login-callback`. Without it Supabase sends students to the Site URL instead of back into the app. **Testing in Chrome (web):** also add the web address, e.g. run with `flutter run -d chrome --web-port 3000` and add `http://localhost:3000/**` (for the published web app, its own address).
 
-**Preview before setting anything up:** `flutter run -d chrome --dart-define=PREVIEW_SIGN_IN_CHOICE=true` (or with your phone instead of `-d chrome`), then sign out. The "Decide how you sign in" page opens with a "Preview mode" note; tapping a provider that isn't switched on yet just says so. Normal builds never show preview mode.
-
-**4. Check.** Restart the app (it checks Supabase while the logo shows): after signing out, the **"Decide how you sign in"** page now appears before the email form, with a button for each provider you switched on. Test with an email that already has a CrimiReview account; it should open the same account with the same progress. If Facebook doesn't share an email (some accounts are phone-only), the app explains it and the student can use Google or email.
+**4. Check.** Sign out; on the sign-in page, tap the Google (or Facebook) icon under the Sign in button. It now opens the provider's sign-in page instead of saying it isn't available yet. Test with an email that already has a CrimiReview account; it should open the same account with the same progress. If Facebook doesn't share an email (some accounts are phone-only), the app explains it and the student can use Google or email.
 
 Core tables used by the app:
 

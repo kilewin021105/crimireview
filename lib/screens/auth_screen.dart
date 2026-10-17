@@ -10,11 +10,10 @@ import '../widgets/password_strength_indicator.dart';
 import 'email_verification_screen.dart';
 import 'forgot_password_screen.dart';
 import 'sign_in_completion.dart';
+import 'social_sign_in_icons.dart';
 
-/// The email + password form (sign in / create account).
-///
-/// Google and Facebook are not on this page: they have their own page,
-/// `SignInChoiceScreen`, shown before this one when they are switched on.
+/// The sign-in page: the email + password form (sign in / create account),
+/// with a Google and a Facebook icon under it ([SocialSignInIcons]).
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -167,24 +166,7 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              // Back to "Decide how you sign in" when opened from it.
-                              if (Navigator.of(context).canPop()) ...[
-                                IconButton(
-                                  tooltip: 'Back',
-                                  onPressed: () => Navigator.of(context).maybePop(),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.white.withValues(alpha: 0.14),
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  icon: const Icon(Icons.arrow_back_rounded),
-                                ),
-                                const SizedBox(width: 12),
-                              ],
-                              AppLogo(size: isSmall ? 44 : 52, showShadow: false),
-                            ],
-                          ),
+                          AppLogo(size: isSmall ? 44 : 52, showShadow: false),
                           SizedBox(height: isSmall ? 14 : 20),
                           Text(
                             _isLogin ? 'Welcome back' : 'Create your account',
@@ -325,6 +307,13 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
                               label: _isLogin ? 'Sign in' : 'Create account',
                               loading: _isLoading || isCompletingSignIn,
                               onPressed: _submit,
+                            ),
+                            // A Google or Facebook sign-in finishes through
+                            // watchForSessions above; while the email button
+                            // signs in (_isLoading), the icons wait.
+                            SocialSignInIcons(
+                              enabled: !_isLoading,
+                              completing: isCompletingSignIn && !_isLoading,
                             ),
                             const SizedBox(height: 20),
                             Wrap(

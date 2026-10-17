@@ -113,6 +113,25 @@ void main() {
     }
   }
 
+  // The Google and Facebook icons sit under the form on both tabs.
+  for (final size in sizes.entries) {
+    for (final signUp in [false, true]) {
+      testWidgets('${signUp ? 'Sign up' : 'Log in'} with Google and Facebook icons fits at ${size.key}',
+          (tester) async {
+        final overflows = await _overflowsFor(
+          tester,
+          const AuthScreen(),
+          size.value,
+          act: signUp
+              ? (tester) async => tester.tap(find.text('Create account').last, warnIfMissed: false)
+              : null,
+        );
+        expect(find.text('or continue with'), findsOneWidget);
+        expect(overflows, isEmpty, reason: overflows.join('\n'));
+      });
+    }
+  }
+
   for (final size in sizes.entries) {
     testWidgets('Sign up form fits at ${size.key}', (tester) async {
       final overflows = await _overflowsFor(
