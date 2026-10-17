@@ -6,6 +6,7 @@ import '../models/subject.dart';
 import '../models/user_progress.dart';
 import '../screens/study_notes_screen.dart';
 import '../services/adaptive_learning_service.dart';
+import '../services/question_repository.dart';
 import '../widgets/ui/ui.dart';
 import 'error_messages.dart';
 import 'page_transitions.dart';
@@ -55,9 +56,15 @@ Future<void> startSegmentQuiz(
   if (!context.mounted) return;
 
   if (questions.isEmpty) {
+    // Nothing on the phone at all means the question bank was never
+    // downloaded (first start without internet), not an empty segment.
+    final bankEmpty = (await QuestionRepository.instance.all()).isEmpty;
+    if (!context.mounted) return;
     showAppSnack(
       context,
-      'No ${difficulty.name} questions available for ${SegmentProgress.rangeLabelFor(segmentIndex)}',
+      bankEmpty
+          ? 'No questions on this phone yet. Connect to the internet once so CrimiReview can download them.'
+          : 'No ${difficulty.name} questions available for ${SegmentProgress.rangeLabelFor(segmentIndex)}',
       tone: BannerTone.danger,
     );
     return;

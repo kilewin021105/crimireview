@@ -234,6 +234,18 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 'No email app found. Write to $_supportEmail',
               ),
             ),
+            AppListTile(
+              icon: Icons.privacy_tip_outlined,
+              iconColor: p.textSecondary,
+              title: 'Privacy Policy',
+              onTap: () => _open(Uri.parse(kPrivacyPolicyUrl), 'Open $kPrivacyPolicyUrl in your browser'),
+            ),
+            AppListTile(
+              icon: Icons.description_outlined,
+              iconColor: p.textSecondary,
+              title: 'Terms of Service',
+              onTap: () => _open(Uri.parse(kTermsUrl), 'Open $kTermsUrl in your browser'),
+            ),
           ],
         ),
         const SizedBox(height: 28),

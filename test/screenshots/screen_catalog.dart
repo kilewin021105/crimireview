@@ -149,6 +149,9 @@ List<Shot> screenCatalog() => [
       Shot('tab_cards', (_) => const HomeScreen(), act: (t) => tapText(t, 'Cards')),
       Shot('tab_progress', (_) => const HomeScreen(), act: (t) => tapText(t, 'Progress')),
       Shot('tab_settings', (_) => const HomeScreen(), act: (t) => tapText(t, 'Settings')),
+      // The whole Settings tab in one tall image (Support links at the end).
+      Shot('tab_settings_full', (_) => const HomeScreen(),
+          dark: false, size: const Size(390, 1500), act: (t) => tapText(t, 'Settings')),
       Shot(
         'study_notes',
         (_) => StudyNotesScreen(

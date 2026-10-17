@@ -189,6 +189,11 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
 8. **`supabase_security_fixes_v2.sql`** — pre-launch security fixes: profiles (emails, schools, roles) are no longer readable by other users or logged-out visitors; the leaderboard is served by `get_leaderboard()` with public fields only; daily scores are private and insert-only; password reset re-checks the emailed code; code emails are rate-limited; avatars are limited to 2 MB images; name lengths are capped. **Requires app v1.0.1 or newer** for Forgot Password and the leaderboard.
 9. `supabase_enforce_email_verification.sql` — makes the database refuse to create an account unless the email passed the 6-digit check, so Supabase's public sign-up API can't be used to skip it. Google and Facebook accounts are let through (those providers already proved the email). **Test a new sign-up in the app right after running it**; the file has a one-line rollback. To add a user by hand afterwards, see the file's header.
 10. `supabase_social_login.sql` — new accounts from Google / Facebook get their real name and profile photo instead of being named after their email address.
+11. **`supabase_audit_fixes.sql`** (pre-release audit, 2026-10-17):
+    - a profile's email always equals the sign-in email, and "Make admin" finds accounts by their sign-in email, so a student can't get promoted in a teacher's place;
+    - profile photos can only point at the student's own upload (or their Google/Facebook photo);
+    - a password reset signs the account out on every device;
+    - the internal email functions can only be run by the database.
 
 ## Google and Facebook sign-in
 

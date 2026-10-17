@@ -570,13 +570,12 @@ class OfflineSyncService extends ChangeNotifier {
   }) async {
     if (!_hasAuthenticatedSession) return;
 
-    final normalizedSchool = (school != null && school.isEmpty) ? null : school;
-
+    // school: null = leave as is, '' = clear it.
     if (await _canSyncNow()) {
       try {
         await SupabaseService.instance.updateProfile(
           displayName: displayName,
-          school: normalizedSchool,
+          school: school,
         );
         return;
       } catch (e) {
@@ -586,7 +585,7 @@ class OfflineSyncService extends ChangeNotifier {
 
     await queueProfileDetails(
       displayName: displayName,
-      school: normalizedSchool,
+      school: school,
     );
   }
 
