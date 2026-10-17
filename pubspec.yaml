@@ -39,12 +39,26 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3
 
 # App Icon Configuration
+# Source: assets/icon/logo_original.png (the CrimiReview logo: white C, red
+# R, cap, scales and book on black). Regenerate with:
+#   dart run flutter_launcher_icons
 flutter_launcher_icons:
   android: true
   ios: true
+  remove_alpha_ios: true
   image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#6C5CE7"
+  adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  # Keeps the whole logo (book corners included) inside the circle or
+  # squircle Android launchers cut the icon to.
+  adaptive_icon_foreground_inset: 20
+  windows:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
 
 flutter:
   uses-material-design: true

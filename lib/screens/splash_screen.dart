@@ -108,7 +108,16 @@ class _SplashScreenState extends State<SplashScreen>
       value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
       child: Scaffold(
         body: Container(
-          decoration: BoxDecoration(gradient: p.heroGradient),
+          // The logo's black, with a soft red glow behind it. Black also
+          // matches the system launch screen shown just before this one
+          // (android/app/src/main/res), so there's no jump in colour.
+          decoration: BoxDecoration(
+            color: Colors.black,
+            gradient: RadialGradient(
+              radius: 0.9,
+              colors: [p.primary.withValues(alpha: 0.32), Colors.black],
+            ),
+          ),
           child: Stack(
             children: [
               // Soft rings behind the logo.

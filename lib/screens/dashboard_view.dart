@@ -143,28 +143,76 @@ class _DashboardViewState extends State<DashboardView> with WidgetsBindingObserv
           bottom: false,
           child: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(padding, 12, padding, 28),
-            child: ContentWidth(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Appear(index: 0, child: _buildHeader(progress)),
-                  const SizedBox(height: 20),
-                  Appear(index: 1, child: _buildTodayCard(progress)),
-                  const SizedBox(height: 14),
-                  Appear(index: 2, child: _buildContinueCard(progress)),
-                  const SizedBox(height: 12),
-                  Appear(index: 3, child: _buildChallengeCard()),
-                  const SizedBox(height: 12),
-                  Appear(index: 4, child: _buildTotals(progress)),
-                  SizedBox(height: gap),
-                  Appear(index: 5, child: _buildReadiness(service)),
-                  Appear(index: 6, child: _buildReviewTopics()),
-                  Appear(index: 7, child: _buildShortcuts()),
-                  SizedBox(height: gap),
-                  Appear(index: 8, child: _buildModules(progress)),
-                ],
-              ),
-            ),
+            child: LayoutBuilder(builder: (context, c) {
+              // Today, continue, challenge, totals and shortcuts; then the
+              // readiness and topics-to-review analysis.
+              final today = [
+                Appear(index: 1, child: _buildTodayCard(progress)),
+                const SizedBox(height: 14),
+                Appear(index: 2, child: _buildContinueCard(progress)),
+                const SizedBox(height: 12),
+                Appear(index: 3, child: _buildChallengeCard()),
+                const SizedBox(height: 12),
+                Appear(index: 4, child: _buildTotals(progress)),
+                SizedBox(height: gap),
+              ];
+              final analysis = [
+                Appear(index: 5, child: _buildReadiness(service)),
+                Appear(index: 6, child: _buildReviewTopics()),
+              ];
+              final shortcuts = Appear(index: 7, child: _buildShortcuts());
+              final modules = Appear(index: 8, child: _buildModules(progress));
+
+              // Landscape tablets and computers: two columns side by side
+              // instead of one phone-width column in the middle.
+              if (c.maxWidth >= 1000) {
+                return ContentWidth(
+                  maxWidth: 1180,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Appear(index: 0, child: _buildHeader(progress)),
+                      const SizedBox(height: 20),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [...today, shortcuts],
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: analysis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: gap),
+                      modules,
+                    ],
+                  ),
+                );
+              }
+
+              return ContentWidth(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Appear(index: 0, child: _buildHeader(progress)),
+                    const SizedBox(height: 20),
+                    ...today,
+                    ...analysis,
+                    shortcuts,
+                    SizedBox(height: gap),
+                    modules,
+                  ],
+                ),
+              );
+            }),
           ),
         ),
         if (_preparingQuiz) _buildPreparingOverlay(),
@@ -255,7 +303,8 @@ class _DashboardViewState extends State<DashboardView> with WidgetsBindingObserv
     final ratio = _dailyGoal == 0 ? 0.0 : answeredToday / _dailyGoal;
     final reached = answeredToday >= _dailyGoal;
     final left = _dailyGoal - answeredToday;
-    const accent = Color(0xFFFFC266);
+    // White ring on the red-to-black card, like the logo's white C.
+    const accent = Colors.white;
     final soft = Colors.white.withValues(alpha: 0.72);
 
     return GradientCard(
@@ -1105,7 +1154,8 @@ class _WeekStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = context.textStyles;
-    const navy = Color(0xFF13286E);
+    // Tick in the logo's deep red on the white day dots.
+    const tick = Color(0xFFA8000F);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -1135,7 +1185,7 @@ class _WeekStrip extends StatelessWidget {
                         ? Border.all(color: Colors.white, width: 1.6)
                         : null,
                   ),
-                  child: d.studied ? const Icon(Icons.check_rounded, size: 18, color: navy) : null,
+                  child: d.studied ? const Icon(Icons.check_rounded, size: 18, color: tick) : null,
                 ),
               ],
             ),

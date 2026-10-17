@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/theme_service.dart';
 
-/// The CrimiReview logo (the same artwork as the app icon) on a rounded
-/// white tile, optionally with the wordmark underneath.
+/// The CrimiReview logo (the same artwork as the app icon: white C, red R,
+/// cap, scales and book) on its own black rounded tile, optionally with the
+/// wordmark underneath.
 class AppLogo extends StatelessWidget {
   final double size;
   final bool showText;
@@ -22,13 +23,16 @@ class AppLogo extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.black,
         borderRadius: BorderRadius.circular(size * 0.28),
-        border: Border.all(color: context.isDarkMode ? Colors.transparent : p.border),
+        // A hairline so the black tile still has an edge on dark screens.
+        border: Border.all(
+          color: context.isDarkMode ? Colors.white.withValues(alpha: 0.14) : Colors.transparent,
+        ),
         boxShadow: showShadow
             ? [
                 BoxShadow(
-                  color: const Color(0xFF13286E).withValues(alpha: context.isDarkMode ? 0.5 : 0.16),
+                  color: Colors.black.withValues(alpha: context.isDarkMode ? 0.5 : 0.22),
                   blurRadius: size * 0.35,
                   offset: Offset(0, size * 0.12),
                 ),
@@ -36,9 +40,9 @@ class AppLogo extends StatelessWidget {
             : null,
       ),
       clipBehavior: Clip.antiAlias,
-      padding: EdgeInsets.all(size * 0.1),
-      // assets/images/logo_mark.png is the app icon artwork cropped to
-      // the mark itself, so it fills the tile like the launcher icon.
+      padding: EdgeInsets.all(size * 0.04),
+      // assets/images/logo_mark.png is the logo cropped close to the
+      // artwork, on the logo's own black, so it fills the tile.
       child: Image.asset(
         'assets/images/logo_mark.png',
         fit: BoxFit.contain,
@@ -63,7 +67,8 @@ class AppLogo extends StatelessWidget {
   }
 }
 
-/// "CrimiReview" set in the brand style: "Crimi" in ink, "Review" in blue.
+/// "CrimiReview" set in the brand style, like the logo's white C and red
+/// R: "Crimi" in ink (white on dark), "Review" in red.
 class AppWordmark extends StatelessWidget {
   final double fontSize;
   final Color? color;

@@ -322,7 +322,7 @@ class _ResultsScreenState extends State<ResultsScreen> with SingleTickerProvider
                     style: text.bodySmall,
                   ),
                   const SizedBox(height: 10),
-                  AppProgressBar(value: attemptedSubjects / allSubjects.length, height: 6),
+                  AppProgressBar(value: attemptedSubjects / allSubjects.length, color: p.info, height: 6),
                 ],
               ),
             ),

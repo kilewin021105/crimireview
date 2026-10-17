@@ -26,7 +26,7 @@ App start
 
 ### Main Navigation
 
-Five bottom tabs (students):
+Five tabs (students): a bottom bar on phones, a side navigation rail on tablets in landscape and computers (840 px wide and up); the Home dashboard switches to two columns from about 1000 px. Text follows the phone's text-size setting up to 130%.
 
 - **Home** (`dashboard_view.dart`): greeting, streak and leaderboard; **today's goal** (questions answered today against a goal the student picks: 10/20/30/50) with this week's study days; **continue learning** (most recent subject at the level and segment the student is on, one tap to start); Daily Challenge with a "done today" state; totals; board-exam readiness from the ML model; **topics to review** (lowest BKT mastery); shortcuts; study modules.
 - **Quiz:** subjects → difficulty lock/unlock → study notes → quiz → results. Item selection goes through `QuestionSelectionService` (unseen-first, weighted toward weak topics per the BKT model in `MasteryService`) so a retry never repeats the same set.
@@ -65,11 +65,11 @@ Layer summary:
 
 The whole UI (student app and admin panel) is built from one design system, introduced in the 2026-10 redesign:
 
-- **Brand:** the app icon's navy and gold. Royal blue is the interactive colour (buttons, links, selection), deep navy anchors the hero cards, gold marks points, ranks and achievements. Each board subject has its own accent colour (`AppColors.subjectColors`).
+- **Brand:** the logo's black, red and white (since Session 48). The logo's red (`#D7101F`, dark mode `#E8192C`) is the interactive colour (buttons, links, tabs). Hero cards go from that red to black, greys are neutral, and the splash screen is the logo's black with a red glow. A quiz answer that has been tapped but not yet checked shows in ink (black/white), never red, so it can't be mistaken for "wrong". Gold still marks points, ranks and achievements; green / amber / red still mean right / so-so / wrong. Each board subject keeps its own accent colour (`AppColors.subjectColors`).
 - **Tokens:** `lib/services/theme_service.dart` defines `AppPalette` (light and dark colour sets), spacing/radii (`AppSpace`) and the full Material 3 theme. Screens read colours with `context.palette` instead of hard-coding them, so dark mode comes from one place.
 - **Typeface:** Plus Jakarta Sans, bundled in `assets/fonts/` (SIL Open Font License), so text renders correctly even on a first launch offline.
 - **Components:** `lib/widgets/ui/` — import `widgets/ui/ui.dart` to get `AppCard`, `GradientCard`, `StatTile`, `PageHeader`/`SectionHeader`/`AppTopBar`, `PrimaryButton`/`SecondaryButton`, `AppTextField`, `CodeInput`, `PillTabs`, `Pill`, `IconBadge`, `InlineBanner`, `AppListGroup`, `RingProgress`, `AppProgressBar`, `EmptyState`, `LoadingView`, `UserAvatar`, `showConfirmDialog` and `showAppSnack`.
-- **Logo:** `lib/widgets/app_logo.dart` renders the real logo (`assets/images/logo_mark.png`, cropped from the app icon) and the "CrimiReview" wordmark.
+- **Logo:** the source is `assets/icon/logo_original.png`. `lib/widgets/app_logo.dart` shows it on a black rounded tile (`assets/images/logo_mark.png`, cropped close to the artwork) next to the wordmark ("Crimi" in ink, "Review" in red, like the logo's C and R). App icons for Android, iOS, Windows and macOS come from `assets/icon/app_icon.png` via `dart run flutter_launcher_icons` (settings in `pubspec.yaml`). Web icons, the favicon and the website's logo are made from the same source.
 
 ## Setup on New Laptop (Windows)
 
@@ -138,6 +138,11 @@ flutter test
 flutter test test/screenshots --dart-define=SHOTS=build/screenshots
 # ...or only some screens:
 flutter test test/screenshots --dart-define=SHOTS=build/screenshots --dart-define=ONLY=home,quiz
+# Responsive check: every screen on 12 devices (small/large phones, landscape,
+# 7-12 inch tablets, desktop, and 130% system text); prints any layout problem
+flutter test test/screenshots --dart-define=SWEEP=true
+# ...add --dart-define=SHOTS=<dir> to save images of problems (ALL_IMAGES=true
+# for every render) and --dart-define=DETAILS=true for which widget overflowed
 
 # Run in release mode on connected device
 flutter run --release

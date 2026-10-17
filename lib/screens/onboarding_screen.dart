@@ -23,7 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Review smarter for the board exam',
       description:
           'All six Criminology board subjects in one place, with quizzes, flashcards and study notes you can use anywhere.',
-      color: Color(0xFF2449D8),
+      color: Color(0xFFD7101F),
       tags: ['6 board subjects', 'Works offline'],
     ),
     OnboardingPage(

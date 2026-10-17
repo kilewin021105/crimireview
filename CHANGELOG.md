@@ -777,6 +777,156 @@ You asked whether every feature works offline. I checked: studying works offline
 
 ---
 
+## 2026-10-15 — Session 48: new logo, and the app's colours now follow it
+
+You gave a new logo (white C, red R, graduation cap, scales of justice and an open book, on black) and asked for it everywhere: the app, its colours, the website and anything else that shows the logo. App changes are on branch `new-logo` with their own pull request; the website change is on a `new-logo` branch in `crimireview-landing` with its own pull request. Nothing is live until you merge.
+
+**Logo files** (all made from your image by one script, so they match exactly):
+- `assets/icon/logo_original.png`: your logo, kept as the master copy.
+- **App icons:** `assets/icon/app_icon.png` + `app_icon_foreground.png`, then `dart run flutter_launcher_icons` regenerated the Android icons (all sizes, plus the adaptive icon on a black background), iOS (all sizes) and, for the first time, **Windows** (`app_icon.ico`) and **macOS**. Those two still had Flutter's default icon.
+  - Android launchers cut icons to a circle or rounded square. The adaptive icon keeps a 20% margin, so the whole logo, book corners included, stays inside the safe area: the farthest point is at 0.283 of the size, the limit is 0.306. Checked with a simulated circle and rounded square.
+- **In-app logo:** `assets/images/logo_mark.png` (cropped close to the artwork), shown by `AppLogo` on a black rounded tile; it used to be a white tile.
+- **Web app:** `web/favicon.png`, `web/icons/Icon-192/512` and the maskable versions (scaled so a round crop doesn't cut the logo); `manifest.json` colours are now black.
+- **Removed:** the old navy/gold logo files `logo_original.jpg`, `graduation_cap.png`, `graduation_cap_splash.png`, `splash_logo.png`. Nothing used them, and they are still in git history.
+
+**Colours: navy, blue and gold become the logo's black, red and white** (`AppPalette` in `theme_service.dart`; every screen reads from it):
+- The logo's red is the interactive colour (buttons, links, tabs): `#D7101F` in light mode and `#E8192C` in dark mode. Both were checked for readability: white text on them scores 5.3:1 and 4.6:1.
+- Hero cards (dashboard goal card, sign-in header, admin question-bank card) go from that red to black.
+- Greys are neutral now (the old ones were tinted blue), so black and white look like the logo. Dark mode is near-black.
+- Unchanged on purpose: gold for points and achievements, green / amber / red for right / so-so / wrong, blue for information, and each subject's own colour.
+- The wordmark is "Crimi" in ink and "Review" in red, like the logo's white C and red R.
+- **Splash and launch screens:**
+  - The in-app splash is now the logo's black with a soft red glow.
+  - The phone's own launch screen (Android, including Android 12+) is black too, so there is no jump in colour when the app starts. It used to be navy.
+
+**Places where red would have meant the wrong thing, fixed:**
+- **Quiz:** a tapped answer that hasn't been checked yet showed in the brand colour. In red it would look like a wrong answer before checking. It now shows in ink (black, or white in dark mode); red stays for wrong answers only.
+- **Topic mastery bar** under each answer used the brand colour, so a good 72% looked red. It now uses green / amber / red by level, like every other score.
+- Achievement progress is now gold (like all achievements). "Subjects attempted" on the results screen is now neutral blue, so it doesn't read as a warning.
+- Leftover fixed colours (navy shadow on the logo tile, navy tick on the week strip, gold goal ring, blue first onboarding page, blue snackbar action) were switched to the new palette.
+
+**Website** (`crimireview-landing`, branch `new-logo`):
+- New `logo.png`, `favicon.png` and an `apple-touch-icon.png` (iPhone home-screen icon).
+- The violet accent became the logo's red, and the navy background became black. The mock phone screenshot uses the same colours.
+- A `theme-color` tag makes the phone browser bar black.
+- Merging that pull request publishes it through Vercel as before.
+
+**Checks:**
+- `flutter analyze`: 0 errors / 0 warnings. `flutter test`: 34 pass.
+- All 70 screens re-rendered in light and dark; no layout problems. `quiz_answered` still fails only for the old test-only sound reason.
+- The website was rendered in Chrome.
+- **Debug APK builds**, and the new launcher icon and logo are inside it (the packaged in-app logo matches the new file byte for byte).
+
+**Laptop problem found while building: VS Code was eating the memory.**
+- The first APK build stalled. About 35 Gradle helper programs (Gradle daemons) were running, about 250 MB each.
+- They were started by VS Code's Java extensions (`redhat.java`, `vscode-gradle`), not by the build. These extensions kept trying to load `android/` as a Java project: 13 new ones in 45 seconds with nothing building. The 26 `hs_err_pid*.log` crash files in the project folder, all from 2026-09-05, fit this pattern.
+- Fix: `.vscode/settings.json` tells those extensions not to load Gradle projects in this folder. Flutter builds don't use them.
+- After that, 0 new daemons in 60 seconds, and the build took 121 s instead of 308 s.
+- The settings file is local and not committed, so it applies whichever branch is checked out.
+
+---
+
+## 2026-10-16 — Session 49: overflow error fixed, app responsive on phones, tablets and computers
+
+You saw "A RenderFlex overflowed by 5.8 pixels on the bottom" and asked for the app to work on every device, tablets included.
+
+**How the problems were found:** the screenshot tests got a **sweep mode** (`--dart-define=SWEEP=true`, see README). It renders every screen on 12 devices and reports any layout error:
+- small phone 320×568, 360×640, 390×844, 430×932;
+- a phone held sideways (844×390);
+- 7-inch, 10-inch, landscape and 12-inch tablets;
+- desktop 1440×900;
+- small and normal phones with the system text size at 130%.
+
+The first run found **15 problems on 6 screens**. After the fixes: **0 problems in all 420 renders**.
+
+**The overflows and what fixed each:**
+1. **Admin dashboard, the six number tiles** (your error). The tiles had a fixed shape, so on phones 320-360 px wide they were too short for their content: 6.2 px at 360 px wide (yours was 5.8 px), 18 px at 320 px, up to 20 px with larger text. It also showed while the Settings tab was open, because the dashboard stays laid out behind it. The tiles now sit in a new kit component, `AdaptiveGrid`, whose rows are as tall as their tallest tile.
+2. **Admin side menu on a short screen** (a phone held sideways), 49 px. The menu couldn't scroll. It now scrolls when needed; "Sign out" stays at the bottom when there's room.
+3. **"Decide how you sign in" page, phone held sideways**, 22 px. The fill-the-screen layout measured the text at the full screen width, but drew it in a narrower column, so the page came out too short. Replaced with a layout that needs no measuring: at least one screen tall, explanation on top, choices at the bottom, scrolls if longer.
+4. **Sign-up page with larger text**, 2 px. The red header had a fixed height; "Create your account" wrapped to two lines and no longer fit. The header now grows with its text. Normal phones look exactly as before (checked).
+5. **Question editor with larger text**, 7 px to the right. A section title couldn't wrap; now it can.
+
+**Tablets and computers:**
+- The student app now uses a **side navigation rail** (logo on top, the same five tabs) when the screen is at least 840 px wide and 480 px tall: tablets in landscape, computers and the web. This matches the admin panel. Phones, including a phone held sideways (too short for five rail items), keep the bottom bar.
+- The **Home dashboard uses two columns** from about 1000 px: today's goal, continue learning, Daily Challenge, totals and shortcuts on the left; readiness and topics to review on the right. Before, it was one phone-width column in the middle of a large screen.
+- The 840 px breakpoint is now one shared constant (`kWideLayoutWidth`) for the student and admin layouts.
+
+**Very large system text:** text now follows the phone's text-size setting **up to 130%**, then stops (`kMaxTextScale`, applied once in `main.dart`). Newer Android phones allow up to 200%, which would push buttons and cards apart on any screen. Every screen is checked at 130% on small and normal phones.
+
+**Screenshot harness:** besides `SWEEP`, it now has `DETAILS=true` (prints which widget overflowed, with file and line) and `ALL_IMAGES=true` (keeps every render, not only the ones with problems).
+
+**Checks:**
+- `flutter analyze`: 0 errors / 0 warnings. `flutter test`: 34 pass.
+- Sweep: 0 layout problems in 420 renders.
+- Reviewed images: tablet landscape (rail + two columns), the smallest phone (admin tiles), the sign-up page at 130% text, and the normal sign-in page (unchanged).
+
+---
+
+## 2026-10-16 — Session 50: exam subjects corrected to the official 2021 table; research for Chapters 1–4
+
+You asked for Chapters 1–4 of the capstone manuscript to be rebuilt precisely, including a study of competing review apps.
+
+**Research done first** (deep research, six tracks). Notes are in `research_notes/CrimiReview capstone chapters 1 to 4/`, and the report is in `reports/CrimiReview capstone chapters 1 to 4.md`. Both folders are kept out of git with `.git/info/exclude`. The six tracks:
+- competing CLE and other review apps;
+- the Philippine Criminologist Licensure Examination;
+- the adaptive-learning literature;
+- mobile learning, gamification, local studies and data privacy;
+- methodology and evaluation standards;
+- a code-checked audit of the Oct 7 manuscript draft (61 findings).
+
+**App fix found by that research: the six subjects showed the wrong weights.**
+- `lib/models/subject.dart` said "2026 PRC Board Exam subjects with actual weights" but held the RA 11131 Sec. 15 table from 2018.
+- The official table since the 2nd exam of 2022 is PRC Board of Criminology Resolution No. 01, s. 2021, confirmed by the PRC Program of Examination for February 4–6, 2026:
+
+  | Subject | Weight |
+  |---|---|
+  | Criminal Law and Jurisprudence | 20% |
+  | Law Enforcement Administration | 15% |
+  | Crime Detection and Investigation | 20% |
+  | Forensic Science | 15% |
+  | Criminology | 20% |
+  | Correctional Administration | 10% |
+
+- Fixed:
+  - Names: "Criminal Jurisprudence" is now "Criminal Law and Jurisprudence", and "Criminalistics" is now "Forensic Science".
+  - Short names, the component-course descriptions and the weights. LEA 20→15, CDI 15→20, Criminology 15→20, Forensic Science 20→15.
+  - The two study-module titles that used the old names.
+- The internal subject ids (`criminal_jurisprudence`, `criminalistics`, ...) are unchanged. Saved progress, the question bank and the cloud tables use them, so no data moves.
+- The weights are shown to students ("% of exam") but no calculation uses them.
+- **Not changed:** the bundled readiness model was trained with a 50% per-subject floor, while the law says no subject below 60%. Fixing that means retraining the model. It is noted as a limitation for the manuscript.
+
+**Checks:**
+- `flutter analyze`: 0 errors / 0 warnings. `flutter test`: 34 pass.
+- Screenshot sweep: 0 layout problems in 420 renders (the longer subject name fits everywhere).
+
+---
+
+## 2026-10-16 — Session 51: Chapters 1–4 manuscript rebuilt from the Session 50 research — no app code touched
+
+Published to the same manuscript page as before: https://claude.ai/artifact/5dtwfNPojdeZoCnhjy9RvB (version 19). The page's own "Revision notes — October 16, 2026" section lists every change and every open item; the main ones:
+
+- **Facts corrected against the code and PRC sources:**
+  - Subjects and weights now follow Res. No. 01, s. 2021 (Table 1). National results from June 2022 to August 2026 were added (Table 2).
+  - The removed PDF/AI question generator is gone from every chapter. Template generation is described exactly, including its 21-question ceiling.
+  - "Adaptive difficulty" was corrected: students pick unlocked levels, and BKT steers which questions appear.
+  - "No machine learning" was replaced by a description of the readiness model.
+  - Android 7.0 (API 24), not Android 10.
+- **Chapter 1:** added Statement of the Problem, Significance of the Study and Definition of Terms. The limitations now list the real ones.
+- **Chapter 2:** unverifiable sources were replaced with verified ones. A Review of Related Systems compares competing CLE review apps in a dated feature matrix (Table 3).
+- **Chapter 4:** all twelve activity diagrams were redrawn to match the app as built. Sections 4.8 Development Model, 4.9 Testing, 4.10 Evaluation Method (ISO/IEC 25010:2023, SUS), 4.11 Results and Discussion (placeholders) and 4.12 Implementation Plan were drafted.
+- **Numbering:** Tables 1–30 in page order (the old Tables 1–12 are now 8–19). Figures 1–16 keep their numbers; Figure 17 is new.
+- **References:** one APA 7 list for all four chapters (145 entries, plus 8 legal bases and official issuances listed separately). 16 references that could not be verified were removed.
+- **Open items for the team** (also listed on the page):
+  - adviser name and title-page date;
+  - Chapter 4 heading per the manual;
+  - six items tagged "verify";
+  - evaluation results and Scrum roles, which are placeholders;
+  - five exam results sourced from an aggregator;
+  - the readiness model's 50% subject floor.
+- The untracked `docs/manuscript_*.md` files are older drafts and are now out of date. The published page is the current manuscript.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
@@ -788,6 +938,8 @@ You asked whether every feature works offline. I checked: studying works offline
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 48: `assets/icon/logo_original.png` (new logo master); Windows and macOS app icons.
 
 Session 46: `lib/screens/sign_in_choice_screen.dart`, `lib/screens/sign_in_completion.dart`.
 
@@ -804,3 +956,5 @@ Session 41 (redesign): `lib/widgets/ui/` (design-system components), `assets/fon
 `lib/screens/admin/admin_document_generation_screen.dart`, `lib/services/document_generation_service.dart`, `supabase/functions/generate-questions-from-document/`, `supabase_document_generation.sql` — the PDF → AI generation path (added Session 12), removed in Session 28.
 
 Session 41: `lib/widgets/animated_widgets.dart`, `lib/widgets/streak_widget.dart`, `lib/widgets/sync_status_indicator.dart` (unused by any screen), `test/fonts/` (Poppins, replaced by the bundled app font).
+
+Session 48: `assets/icon/logo_original.jpg`, `graduation_cap.png`, `graduation_cap_splash.png`, `splash_logo.png` (the old navy/gold logo artwork; nothing used them).

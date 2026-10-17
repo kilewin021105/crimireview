@@ -37,6 +37,35 @@ import 'screen_catalog.dart';
 const _outDir = String.fromEnvironment('SHOTS');
 const _only = String.fromEnvironment('ONLY');
 
+/// `--dart-define=SWEEP=true`: render every screen at every device in
+/// [_sweepDevices] (light mode) and report any layout problem. Images are
+/// written only when SHOTS is also given.
+const _sweep = bool.fromEnvironment('SWEEP');
+
+/// `--dart-define=DETAILS=true`: print the full error (which widget, where)
+/// for each layout problem, not just its first line.
+const _details = bool.fromEnvironment('DETAILS');
+
+/// With SWEEP: `--dart-define=ALL_IMAGES=true` saves every render, not only
+/// the ones with problems.
+const _allImages = bool.fromEnvironment('ALL_IMAGES');
+
+/// Phones, landscape, tablets, desktop/web, and large system text.
+const _sweepDevices = <(String, Size, double)>[
+  ('phone-se', Size(320, 568), 1.0),
+  ('phone-small', Size(360, 640), 1.0),
+  ('phone', Size(390, 844), 1.0),
+  ('phone-large', Size(430, 932), 1.0),
+  ('phone-landscape', Size(844, 390), 1.0),
+  ('tablet-7in', Size(600, 960), 1.0),
+  ('tablet-10in', Size(800, 1280), 1.0),
+  ('tablet-landscape', Size(1280, 800), 1.0),
+  ('tablet-12in', Size(1024, 1366), 1.0),
+  ('desktop', Size(1440, 900), 1.0),
+  ('phone-small-bigtext', Size(360, 640), 1.3),
+  ('phone-bigtext', Size(390, 844), 1.3),
+];
+
 Future<void> _loadFont(String family, List<String> paths) async {
   final loader = FontLoader(family);
   for (final path in paths) {
@@ -137,7 +166,7 @@ Map<String, Object> sampleMastery() {
 }
 
 void main() {
-  if (_outDir.isEmpty) {
+  if (_outDir.isEmpty && !_sweep) {
     test('screenshots (skipped: pass --dart-define=SHOTS=<dir>)', () {}, skip: true);
     return;
   }
@@ -155,7 +184,7 @@ void main() {
     final material = _materialFontsDir();
     await _loadFont('MaterialIcons', ['$material/materialicons-regular.otf']);
     await _loadFont('Roboto', ['$material/roboto-regular.ttf', '$material/roboto-bold.ttf']);
-    Directory(_outDir).createSync(recursive: true);
+    if (_outDir.isNotEmpty) Directory(_outDir).createSync(recursive: true);
     AdminService.debugInstance = FakeAdminService();
 
     // Learning models the dashboard reads: a few BKT topic records, and
@@ -172,10 +201,22 @@ void main() {
 
   final filters = _only.isEmpty ? <String>[] : _only.split(',');
 
-  for (final shot in screenCatalog()) {
-    if (filters.isNotEmpty && !filters.any((f) => shot.name.contains(f))) continue;
-    for (final dark in [false, if (shot.dark) true]) {
-      final name = '${shot.name}${dark ? '_dark' : ''}';
+  // Normal run: each shot at its own size, light and dark. Sweep: each
+  // shot at every device size (light only; colours don't change layout),
+  // skipping the size variants that the sweep already covers.
+  final runs = <(Shot, String, Size, double, bool)>[
+    for (final shot in screenCatalog())
+      if (filters.isEmpty || filters.any((f) => shot.name.contains(f)))
+        if (!_sweep)
+          for (final dark in [false, if (shot.dark) true])
+            (shot, '${shot.name}${dark ? '_dark' : ''}', shot.size, 1.0, dark)
+        else if (!RegExp(r'_(small|wide)$|^home_full').hasMatch(shot.name))
+          for (final (device, size, textScale) in _sweepDevices)
+            (shot, '${shot.name}@$device', size, textScale, false),
+  ];
+
+  for (final (shot, name, size, textScale, dark) in runs) {
+    {
       testWidgets(name, (tester) async {
         SharedPreferences.setMockInitialValues({
           if (shot.seeded) ...sampleProgressPrefs(),
@@ -187,10 +228,11 @@ void main() {
           final text = details.exceptionAsString();
           // Every layout error, not only overflows: a page that throws
           // during layout renders blank, and that must not pass silently.
-          problems.add(text.split('\n').first);
+          problems.add(_details ? details.toString() : text.split('\n').first);
         };
-        tester.view.physicalSize = shot.size * 2;
+        tester.view.physicalSize = size * 2;
         tester.view.devicePixelRatio = 2;
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
         final storage = StorageService();
         final key = GlobalKey();
         try {
@@ -230,12 +272,14 @@ void main() {
               await tester.pump(const Duration(milliseconds: 250));
             }
           }
-          await tester.runAsync(() async {
-            final boundary = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
-            final image = await boundary.toImage(pixelRatio: 1.5);
-            final data = await image.toByteData(format: ui.ImageByteFormat.png);
-            File('$_outDir/$name.png').writeAsBytesSync(data!.buffer.asUint8List());
-          });
+          if (_outDir.isNotEmpty && (!_sweep || _allImages || problems.isNotEmpty)) {
+            await tester.runAsync(() async {
+              final boundary = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+              final image = await boundary.toImage(pixelRatio: _sweep ? 1 : 1.5);
+              final data = await image.toByteData(format: ui.ImageByteFormat.png);
+              File('$_outDir/$name.png').writeAsBytesSync(data!.buffer.asUint8List());
+            });
+          }
           if (problems.isNotEmpty) {
             // ignore: avoid_print
             print('LAYOUT PROBLEM in $name: ${problems.join(' | ')}');
@@ -244,6 +288,7 @@ void main() {
           FlutterError.onError = previous;
           tester.view.resetPhysicalSize();
           tester.view.resetDevicePixelRatio();
+          tester.platformDispatcher.clearTextScaleFactorTestValue();
         }
         await tester.pumpWidget(const SizedBox());
         await tester.pump(const Duration(seconds: 3));

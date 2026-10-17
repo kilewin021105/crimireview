@@ -171,7 +171,7 @@ class AchievementsScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Expanded(child: AppProgressBar(value: progressValue, height: 6)),
+                      Expanded(child: AppProgressBar(value: progressValue, color: p.gold, height: 6)),
                       const SizedBox(width: 10),
                       Text(
                         '${progress.clamp(0, achievement.requirement)}/${achievement.requirement}',

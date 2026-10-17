@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_sync_service.dart';
 import '../widgets/ui/ui.dart';
+import '../utils/responsive.dart';
+import '../widgets/app_logo.dart';
 import 'dashboard_view.dart';
 import 'subjects_screen.dart';
 import 'flashcards_home_screen.dart';
@@ -37,9 +39,23 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _currentIndex = index);
   }
 
+  static const _destinations = [
+    (Icons.home_outlined, Icons.home_rounded, 'Home'),
+    (Icons.quiz_outlined, Icons.quiz_rounded, 'Quiz'),
+    (Icons.style_outlined, Icons.style_rounded, 'Cards'),
+    (Icons.insights_outlined, Icons.insights_rounded, 'Progress'),
+    (Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    final size = MediaQuery.sizeOf(context);
+    // Tablets in landscape and computers: a side rail, like the admin
+    // panel. Phones (including a phone held sideways, which is too short
+    // for five rail items) keep the bottom bar.
+    final wide = size.width >= kWideLayoutWidth && size.height >= 480;
+
     final tabs = IndexedStack(
       index: _currentIndex,
       children: [
@@ -50,24 +66,38 @@ class _HomeScreenState extends State<HomeScreen> {
         SettingsScreen(key: ValueKey('settings_$_currentIndex')),
       ],
     );
-    return Scaffold(
-      body: ListenableBuilder(
-        listenable: Listenable.merge([ConnectivityService.instance, OfflineSyncService.instance]),
-        child: tabs,
-        builder: (context, child) => Column(
-          children: [
-            _ConnectionBanner(topInset: MediaQuery.of(context).padding.top),
-            Expanded(
-              child: MediaQuery.removePadding(
-                context: context,
-                // The banner already sits under the status bar when shown.
-                removeTop: _bannerVisible,
-                child: child!,
-              ),
+    final body = ListenableBuilder(
+      listenable: Listenable.merge([ConnectivityService.instance, OfflineSyncService.instance]),
+      child: tabs,
+      builder: (context, child) => Column(
+        children: [
+          _ConnectionBanner(topInset: MediaQuery.of(context).padding.top),
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              // The banner already sits under the status bar when shown.
+              removeTop: _bannerVisible,
+              child: child!,
             ),
+          ),
+        ],
+      ),
+    );
+
+    if (wide) {
+      return Scaffold(
+        body: Row(
+          children: [
+            _buildRail(),
+            VerticalDivider(width: 1, thickness: 1, color: p.border),
+            Expanded(child: body),
           ],
         ),
-      ),
+      );
+    }
+
+    return Scaffold(
+      body: body,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: p.border)),
@@ -75,32 +105,46 @@ class _HomeScreenState extends State<HomeScreen> {
         child: NavigationBar(
           selectedIndex: _currentIndex,
           onDestinationSelected: _selectTab,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.quiz_outlined),
-              selectedIcon: Icon(Icons.quiz_rounded),
-              label: 'Quiz',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.style_outlined),
-              selectedIcon: Icon(Icons.style_rounded),
-              label: 'Cards',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.insights_outlined),
-              selectedIcon: Icon(Icons.insights_rounded),
-              label: 'Progress',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings_rounded),
-              label: 'Settings',
-            ),
+          destinations: [
+            for (final d in _destinations)
+              NavigationDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: d.$3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRail() {
+    final p = context.palette;
+    final text = context.textStyles;
+    return Container(
+      color: p.surface,
+      child: SafeArea(
+        right: false,
+        child: NavigationRail(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: _selectTab,
+          backgroundColor: p.surface,
+          labelType: NavigationRailLabelType.all,
+          minWidth: 92,
+          groupAlignment: -0.9,
+          indicatorColor: p.primarySoft,
+          indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          selectedIconTheme: IconThemeData(color: p.primary, size: 23),
+          unselectedIconTheme: IconThemeData(color: p.textTertiary, size: 23),
+          selectedLabelTextStyle: text.labelSmall?.copyWith(color: p.textPrimary, fontWeight: FontWeight.w800),
+          unselectedLabelTextStyle: text.labelSmall?.copyWith(color: p.textTertiary),
+          leading: const Padding(
+            padding: EdgeInsets.only(top: 12, bottom: 16),
+            child: AppLogo(size: 44, showShadow: false),
+          ),
+          destinations: [
+            for (final d in _destinations)
+              NavigationRailDestination(
+                icon: Icon(d.$1),
+                selectedIcon: Icon(d.$2),
+                label: Text(d.$3),
+              ),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../services/storage_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/page_transitions.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/ui/ui.dart';
 import '../sign_in_choice_screen.dart';
@@ -81,7 +82,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final wide = MediaQuery.of(context).size.width >= 840;
+    final wide = MediaQuery.of(context).size.width >= kWideLayoutWidth;
 
     final tabs = [
       // Sign out now lives in the Settings tab (and the wide side menu).
@@ -130,61 +131,80 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       color: p.surface,
       child: SafeArea(
         right: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        // Scrolls when the screen is too short for the whole menu (a phone
+        // held sideways is about 390 px tall); otherwise "Sign out" stays
+        // pinned to the bottom.
+        child: LayoutBuilder(
+          builder: (context, viewport) => SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: viewport.maxHeight - 36),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const AppLogo(size: 38, showShadow: false),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const AppWordmark(fontSize: 17),
-                        Text('Admin panel', style: text.bodySmall),
-                      ],
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const AppLogo(size: 38, showShadow: false),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppWordmark(fontSize: 17),
+                                Text('Admin panel', style: text.bodySmall),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 28),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10, bottom: 8),
+                        child: Text('MANAGE', style: text.labelSmall),
+                      ),
+                      for (var i = 0; i < _destinations.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: _sideItem(i),
+                        ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      const InlineBanner(
+                        tone: BannerTone.neutral,
+                        icon: Icons.shield_outlined,
+                        message: 'Changes here go live for every student.',
+                      ),
+                      const SizedBox(height: 12),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _confirmSignOut,
+                          borderRadius: BorderRadius.circular(AppSpace.radiusMd),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            child: Row(
+                              children: [
+                                Icon(Icons.logout_rounded, color: p.danger, size: 20),
+                                const SizedBox(width: 12),
+                                Text('Sign out', style: text.titleSmall?.copyWith(color: p.danger)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
-              Padding(
-                padding: const EdgeInsets.only(left: 10, bottom: 8),
-                child: Text('MANAGE', style: text.labelSmall),
-              ),
-              for (var i = 0; i < _destinations.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: _sideItem(i),
-                ),
-              const Spacer(),
-              const InlineBanner(
-                tone: BannerTone.neutral,
-                icon: Icons.shield_outlined,
-                message: 'Changes here go live for every student.',
-              ),
-              const SizedBox(height: 12),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _confirmSignOut,
-                  borderRadius: BorderRadius.circular(AppSpace.radiusMd),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout_rounded, color: p.danger, size: 20),
-                        const SizedBox(width: 12),
-                        Text('Sign out', style: text.titleSmall?.copyWith(color: p.danger)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -210,7 +230,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
               const SizedBox(width: 12),
               Text(
                 d.$3,
-                style: text.titleSmall?.copyWith(color: selected ? p.onPrimarySoft : p.textSecondary),
+                style:
+                    text.titleSmall?.copyWith(color: selected ? p.onPrimarySoft : p.textSecondary),
               ),
             ],
           ),

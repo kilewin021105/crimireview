@@ -303,10 +303,12 @@ class _QuizScreenState extends State<QuizScreen> {
         badgeFg = p.textTertiary;
       }
     } else if (isSelected) {
-      bg = p.primarySoft;
-      border = p.primary;
-      badgeBg = p.primary;
-      badgeFg = Colors.white;
+      // Tapped but not checked yet: ink (black, or white in dark mode), not
+      // the brand red, so a choice never looks "wrong" before it's checked.
+      bg = p.surfaceAlt;
+      border = p.textPrimary;
+      badgeBg = p.textPrimary;
+      badgeFg = p.surface;
     }
 
     return Padding(
@@ -445,7 +447,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     const SizedBox(height: 14),
                     Row(
                       children: [
-                        Icon(Icons.psychology_rounded, size: 16, color: p.primary),
+                        Icon(Icons.psychology_rounded, size: 16, color: p.textSecondary),
                         const SizedBox(width: 6),
                         Text('Topic mastery', style: text.labelMedium),
                         const Spacer(),
@@ -464,7 +466,13 @@ class _QuizScreenState extends State<QuizScreen> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    AppProgressBar(value: feedback.masteryPercent / 100, height: 6),
+                    // Green / amber / red by level, like every other score;
+                    // the brand red would read as "bad" at any level.
+                    AppProgressBar(
+                      value: feedback.masteryPercent / 100,
+                      color: p.forScore(feedback.masteryPercent),
+                      height: 6,
+                    ),
                   ],
                 ),
               ),

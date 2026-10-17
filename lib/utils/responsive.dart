@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+/// Largest text size the app follows from the phone's settings (130%).
+/// Applied once in main.dart; the screenshot sweep checks every screen at it.
+const double kMaxTextScale = 1.3;
+
+/// From this width up (tablets in landscape, computers) the app shows a
+/// side navigation rail instead of the bottom bar. Same as the admin panel.
+const double kWideLayoutWidth = 840;
+
 class Responsive {
   static double screenWidth(BuildContext context) => MediaQuery.of(context).size.width;
   static double screenHeight(BuildContext context) => MediaQuery.of(context).size.height;

@@ -453,3 +453,40 @@ class AppListTile extends StatelessWidget {
     );
   }
 }
+
+/// A grid whose rows are as tall as their tallest tile, instead of a fixed
+/// tile height or shape. Tiles never overflow, whether the screen is a
+/// small phone or the system text size is turned up.
+class AdaptiveGrid extends StatelessWidget {
+  final List<Widget> children;
+  final int columns;
+  final double spacing;
+  final double runSpacing;
+
+  const AdaptiveGrid({
+    super.key,
+    required this.children,
+    required this.columns,
+    this.spacing = 10,
+    this.runSpacing = 10,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var start = 0; start < children.length; start += columns) {
+      final cells = <Widget>[];
+      for (var i = 0; i < columns; i++) {
+        if (i > 0) cells.add(SizedBox(width: spacing));
+        final index = start + i;
+        // An empty slot keeps the last row's tiles the same width as above.
+        cells.add(Expanded(child: index < children.length ? children[index] : const SizedBox()));
+      }
+      if (rows.isNotEmpty) rows.add(SizedBox(height: runSpacing));
+      rows.add(IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: cells),
+      ));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+  }
+}

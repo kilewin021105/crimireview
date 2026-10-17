@@ -280,16 +280,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return LayoutBuilder(builder: (context, c) {
       final columns = c.maxWidth >= 760 ? 6 : (c.maxWidth >= 480 ? 3 : 2);
-      return GridView.count(
-        crossAxisCount: columns,
-        shrinkWrap: true,
-        padding: EdgeInsets.zero,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: columns == 6 ? 1.05 : 1.35,
-        children: tiles,
-      );
+      // Rows fit their tiles. The old fixed tile shape (width / height)
+      // made tiles too short on narrow phones: 6-18 px overflow.
+      return AdaptiveGrid(columns: columns, children: tiles);
     });
   }
 
