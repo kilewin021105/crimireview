@@ -1018,6 +1018,34 @@ You asked to remove the separate "Decide how you sign in" page, because students
 
 ---
 
+## 2026-10-17 — Session 55: Privacy Policy and Terms of Service pages on the website (for Google and Facebook sign-in)
+
+You were setting up Google sign-in. In Google Auth Platform, **"Publish app" stayed greyed out** ("you must complete your configuration on the Branding page"). Publishing needs a home page and privacy policy link on an authorized domain, and the website had neither. Facebook also requires a privacy policy and data deletion instructions before its sign-in can go live.
+
+**What changed:**
+- **Website** (repo `crimireview-landing`, branch `privacy-terms`, **website PR #2**, merge after website PR #1):
+  - new pages `privacy.html` and `terms.html`, styled like the site;
+  - Privacy / Terms links in the footer.
+- **Privacy policy:** written from what the app and database really do. It covers:
+  - what is collected (including answer times and seen questions) and what isn't (no location, contacts, ads or third-party analytics);
+  - who sees what: the leaderboard shows name, photo, points and rank; faculty see name, email, points and mastery, read-only; profile photos have public links;
+  - service providers: Supabase (Singapore, as the project's region `ap-southeast-1` confirms) and Resend;
+  - how to delete your data (`#delete-your-data`, for Facebook);
+  - the rights under RA 10173.
+- **Terms of service:** not affiliated with the PRC; content may contain mistakes; no guarantee of passing; fair use; Philippine law.
+- **README updated** with the exact links to type into Google (home page, privacy, terms, authorized domain `crimireview.app`) and Facebook (privacy, terms, data deletion).
+
+**Still to do (you):**
+- Check that **support@crimireview.app receives mail**; deletion requests go there.
+- Keep the **30-day** deletion promise only if the team can honour it.
+- Have your adviser look at the two pages. They were drafted by an AI assistant and are not legal advice.
+- Merge website PRs #1 and #2.
+- Fill in Google's Branding page with the links, then **Publish app**. Meanwhile, Google sign-in works for **test users** you add in Audience.
+
+**Checks:** pages rendered in Edge at 1280, 390 and 320 px wide: no horizontal scrolling, and the links work.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.

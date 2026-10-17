@@ -197,15 +197,15 @@ The app side is done; these steps switch it on. They need your own Google and Fa
 **0. Security first.** Run `supabase_enforce_email_verification.sql` (Supabase step 9) **before** switching either provider on. Supabase joins a Google login to an existing account with the same email; without step 9, someone could pre-create an email/password account for another student's Gmail (skipping the code) and later get into that student's account.
 
 **1. Google** ([console.cloud.google.com](https://console.cloud.google.com), any project):
-1. *Google Auth Platform → Branding*: app name `CrimiReview`, your support email. Under *Authorized domains* add `wbhobbehgqlzfborscvx.supabase.co`.
-2. *Audience*: External, then **Publish app** (otherwise only listed test users can sign in). Only the basic `openid`, `email`, `profile` scopes are used, so no Google review is needed.
+1. *Google Auth Platform → Branding*: app name `CrimiReview`, your support email, developer contact email. No logo (a logo makes Google review the app first). App home page `https://www.crimireview.app`, privacy policy `https://www.crimireview.app/privacy.html`, terms of service `https://www.crimireview.app/terms.html` (the pages come from the website's privacy-terms PR, which must be merged first). Under *Authorized domains* add `wbhobbehgqlzfborscvx.supabase.co` and `crimireview.app`.
+2. *Audience*: External, then **Publish app**; it stays greyed out until the Branding page is complete. Until then, add your own Gmail under *Test users* to test. Only the basic `openid`, `email`, `profile` scopes are used, so no Google review is needed.
 3. *Clients → Create client*: type **Web application**; *Authorized redirect URIs*: the callback URL above. Copy the **Client ID** and **Client secret**.
 4. Supabase dashboard → *Authentication → Sign In / Providers → Google*: enable, paste both, save.
 
 **2. Facebook** ([developers.facebook.com](https://developers.facebook.com) → My Apps → Create app):
 1. Use case **Authenticate and request data from users with Facebook Login**. In that use case's permissions, add **email** (public_profile is there by default).
 2. *Facebook Login → Settings → Valid OAuth Redirect URIs*: the callback URL above.
-3. *App settings → Basic*: copy the **App ID** and **App secret**; fill in a Privacy Policy URL (Facebook requires one to go live).
+3. *App settings → Basic*: copy the **App ID** and **App secret**; Privacy Policy URL `https://www.crimireview.app/privacy.html`, Terms of Service URL `https://www.crimireview.app/terms.html`, User data deletion: instructions URL `https://www.crimireview.app/privacy.html#delete-your-data` (Facebook requires these to go live).
 4. Switch the app to **Live** (in Development mode only you and listed testers can log in).
 5. Supabase → *Sign In / Providers → Facebook*: enable, App ID as Client ID, App secret as secret, save.
 
