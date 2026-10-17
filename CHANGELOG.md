@@ -717,6 +717,25 @@ You asked for "sign in with Google or Facebook" so students don't have to type, 
 
 ---
 
+## 2026-10-15 — Session 45: admin panel Settings (separate branch, optional)
+
+You said the admin panel lacking settings was a gap, and asked for it on its own branch so you can take it or leave it. It is on branch `admin-settings`, built on top of `social-login-dashboard` (Session 44), with its own pull request. Merge it to add Settings to the admin panel; close it to keep the admin panel as it is. Nothing else depends on it.
+
+**What it adds:** a fourth admin tab, **Settings** (bottom bar on phones; side menu on wide screens), `lib/screens/admin/admin_settings_screen.dart`:
+- **Account:** name, email and an "Administrator" tag.
+- **Appearance:** Light / Dark / Phone setting. The admin panel had no way to change the theme before.
+- *(The first version also listed the sign-in methods (Email / Google / Facebook) with their on/off status, and the account card showed how the admin signs in. Both were removed in Session 46 at your request: sign-in methods appear only on their own page before signing in, never inside the admin or student screens.)*
+- **Security:** Change password (asks for the current one first; hidden for an admin account that has no password), and Sign out.
+- **About:** website, support email, version.
+
+**Moved:** on phones, Sign out used to be an icon in the dashboard's top bar; it now lives in Settings, where people look for it. The wide-screen side menu keeps its Sign out button. Both use the same confirm-and-sign-out code.
+
+**Small cleanup:** the version number shown in Settings is now one shared constant (`lib/utils/app_info.dart`) used by both the student and admin Settings, so the two can't disagree. In Session 41 the student Settings was still showing 1.0.0.
+
+**Verification:** `flutter analyze` 0 errors / 0 warnings; `flutter test` all pass; screenshots of the Settings tab (phone, light and dark) and the wide layout reviewed, no overflows.
+
+---
+
 ## 2026-10-15 — Session 46: Google / Facebook moved to their own sign-in page
 
 You showed an app-setup page (a title, a short explanation, then large rounded choice buttons and an "I'm already a member" link) and asked for the Google/Facebook choice to look like that: on a page of its own, not inside the student or admin screens, and without Discord.
@@ -771,6 +790,8 @@ You asked whether every feature works offline. I checked: studying works offline
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
 
 Session 46: `lib/screens/sign_in_choice_screen.dart`, `lib/screens/sign_in_completion.dart`.
+
+Session 45: `lib/screens/admin/admin_settings_screen.dart`, `lib/utils/app_info.dart`.
 
 Session 44: `lib/services/social_auth_service.dart`, `lib/services/post_sign_in_service.dart`, `lib/screens/dashboard_view.dart`, `lib/utils/quiz_launcher.dart`, `lib/widgets/brand_logos.dart`, `supabase_social_login.sql`.
 

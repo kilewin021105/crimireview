@@ -9,6 +9,7 @@ import '../../widgets/ui/ui.dart';
 import '../sign_in_choice_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_questions_screen.dart';
+import 'admin_settings_screen.dart';
 import 'admin_students_screen.dart';
 
 /// Root screen for an admin account -- the counterpart to `HomeScreen` for
@@ -25,7 +26,7 @@ import 'admin_students_screen.dart';
 /// itself resolved from `is_admin()` -- the same function the database's
 /// row-level security uses, so the app's idea of "is this account an admin"
 /// can never drift from the database's). This shell owns its own navigation
-/// -- Dashboard / Questions / Students -- with no student-facing tabs in it
+/// -- Dashboard / Questions / Students / Settings -- with no student-facing tabs in it
 /// at all, and no path INTO the student experience either: an admin session
 /// never sees `HomeScreen`/Quiz/Cards/Progress under any circumstance. The
 /// two roles share a database (an admin's edits reach students through
@@ -47,6 +48,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     (Icons.space_dashboard_outlined, Icons.space_dashboard_rounded, 'Dashboard'),
     (Icons.quiz_outlined, Icons.quiz_rounded, 'Questions'),
     (Icons.groups_outlined, Icons.groups_rounded, 'Students'),
+    (Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
   ];
 
   void _goToTab(int index) {
@@ -82,22 +84,11 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     final wide = MediaQuery.of(context).size.width >= 840;
 
     final tabs = [
-      AdminDashboardScreen(
-        showBackButton: false,
-        onNavigateToTab: _goToTab,
-        appBarActions: wide
-            ? null
-            : [
-                ToolbarIconButton(
-                  icon: Icons.logout_rounded,
-                  tooltip: 'Sign out',
-                  size: 40,
-                  onPressed: _confirmSignOut,
-                ),
-              ],
-      ),
+      // Sign out now lives in the Settings tab (and the wide side menu).
+      AdminDashboardScreen(showBackButton: false, onNavigateToTab: _goToTab),
       const AdminQuestionsScreen(showBackButton: false),
       const AdminStudentsScreen(showBackButton: false),
+      AdminSettingsScreen(onSignOut: _confirmSignOut),
     ];
 
     final body = IndexedStack(index: _currentIndex, children: tabs);

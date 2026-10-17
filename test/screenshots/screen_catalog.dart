@@ -11,6 +11,7 @@ import 'dart:io';
 import 'package:crimireview/screens/achievements_screen.dart';
 import 'package:crimireview/screens/admin/admin_question_editor_screen.dart';
 import 'package:crimireview/screens/admin/admin_questions_screen.dart';
+import 'package:crimireview/screens/admin/admin_settings_screen.dart';
 import 'package:crimireview/screens/admin/admin_shell_screen.dart';
 import 'package:crimireview/screens/admin/admin_students_screen.dart';
 import 'package:crimireview/screens/admin/admin_template_generation_screen.dart';
@@ -243,6 +244,11 @@ List<Shot> screenCatalog() => [
       Shot('daily_challenge', (_) => const DailyChallengeScreen(), prefs: questionBankPrefs()),
       Shot('admin_shell', (_) => const AdminShellScreen()),
       Shot('admin_shell_wide', (_) => const AdminShellScreen(), size: const Size(1280, 800)),
+      Shot('admin_settings', (_) => const AdminSettingsScreen()),
+      Shot('admin_settings_tab', (_) => const AdminShellScreen(),
+          dark: false, act: (t) => tapText(t, 'Settings')),
+      Shot('admin_settings_wide', (_) => const AdminShellScreen(),
+          dark: false, size: const Size(1280, 800), act: (t) => tapText(t, 'Settings')),
       Shot('admin_questions', (_) => const AdminQuestionsScreen(showBackButton: false)),
       Shot('admin_editor', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(0, _subject.id))),
       Shot('admin_students', (_) => const AdminStudentsScreen(showBackButton: false)),
