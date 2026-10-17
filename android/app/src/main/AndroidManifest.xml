@@ -27,7 +27,7 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Google / Facebook sign-in: the browser returns here with a
+            <!-- Google sign-in: the browser returns here with a
                  one-time code (SocialAuthService.redirectUrl). Supabase's
                  package reads it; Flutter's own deep-link router is off
                  below so it doesn't also try to open it as a page. -->

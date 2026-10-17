@@ -7,10 +7,10 @@ import 'storage_service.dart';
 import 'supabase_service.dart';
 
 /// Everything that has to happen right after a successful sign-in, by
-/// any method: email + password, Google or Facebook.
+/// any method: email + password or Google.
 ///
-/// This used to live inside the login button's handler. Google and
-/// Facebook sign-in finish somewhere else (the student comes back from
+/// This used to live inside the login button's handler. Google
+/// sign-in finishes somewhere else (the student comes back from
 /// the browser, sometimes into a freshly restarted app), so it moved here
 /// where every path can run the same steps. One copy means a Google login
 /// can't skip a step an email login does.

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// The Google "G" and Facebook "f" marks for the sign-in buttons, drawn
-/// from the brands' own vector shapes (SVG path data) so they stay crisp
-/// at any size without image files or a network download.
+/// The Google "G" mark for the sign-in button, drawn from Google's own
+/// vector shapes (SVG path data) so it stays crisp at any size without
+/// image files or a network download.
 ///
-/// Brand rules followed: Google's G keeps its four colours and is never
-/// recoloured; Facebook's mark is the blue circle with a white "f".
+/// Brand rule followed: the G keeps its four colours and is never
+/// recoloured.
 class GoogleLogo extends StatelessWidget {
   final double size;
   const GoogleLogo({super.key, this.size = 20});
@@ -26,34 +26,11 @@ class GoogleLogo extends StatelessWidget {
       );
 }
 
-class FacebookLogo extends StatelessWidget {
-  final double size;
-  const FacebookLogo({super.key, this.size = 20});
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-        size: Size.square(size),
-        painter: _SvgPainter(
-          viewBox: 24,
-          // The "f" is a hole in the circle; a white disc behind it keeps the
-          // f white on dark backgrounds too.
-          backdrop: (Colors.white, 11.85),
-          layers: const [
-            (0xFF1877F2, 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 '
-                '10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 '
-                '1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328'
-                'l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z'),
-          ],
-        ),
-      );
-}
-
 class _SvgPainter extends CustomPainter {
   final double viewBox;
   final List<(int, String)> layers;
-  final (Color, double)? backdrop;
 
-  _SvgPainter({required this.viewBox, required this.layers, this.backdrop});
+  _SvgPainter({required this.viewBox, required this.layers});
 
   static final Map<String, Path> _cache = {};
 
@@ -62,10 +39,6 @@ class _SvgPainter extends CustomPainter {
     canvas.save();
     canvas.scale(size.width / viewBox, size.height / viewBox);
     final paint = Paint()..isAntiAlias = true;
-    if (backdrop != null) {
-      paint.color = backdrop!.$1;
-      canvas.drawCircle(Offset(viewBox / 2, viewBox / 2), backdrop!.$2, paint);
-    }
     for (final (color, data) in layers) {
       paint.color = Color(color);
       canvas.drawPath(_cache.putIfAbsent(data, () => parseSvgPath(data)), paint);
@@ -78,7 +51,7 @@ class _SvgPainter extends CustomPainter {
 }
 
 /// Converts SVG path data (the `d` attribute) into a Flutter [Path].
-/// Supports the commands the logos above use: M L H V C S Z, in absolute
+/// Supports the commands the logo above uses: M L H V C S Z, in absolute
 /// (upper case) and relative (lower case) form, with repeated arguments.
 Path parseSvgPath(String data) {
   final tokens = RegExp(r'[MmLlHhVvCcSsZz]|-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?')

@@ -22,7 +22,7 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<!-- Google / Facebook sign-in returns to the app through this link
+	<!-- Google sign-in returns to the app through this link
 	     (SocialAuthService.redirectUrl); Supabase's package reads it. -->
 	<key>CFBundleURLTypes</key>
 	<array>

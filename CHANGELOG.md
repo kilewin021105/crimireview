@@ -1116,6 +1116,33 @@ You asked for a full audit before uploading the new version: sign-in and sign-up
 
 ---
 
+## 2026-10-17 — Session 57: Facebook sign-in removed; Google only. Audit SQL confirmed live
+
+You asked, before the release, to remove the Facebook sign-up and keep only Google.
+
+**Audit SQL first.** You ran `supabase_audit_fixes.sql`, and PR #6 and website PR #3 are merged. All four database fixes are live. A test that undid itself afterwards, acting as a real signed-in student, confirmed:
+- trying to change the profile email left it unchanged;
+- an outside photo address was rejected ("Profile photo must be uploaded through the app.").
+
+**What changed** (branch `google-only`):
+- **App:**
+  - `SocialProvider` now has only `google`, and the `FacebookLogo` widget was removed;
+  - the log-in page shows one centred Google icon and "Your password stays with Google…";
+  - comments, the Android manifest and the iOS `Info.plist` notes now say Google only;
+  - a phone that still has "facebook" in its saved provider check simply ignores it (covered by a test).
+- **Tests:** the icon tests now check that only Google appears and that the word "Facebook" is nowhere on the page.
+- **README:** the Facebook setup steps were removed, and the README says to keep the Facebook provider switched off in Supabase.
+- **Website** (`crimireview-landing`, branch `google-only`, website PR #4): the Privacy Policy no longer mentions Facebook.
+- **Left as is, harmless:** the database functions still recognise a "facebook" provider (sign-up exemption, name and photo, photo hosts). With Facebook switched off in Supabase, no Facebook account can be created, and there are none (checked).
+- **Manuscript:** it still says "Google or Facebook" in 47 places, including Figures 2–4. It will be updated together with the release status after version 1.0.2 is published.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings.
+- `flutter test`: 49 pass.
+- Sign-in screens re-rendered and swept on 12 devices: 36 renders, 0 problems.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.

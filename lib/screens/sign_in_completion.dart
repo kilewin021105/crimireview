@@ -11,12 +11,12 @@ import 'admin/admin_shell_screen.dart';
 import 'home_screen.dart';
 
 /// How the sign-in page (`AuthScreen`) finishes signing in, for its email
-/// button and for a Google/Facebook sign-in started from its icons, so
+/// button and for a Google sign-in started from its icon, so
 /// every method ends the same way: sync this account's data onto the
 /// phone (PostSignInService), then open the admin or student home.
 ///
-/// It also picks up a session that arrives by itself: a Google/Facebook
-/// sign-in finishing when the student comes back from the browser, or
+/// It also picks up a session that arrives by itself: a Google sign-in
+/// finishing when the student comes back from the browser, or
 /// after Android restarted the app. Only the screen on top reacts, so
 /// sign-up / forgot password (opened on top) keep handling their own.
 mixin SignInCompletion<T extends StatefulWidget> on State<T> {

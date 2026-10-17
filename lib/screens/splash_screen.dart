@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
       // uses the role last confirmed for this account.
       var isAdmin = await AdminService.instance.resolvedRole();
 
-      // A session this phone hasn't set up yet: a Google/Facebook sign-in
+      // A session this phone hasn't set up yet: a Google sign-in
       // that finished while the app was closed (Android may close it while
       // the browser is open), or a web sign-in that reloaded the page.
       // Run the same sync the login screen runs, so the right account's

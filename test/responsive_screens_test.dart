@@ -113,10 +113,10 @@ void main() {
     }
   }
 
-  // The Google and Facebook icons sit under the form on both tabs.
+  // The Google icon sits under the form on both tabs.
   for (final size in sizes.entries) {
     for (final signUp in [false, true]) {
-      testWidgets('${signUp ? 'Sign up' : 'Log in'} with Google and Facebook icons fits at ${size.key}',
+      testWidgets('${signUp ? 'Sign up' : 'Log in'} with the Google icon fits at ${size.key}',
           (tester) async {
         final overflows = await _overflowsFor(
           tester,

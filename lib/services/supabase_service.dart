@@ -68,7 +68,7 @@ class SupabaseService {
   bool get isLoggedIn => _isInitialized && currentUser != null;
   String? get userId => currentUser?.id;
 
-  /// How this account can sign in: 'email', 'google', 'facebook'. Set by
+  /// How this account can sign in: 'email', 'google'. Set by
   /// Supabase Auth (app_metadata), not by the app. One account can have
   /// several when a student used both email and Google with one address.
   List<String> get signInMethods {
@@ -78,7 +78,7 @@ class SupabaseService {
     return single == null ? const [] : [single.toString()];
   }
 
-  /// False for an account that only ever used Google or Facebook: it has
+  /// False for an account that only ever used Google: it has
   /// no password, so "Change password" doesn't apply to it.
   bool get hasPasswordSignIn => signInMethods.contains('email');
 
@@ -242,7 +242,7 @@ class SupabaseService {
       
       // Create new profile
       final user = currentUser!;
-      // display_name: email sign-up; full_name / name: Google, Facebook.
+      // display_name: email sign-up; full_name / name: Google.
       final name = displayName ??
                    user.userMetadata?['display_name'] ??
                    user.userMetadata?['full_name'] ??
