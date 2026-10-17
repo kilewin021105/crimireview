@@ -34,7 +34,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     final name = await _storage.getUserName();
     final school = await _storage.getSchool();
-    final email = await _storage.getUserEmail();
+    // Signed in: always the real sign-in email (it can't be changed here).
+    final email = _signedIn
+        ? SupabaseService.instance.currentUser?.email
+        : await _storage.getUserEmail();
     final imagePath = await _storage.getProfileImage();
     final avatarUrl = await _storage.getAvatarUrl();
 
@@ -49,6 +52,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     }
   }
+
+  bool get _signedIn => SupabaseService.instance.isLoggedIn;
 
   bool get _hasPhoto =>
       (_profileImagePath != null && _profileImagePath!.isNotEmpty) ||
@@ -181,13 +186,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Save to local storage
     await _storage.setUserName(name);
     await _storage.setSchool(school);
-    await _storage.setUserEmail(email);
+    if (!_signedIn) await _storage.setUserEmail(email);
 
-    // Sync to Supabase if logged in
-    if (SupabaseService.instance.isLoggedIn) {
+    // Sync to Supabase if logged in. An empty school is sent as '' so that
+    // clearing the field clears it online too (null would mean "no change").
+    if (_signedIn) {
       await OfflineSyncService.instance.saveProfileDetailsOrQueue(
         displayName: name,
-        school: school.isNotEmpty ? school : null,
+        school: school,
       );
     }
 
@@ -302,10 +308,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 16),
                     AppTextField(
                       controller: _emailController,
-                      label: 'Email (optional)',
+                      label: _signedIn ? 'Sign-in email' : 'Email (optional)',
                       hint: 'you@example.com',
                       icon: Icons.mail_outline_rounded,
                       keyboardType: TextInputType.emailAddress,
+                      enabled: !_signedIn,
+                      helperText: _signedIn ? 'The email you sign in with. It can’t be changed here.' : null,
                     ),
                   ],
                 ),

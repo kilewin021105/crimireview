@@ -1046,6 +1046,76 @@ You were setting up Google sign-in. In Google Auth Platform, **"Publish app" sta
 
 ---
 
+## 2026-10-17 — Session 56: full pre-release audit, and fixes
+
+You asked for a full audit before uploading the new version: sign-in and sign-up, every module, database rules and API permissions, exposed keys, layout on all devices, links and missing pages, error and loading states, slow internet, invalid input, and many users at once. Fixes are on branch `audit-fixes` (app) plus website PR #3. The database part is the new file `supabase_audit_fixes.sql`, which has to be run in the SQL Editor.
+
+### What was checked
+- **Secrets:** all tracked files and the whole git history. The only key in the app is the public `anon` key (its token says `"role":"anon"`), which is meant to be public. No service key, Resend key, Google/Facebook secret or signing key anywhere.
+- **Live database:** every table's row-level security, every policy, grants, both views (both run with the caller's permissions; the student overview returns rows to admins only), every server function's permission checks, storage buckets (avatars: images only, 2 MB), constraints, indexes, and the Security Advisor.
+- **App:** every screen's loading, error and empty states; network time limits (25 s per request, 2 min for photo uploads, already in place); inputs; double taps; the offline queue; start-up; links; Android manifest and build settings.
+- **Website:** every link, the download redirect (the current APK is 60 MB).
+- **Layout:** every screen on 12 devices (phones 320–430 px, landscape phone, 7–12" tablets, desktop, 130% text): 396 renders, 0 problems.
+
+### Fixed: database (`supabase_audit_fixes.sql`, run it once)
+1. **A student could have been promoted to admin in a teacher's place (high).**
+   - "Make admin" looked accounts up by `user_profiles.email`, which every student can edit on their own row through the API.
+   - Now a profile's email is always copied from the sign-in email by a trigger, and "Make admin" searches `auth.users`.
+   - No profile email differed from its sign-in email on 2026-10-17.
+2. **A profile photo could point at any web address (medium).** That address would load on every student's leaderboard, so the site behind it could log their addresses or show anything. Now only the student's own uploaded photo, or a Google/Facebook photo, can be saved.
+3. **A password reset now signs the account out on every device (medium).** Before, an old session stayed valid after the reset.
+4. **The internal email functions (schema `private`) can only be run by the database.** They weren't reachable from the app before (no access to the schema); this removes the leftover default permission.
+- Checked first, with a test that undid itself completely: a trigger fires even when ordinary users lack permission to run its function. So the trigger installed in Session 52 does not block sign-ups, and the new one won't either.
+
+### Fixed: app
+5. **Quiz results could be saved twice (high).**
+   - "See results" waited for up to four server uploads (25 s each on slow internet) while the button still worked, so a second tap counted the quiz twice: double progress and points on the phone.
+   - Now the button is locked with a spinner, the result is saved on the phone first, and the upload runs in the background, one quiz after another in order. "Check answer" can't record an answer twice either.
+6. **Daily Challenge skipped a question (high).** After the timer ran out, the app moved on by itself 2 s later. Tapping "Next" in those 2 s moved on twice, skipping a question that then counted as unanswered. On the last question, the two could also save the score twice on the phone. Both fixed; the score upload also runs in the background.
+7. **Study reminders never appeared on Android 13 and newer (high).**
+   - The permission request existed but was never called.
+   - Now the app asks once when Home first opens, and again when reminders are switched on in Settings. If the student refuses, the switch stays off with an explanation instead of showing "On".
+8. **Reminders would have arrived at 5 PM and 3 AM.** The scheduler's time zone was never set, so "9:00" and "7:00 PM" were UTC. Now they're built on the phone's clock (`NotificationService.nextReminderTime`, with tests).
+9. **Sign-up said "Could not create your account" when the account had been created.**
+   - This happened if the progress upload after sign-up was slow. Retrying then failed with "No pending verification found".
+   - Now that upload can't fail sign-up, and a retry after a failed account step doesn't re-check the already-used code.
+10. **Clearing "School" on the Profile screen was never saved online.** Empty was sent as "no change", so the old school came back at the next sign-in. Fixed.
+11. **The Profile "Email (optional)" field suggested you could change your sign-in email.** It only saved on the phone and was overwritten at the next sign-in. Signed in, it now shows the sign-in email, read-only, with a short note.
+12. **No in-app link to the Privacy Policy or Terms.** Added to student Settings (Support) and admin Settings (About).
+13. **First start without internet said "No easy questions available".** It now says the questions need one download: "Connect to the internet once…".
+
+### Fixed: website (PR #3 on `crimireview-landing`)
+14. **The home page claimed things the app doesn't have.**
+    - "1000+ questions" is now "750+": 760 are active.
+    - The outdated subject list is replaced by the six official CLE subjects.
+    - "Our AI tracks…" now describes what the app actually does.
+
+### Not fixed: decisions or settings for you (see the end of this list)
+- **Leaderboard points are reported by the app.** A technically skilled student could raise their own points through the API. No one else's data is exposed. A real fix means scoring answers on the server, which is a larger change.
+- **The APK is signed with this laptop's debug key.** If the laptop is reset, no update can be installed over the old app. Create a permanent release key before more students install it; existing installs would need one reinstall.
+- **Supabase Free plan:**
+  - the project is paused after 7 days without activity;
+  - backups can't be downloaded;
+  - sign-ins are limited to bursts of about 30 per network address, so a whole class on one school Wi-Fi may need to retry after a minute.
+- **Resend free plan:** 100 emails a day (sign-up and reset codes).
+- **Optional in the Supabase dashboard:**
+  - "Prevent use of leaked passwords" (Authentication), if your plan has it;
+  - the 3 old test accounts from May 23 without profiles can be deleted.
+- **Smaller items:**
+  - passwords are capped at 16 characters in the app (the server allows 72);
+  - Google Play would require target API 36 (the website APK doesn't);
+  - reminders after a phone restart return only once the app is opened;
+  - the leftover `document-uploads` storage bucket can be deleted;
+  - `crimireview.app/privacy` without `.html` shows 404.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings, the same 17 style notes as before.
+- `flutter test`: 49 pass, 4 of them new for the reminder times.
+- Changed screens re-rendered and swept on 12 devices: 132 renders, 0 problems.
+- `quiz_answered` still fails in the test harness only, from the missing audio plugin, exactly as on `main` before the changes.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
@@ -1057,6 +1127,8 @@ You were setting up Google sign-in. In Google Auth Platform, **"Publish app" sta
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 56: `supabase_audit_fixes.sql`, `test/notification_time_test.dart`.
 
 Session 52: `lib/screens/social_sign_in_icons.dart`, `test/social_sign_in_icons_test.dart`.
 

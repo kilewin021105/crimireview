@@ -45,6 +45,11 @@ class AdaptiveLearningService extends ChangeNotifier {
   /// The matching p(known) immediately AFTER the answer was scored.
   final Map<String, double> _lastMasteryAfter = <String, double>{};
 
+  /// Uploads of finished quizzes, run one after another in the background
+  /// (see [recordQuizResult]), so an older quiz's upload can never land
+  /// after a newer one and overwrite it.
+  Future<void> _cloudUploads = Future<void>.value();
+
   AdaptiveLearningService(this._storageService) {
     _initProgress();
   }
@@ -495,31 +500,53 @@ class AdaptiveLearningService extends ChangeNotifier {
                 0),
       );
 
-      await OfflineSyncService.instance.saveSubjectProgressOrQueue(
-        subjectId: subjectId,
-        questionsAnswered: subjectProgress.totalQuestionsAnswered,
-        correctAnswers: subjectProgress.totalCorrectAnswers,
-        easyCorrect: subjectProgress.easyCorrect,
-        easyTotal: subjectProgress.easyTotal,
-        mediumCorrect: subjectProgress.mediumCorrect,
-        mediumTotal: subjectProgress.mediumTotal,
-        hardCorrect: subjectProgress.hardCorrect,
-        hardTotal: subjectProgress.hardTotal,
-        easySegments:
-            subjectProgress.easySegments.map((s) => s.toJson()).toList(),
-        mediumSegments:
-            subjectProgress.mediumSegments.map((s) => s.toJson()).toList(),
-        hardSegments:
-            subjectProgress.hardSegments.map((s) => s.toJson()).toList(),
-      );
+      // The numbers to upload, taken now so a later quiz can't change them.
+      final questionsAnswered = subjectProgress.totalQuestionsAnswered;
+      final correctAnswers = subjectProgress.totalCorrectAnswers;
+      final easyCorrect = subjectProgress.easyCorrect;
+      final easyTotal = subjectProgress.easyTotal;
+      final mediumCorrect = subjectProgress.mediumCorrect;
+      final mediumTotal = subjectProgress.mediumTotal;
+      final hardCorrect = subjectProgress.hardCorrect;
+      final hardTotal = subjectProgress.hardTotal;
+      final easySegments = subjectProgress.easySegments.map((s) => s.toJson()).toList();
+      final mediumSegments = subjectProgress.mediumSegments.map((s) => s.toJson()).toList();
+      final hardSegments = subjectProgress.hardSegments.map((s) => s.toJson()).toList();
+      final currentStreak = _userProgress.currentStreak;
+      final bestStreak = _userProgress.longestStreak;
 
-      await OfflineSyncService.instance.syncProfileUpdateOrQueue(
-        totalPoints: totalCorrect * 10,
-        totalQuizzes: totalQuizzes,
-        totalCorrect: totalCorrect,
-        currentStreak: _userProgress.currentStreak,
-        bestStreak: _userProgress.longestStreak,
-      );
+      // Uploaded in the background: everything is already saved on the
+      // phone, and on a slow connection each request can take up to 25 s,
+      // so the results screen must not wait for it. Each call queues its
+      // update for later if the upload fails.
+      _cloudUploads = _cloudUploads.then((_) async {
+        try {
+          await OfflineSyncService.instance.saveSubjectProgressOrQueue(
+            subjectId: subjectId,
+            questionsAnswered: questionsAnswered,
+            correctAnswers: correctAnswers,
+            easyCorrect: easyCorrect,
+            easyTotal: easyTotal,
+            mediumCorrect: mediumCorrect,
+            mediumTotal: mediumTotal,
+            hardCorrect: hardCorrect,
+            hardTotal: hardTotal,
+            easySegments: easySegments,
+            mediumSegments: mediumSegments,
+            hardSegments: hardSegments,
+          );
+
+          await OfflineSyncService.instance.syncProfileUpdateOrQueue(
+            totalPoints: totalCorrect * 10,
+            totalQuizzes: totalQuizzes,
+            totalCorrect: totalCorrect,
+            currentStreak: currentStreak,
+            bestStreak: bestStreak,
+          );
+        } catch (e) {
+          debugPrint('Background upload of a quiz result failed: $e');
+        }
+      });
     }
 
     notifyListeners();

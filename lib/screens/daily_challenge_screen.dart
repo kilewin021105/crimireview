@@ -28,6 +28,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
   bool _isLoading = true;
   bool _alreadyCompleted = false;
 
+  /// Set once the results are being saved, so a second tap (or the
+  /// time-up auto-advance) can't save the challenge twice.
+  bool _finishing = false;
+
   // Shuffled options for each question
   late List<List<String>> _shuffledOptions;
   late List<int> _shuffledCorrectIndices;
@@ -121,6 +125,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
 
   void _handleTimeUp() {
     if (_selectedAnswer == null) {
+      final timedOutIndex = _currentIndex;
       _userAnswers[_currentIndex] = null; // Time ran out, no answer
       setState(() {
         _selectedAnswer = -1; // Mark as unanswered
@@ -128,8 +133,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
         _streak = 0;
       });
 
+      // Moves on by itself after 2 s -- unless the student already tapped
+      // "Next" in the meantime; advancing again would skip a question.
       Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) _nextQuestion();
+        if (mounted && _currentIndex == timedOutIndex) _nextQuestion();
       });
     }
   }
@@ -157,6 +164,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
   }
 
   void _nextQuestion() {
+    // Only from an answered (or timed-out) question, and never while the
+    // results are being saved.
+    if (_selectedAnswer == null || _finishing) return;
     if (_currentIndex < _questions.length - 1) {
       setState(() {
         _currentIndex++;
@@ -170,6 +180,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
   }
 
   Future<void> _showResults() async {
+    if (_finishing) return;
+    setState(() => _finishing = true);
     _timerController.stop();
 
     final baseScore = _correctCount * 10;
@@ -183,8 +195,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
     await _storage.addDailyChallengeScore(totalScore);
     await _storage.addDailyActivity(_questions.length);
 
-    // Sync to cloud (with offline support)
-    await _syncToCloud(totalScore, _correctCount);
+    // Sync to cloud (with offline support) in the background: the results
+    // must not wait for a slow connection. It queues itself on failure.
+    unawaited(_syncToCloud(totalScore, _correctCount));
 
     if (mounted) {
       Navigator.pushReplacement(
@@ -309,6 +322,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> with Ticker
                     label: _currentIndex == _questions.length - 1 ? 'See results' : 'Next question',
                     icon: Icons.arrow_forward_rounded,
                     trailingIcon: true,
+                    loading: _finishing,
                     onPressed: _nextQuestion,
                   ),
                 ),

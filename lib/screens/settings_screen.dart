@@ -137,6 +137,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _openPage(String url) async {
+    bool opened = false;
+    try {
+      opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened && mounted) {
+      showAppSnack(context, 'Open $url in your browser', tone: BannerTone.info);
+    }
+  }
+
   Future<void> _confirmSignOut() async {
     final confirmed = await showConfirmDialog(
       context,
@@ -320,6 +332,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       subtitle: 'Help us improve',
                       onTap: _sendFeedback,
                     ),
+                    AppListTile(
+                      icon: Icons.privacy_tip_outlined,
+                      iconColor: p.textSecondary,
+                      title: 'Privacy Policy',
+                      subtitle: 'What we collect and your rights',
+                      onTap: () => _openPage(kPrivacyPolicyUrl),
+                    ),
+                    AppListTile(
+                      icon: Icons.description_outlined,
+                      iconColor: p.textSecondary,
+                      title: 'Terms of Service',
+                      onTap: () => _openPage(kTermsUrl),
+                    ),
                   ],
                 ),
 
@@ -346,6 +371,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _setNotifications(bool value) async {
+    // Android 13+ shows nothing until the student allows notifications, so
+    // turning reminders on asks first; if refused, the switch stays off
+    // instead of claiming reminders that will never arrive.
+    if (value && !await NotificationService.instance.requestPermissions()) {
+      if (!mounted) return;
+      showAppSnack(
+        context,
+        "Allow notifications for CrimiReview in your phone's settings to get study reminders.",
+        tone: BannerTone.warning,
+      );
+      return;
+    }
     await _storage.setNotificationsEnabled(value);
     setState(() => _notificationsEnabled = value);
     await NotificationService.instance.setupScheduledNotifications();

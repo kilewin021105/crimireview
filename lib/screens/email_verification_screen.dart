@@ -41,6 +41,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   bool _isLoading = false;
   bool _isResending = false;
   bool _isVerifying = false;
+
+  /// The server accepted the code. Kept so that, if creating the account
+  /// then fails (slow connection), tapping Verify again retries the
+  /// account step instead of re-checking a code that is already used up.
+  bool _codeAccepted = false;
   String? _errorMessage;
   int _resendCooldown = 0;
   Timer? _cooldownTimer;
@@ -105,6 +110,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       setState(() {
         _isResending = false;
         if (result['success'] == true) {
+          _codeAccepted = false;
           _startCooldown();
           _clearCode();
           showAppSnack(context, 'Verification code sent!', tone: BannerTone.success);
@@ -137,18 +143,21 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
     HapticFeedback.mediumImpact();
 
-    final result = await _emailService.verifyCode(widget.email, code);
+    if (!_codeAccepted) {
+      final result = await _emailService.verifyCode(widget.email, code);
 
-    if (result['success'] != true) {
-      if (mounted) {
-        setState(() {
-          _isVerifying = false;
-          _errorMessage = result['error'] ?? 'Invalid or expired code. Please try again.';
-        });
-        HapticFeedback.heavyImpact();
-        _clearCode();
+      if (result['success'] != true) {
+        if (mounted) {
+          setState(() {
+            _isVerifying = false;
+            _errorMessage = result['error'] ?? 'Invalid or expired code. Please try again.';
+          });
+          HapticFeedback.heavyImpact();
+          _clearCode();
+        }
+        return;
       }
-      return;
+      _codeAccepted = true;
     }
 
     // Code is valid, proceed with signup
@@ -205,13 +214,20 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           totalQuizzes += sp.totalQuizzesTaken;
           totalCorrect += sp.totalCorrectAnswers;
         }
-        await _supabase.syncLocalProgress(
-          totalPoints: totalCorrect * 10,
-          totalQuizzes: totalQuizzes,
-          totalCorrect: totalCorrect,
-          currentStreak: progress.currentStreak,
-          bestStreak: progress.longestStreak,
-        );
+        // The account exists and is signed in by now, so a slow or failed
+        // upload must not turn into "Could not create your account": the
+        // totals are uploaded again at the next sign-in or finished quiz.
+        try {
+          await _supabase.syncLocalProgress(
+            totalPoints: totalCorrect * 10,
+            totalQuizzes: totalQuizzes,
+            totalCorrect: totalCorrect,
+            currentStreak: progress.currentStreak,
+            bestStreak: progress.longestStreak,
+          );
+        } catch (e) {
+          debugPrint('Progress upload after sign-up skipped: $e');
+        }
 
         if (!mounted) return;
         HapticFeedback.heavyImpact();

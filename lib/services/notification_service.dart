@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'storage_service.dart';
@@ -54,15 +56,35 @@ class NotificationService {
 
   /// Request notification permissions (for iOS/Android 13+)
   Future<bool> requestPermissions() async {
-    final android = _notifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    
-    if (android != null) {
-      final granted = await android.requestNotificationsPermission();
-      return granted ?? false;
+    try {
+      final android = _notifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+
+      if (android != null) {
+        final granted = await android.requestNotificationsPermission();
+        return granted ?? false;
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Notification permission request failed: $e');
+      return false;
     }
-    
-    return true;
+  }
+
+  static const String _permissionAskedKey = 'notification_permission_asked_v1';
+
+  /// Android 13 and newer block notifications until the student allows
+  /// them, so without this the daily reminders never appeared. Asked once,
+  /// the first time the student reaches Home; after that they can turn
+  /// reminders on in Settings, which asks again.
+  Future<void> requestPermissionOnce() async {
+    if (!_initialized) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_permissionAskedKey) ?? false) return;
+    if (!await _storage.getNotificationsEnabled()) return;
+    await prefs.setBool(_permissionAskedKey, true);
+    await requestPermissions();
   }
 
   /// Setup daily study reminder notifications
@@ -95,6 +117,22 @@ class NotificationService {
     );
   }
 
+  /// The next [hour]:[minute] on the phone's own clock after [now], as an
+  /// exact moment for the scheduler.
+  ///
+  /// The scheduler's "local" time zone is UTC unless the app sets it, so
+  /// the reminders used to be built in UTC: "9:00" arrived at 5 PM and
+  /// "7:00 PM" at 3 AM in the Philippines. Building the time on the
+  /// phone's clock and converting it fixes that; the reminder then repeats
+  /// at the same moment each day (exact where clocks don't change for
+  /// daylight saving, as in the Philippines).
+  @visibleForTesting
+  static tz.TZDateTime nextReminderTime(DateTime now, int hour, int minute) {
+    var at = DateTime(now.year, now.month, now.day, hour, minute);
+    if (!at.isAfter(now)) at = at.add(const Duration(days: 1));
+    return tz.TZDateTime.from(at, tz.UTC);
+  }
+
   Future<void> _scheduleDailyReminder({
     required int id,
     required int hour,
@@ -102,20 +140,7 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-    
-    // If time has passed today, schedule for tomorrow
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
+    final scheduledDate = nextReminderTime(DateTime.now(), hour, minute);
     
     await _notifications.zonedSchedule(
       id,

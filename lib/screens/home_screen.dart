@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/connectivity_service.dart';
+import '../services/notification_service.dart';
 import '../services/offline_sync_service.dart';
 import '../widgets/ui/ui.dart';
 import '../utils/responsive.dart';
@@ -25,6 +26,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     ConnectivityService.instance.startMonitoring();
+    // Once Home is on screen: the one-time "allow notifications?" prompt
+    // the daily study reminders need on Android 13 and newer.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.requestPermissionOnce();
+    });
   }
 
   @override

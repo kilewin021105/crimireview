@@ -58,6 +58,11 @@ class _QuizScreenState extends State<QuizScreen> {
   /// this object, not in a hand-written if/else in the widget tree.
   AnswerFeedback? _currentFeedback;
 
+  /// True while an answer is being recorded or the quiz is being saved,
+  /// so a quick second tap can't record the same answer or the same quiz
+  /// twice (which would double the student's progress and points).
+  bool _busy = false;
+
   @override
   void initState() {
     super.initState();
@@ -223,6 +228,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     color: _hasAnswered && _currentFeedback != null
                         ? (_currentFeedback!.isCorrect ? p.success : null)
                         : null,
+                    loading: _busy && _hasAnswered,
                     onPressed: _selectedAnswer == null
                         ? null
                         : (_hasAnswered ? _nextQuestion : () { _submitAnswer(); }),
@@ -489,7 +495,16 @@ class _QuizScreenState extends State<QuizScreen> {
   /// and builds the feedback card (panel note 5). All local computation --
   /// this never blocks on the network.
   Future<void> _submitAnswer() async {
-    if (_selectedAnswer == null) return;
+    if (_selectedAnswer == null || _hasAnswered || _busy) return;
+    _busy = true;
+    try {
+      await _recordAnswer();
+    } finally {
+      _busy = false;
+    }
+  }
+
+  Future<void> _recordAnswer() async {
     _stopwatch.stop();
 
     final question = widget.questions[_currentIndex];
@@ -536,6 +551,7 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _nextQuestion() {
+    if (!_hasAnswered || _busy) return;
     if (_currentIndex < widget.questions.length - 1) {
       setState(() {
         _currentIndex++;
@@ -551,13 +567,22 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Future<void> _finishQuiz() async {
-    await Provider.of<AdaptiveLearningService>(context, listen: false).recordQuizResult(
-      subjectId: widget.subject.id,
-      questions: widget.questions,
-      results: _results,
-      responseTimes: _responseTimes,
-      segmentIndex: widget.segmentIndex,
-    );
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await Provider.of<AdaptiveLearningService>(context, listen: false).recordQuizResult(
+        subjectId: widget.subject.id,
+        questions: widget.questions,
+        results: _results,
+        responseTimes: _responseTimes,
+        segmentIndex: widget.segmentIndex,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showAppSnack(context, "Couldn't save this quiz on your phone. Please try again.", tone: BannerTone.danger);
+      return;
+    }
     if (!mounted) return;
 
     Navigator.pushReplacement(
