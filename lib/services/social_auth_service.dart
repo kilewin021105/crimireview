@@ -9,10 +9,10 @@ import '../utils/error_messages.dart';
 import 'connectivity_service.dart';
 import 'supabase_service.dart';
 
-/// The social sign-in options: the icons under the email form.
+/// The social sign-in options: the icon under the email form. Only Google
+/// (Facebook sign-in was removed on 2026-10-17).
 enum SocialProvider {
-  google('google', 'Google'),
-  facebook('facebook', 'Facebook');
+  google('google', 'Google');
 
   const SocialProvider(this.id, this.label);
 
@@ -22,27 +22,26 @@ enum SocialProvider {
 
   OAuthProvider get oauth => switch (this) {
         SocialProvider.google => OAuthProvider.google,
-        SocialProvider.facebook => OAuthProvider.facebook,
       };
 }
 
-/// "Continue with Google / Facebook".
+/// "Continue with Google".
 ///
 /// How it stays safe:
 ///   * The password is never seen by this app. The student signs in on
-///     Google's or Facebook's own page in the phone's browser, and the
-///     browser hands back a one-time code.
+///     Google's own page in the phone's browser, and the browser hands
+///     back a one-time code.
 ///   * PKCE (Supabase's default flow): before opening the browser the app
 ///     stores a secret "verifier" on the phone. The one-time code is
 ///     useless without it, so another app that catches the code on its
 ///     way back can't sign in with it.
-///   * Supabase joins a Google/Facebook login to an existing account only
-///     when both sides have a verified email, so a student who already
-///     signed up with email + password keeps the same account and the
-///     same progress instead of getting a second, empty one.
+///   * Supabase joins a Google login to an existing account only when
+///     both sides have a verified email, so a student who already signed
+///     up with email + password keeps the same account and the same
+///     progress instead of getting a second, empty one.
 ///   * The database (supabase_social_login.sql) fills in the name and
 ///     photo; the student's role is always "student" and can't be set
-///     from a Google or Facebook profile.
+///     from a Google profile.
 ///
 /// The student's choice comes back through Supabase's auth listener, not
 /// as the return value here -- see `SignInCompletion` (and `SplashScreen`,
@@ -116,8 +115,8 @@ class SocialAuthService {
       // empty, Supabase would send the student to its Site URL instead);
       // on phones, our app link.
       redirectTo: kIsWeb ? Uri.base.origin : redirectUrl,
-      // Google and Facebook block sign-in inside embedded web views, so
-      // mobile uses the real browser app.
+      // Google blocks sign-in inside embedded web views, so mobile uses
+      // the real browser app.
       authScreenLaunchMode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
       // Always show Google's account chooser, so a student on a shared or
       // family phone picks their own account instead of being signed in

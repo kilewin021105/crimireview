@@ -282,7 +282,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'Account',
                   children: [
                     if (_isLoggedIn) ...[
-                      // A Google/Facebook-only account has no password to change.
+                      // A Google-only account has no password to change.
                       if (SupabaseService.instance.hasPasswordSignIn)
                         AppListTile(
                           icon: Icons.lock_rounded,

@@ -25,8 +25,8 @@ import '../change_password_screen.dart';
 ///   * About: version, website, support email.
 ///
 /// Nothing here changes data other students see. Sign-in methods (email,
-/// Google, Facebook) are deliberately not shown here: they are offered
-/// before sign-in, as icons under the email form.
+/// Google) are deliberately not shown here: they are offered before
+/// sign-in, on the email form.
 class AdminSettingsScreen extends StatefulWidget {
   /// Signs out and returns to the login screen. The shell passes its own
   /// so the wide-screen side menu and this tab do exactly the same thing.

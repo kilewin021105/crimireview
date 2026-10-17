@@ -13,7 +13,7 @@ import 'sign_in_completion.dart';
 import 'social_sign_in_icons.dart';
 
 /// The sign-in page: the email + password form (sign in / create account),
-/// with a Google and a Facebook icon under it ([SocialSignInIcons]).
+/// with a Google icon under it ([SocialSignInIcons]).
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -44,7 +44,7 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
   @override
   void initState() {
     super.initState();
-    // Catches a Google/Facebook sign-in that finishes while this page is
+    // Catches a Google sign-in that finishes while this page is
     // the one showing (see SignInCompletion).
     watchForSessions();
   }
@@ -308,7 +308,7 @@ class _AuthScreenState extends State<AuthScreen> with SignInCompletion {
                               loading: _isLoading || isCompletingSignIn,
                               onPressed: _submit,
                             ),
-                            // A Google or Facebook sign-in finishes through
+                            // A Google sign-in finishes through
                             // watchForSessions above; while the email button
                             // signs in (_isLoading), the icons wait.
                             SocialSignInIcons(

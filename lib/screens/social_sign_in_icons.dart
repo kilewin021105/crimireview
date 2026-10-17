@@ -9,26 +9,26 @@ import '../services/supabase_service.dart';
 import '../widgets/brand_logos.dart';
 import '../widgets/ui/ui.dart';
 
-/// "or continue with" and a Google and a Facebook icon, under the email
-/// sign-in form.
+/// "or continue with" and a Google icon, under the email sign-in form.
+/// (Facebook sign-in was removed on 2026-10-17; the row still lays out one
+/// icon per [SocialProvider].)
 ///
-/// Tapping an icon opens that provider's own sign-in page in the phone's
+/// Tapping the icon opens Google's own sign-in page in the phone's
 /// browser; [SocialAuthService] explains how that stays safe. This widget
 /// only starts the sign-in and shows its progress and errors. When the
 /// student comes back signed in, the screen it sits in finishes the
 /// sign-in through `SignInCompletion`, exactly like its email button.
 ///
-/// Both icons are always shown on Android, iPhone and the web, so the page
-/// looks the same before and after Google and Facebook are set up. Until a
-/// provider is switched on in Supabase, tapping it says so instead of
-/// opening an error page. The desktop apps can't receive the browser's
-/// answer (see [SocialAuthService.isSupportedPlatform]), so they don't
-/// show the icons.
+/// The icon is always shown on Android, iPhone and the web, so the page
+/// looks the same before and after Google is set up. Until it is switched
+/// on in Supabase, tapping it says so instead of opening an error page.
+/// The desktop apps can't receive the browser's answer (see
+/// [SocialAuthService.isSupportedPlatform]), so they don't show it.
 class SocialSignInIcons extends StatefulWidget {
   /// False while the email form is signing in.
   final bool enabled;
 
-  /// True while the screen finishes a Google or Facebook sign-in
+  /// True while the screen finishes a Google sign-in
   /// (syncing the student's progress).
   final bool completing;
 
@@ -249,7 +249,6 @@ class _ProviderIcon extends StatelessWidget {
     final label = 'Continue with ${provider.label}';
     final logo = switch (provider) {
       SocialProvider.google => const GoogleLogo(size: 24),
-      SocialProvider.facebook => const FacebookLogo(size: 26),
     };
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppSpace.radiusMd),
