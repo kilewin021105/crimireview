@@ -264,6 +264,26 @@ class AdminService extends ChangeNotifier {
     QuestionRepository.instance.invalidate();
   }
 
+  /// Approves the generated questions in [ids]: switches them on for
+  /// students. The database changes only questions that are `generated` and
+  /// still inactive, so a hand-written draft in the list is left alone.
+  /// Returns how many were approved; throws if the database refuses.
+  ///
+  /// The caller sends exactly the ids the admin ticked. There is deliberately
+  /// no "approve everything pending": a generated question that was
+  /// deactivated on purpose looks the same as one still waiting for review.
+  Future<int> approveGenerated(List<String> ids) async {
+    final result = await _client.rpc('admin_approve_generated', params: {
+      'p_ids': ids,
+    });
+    final map = result is Map ? result : const <dynamic, dynamic>{};
+    if (map['success'] != true) {
+      throw Exception((map['error'] ?? 'Could not approve the questions.').toString());
+    }
+    QuestionRepository.instance.invalidate();
+    return (map['approved'] as num?)?.toInt() ?? 0;
+  }
+
   /// Hard delete. Only for genuine mistakes (e.g. a duplicate just created);
   /// prefer [setActive] otherwise, since `question_attempts` rows do not
   /// foreign-key to this table and would otherwise silently orphan.

@@ -1143,9 +1143,48 @@ You asked, before the release, to remove the Facebook sign-up and keep only Goog
 
 ---
 
+## 2026-10-18 — Session 58: concept bank screen, four question forms per concept, approve-selected (branch `concept-bank-and-forms`)
+
+**The problem you raised.** Template generation was a hassle for Faculty: a concept made exactly one question, so the 21 seeded concepts meant 21 questions, ever. Concepts could only be added with SQL, so Faculty could not feed the generator at all.
+
+**Found while checking it (a real bug):** the "N available" number on the Generate screen could be wrong. The old generator picked concepts at random without skipping used ones, so asking for exactly the "2 available" created 0 or 1. Reproduced on a local PostgreSQL 18 copy (6 trials: 1, 1, 0, 1, 0, 1 created for "2 available").
+
+**What changed**
+- **New SQL file `supabase_concept_bank.sql`** (run it in the SQL Editor after `supabase_template_generation.sql`; safe to re-run; ends with a rollback block):
+  - **Four question forms per concept** (new `question_templates.form` column): term to definition (the existing one), definition to term, legal basis to term, term to legal basis. The four topics already in the database keep their hand-written template and gain the other three, so the same 21 concepts can now make up to **74 questions** (21 + 21 + 16 + 16).
+  - **One shared rule** for "which concepts can still make a question" (`template_eligible` / `template_candidates`), used by both the generator and the status view. Asking for exactly the number shown now always creates that many (tested: 71 asked, 71 created, 0 mismatches; asking again creates 0).
+  - **Safety rules in the generator:** at least 2 wrong options (3 options total); wrong options never repeat the correct text; the two legal-basis forms are used only for a group in which every concept has its own legal basis and no basis equals or contains another. Without that rule, "which is covered by RA 6975?" would have two right answers in the PNP/BJMP group; that group correctly gets 0 for the two basis forms.
+  - **Text is filled with `replace()`, not `regexp_replace()`**, so a backslash or `&` typed into a definition stays literal.
+  - A question typed by hand with the same text also counts as "already has one", the same comparison the database already uses to refuse duplicates.
+  - **Faculty tools (all admin-only, validated, audit-logged):** `admin_save_concept` (add/edit), `admin_set_concept_active`, `admin_import_concepts` (up to 200 rows; valid rows are saved and refused rows come back with the reason), `admin_approve_generated`. Topic spelling is matched ignoring case, so "justifying circumstances" cannot create a second, empty topic. Adding a concept to a new topic creates its four templates automatically.
+  - Audit entries use the actions the dashboard already labels (create, update, delete, restore, generate); no new action names.
+- **App:**
+  - New **Concepts** screen (Questions toolbar book icon, or "Manage concepts" on the Generate screen): concepts grouped by subject and topic, search, subject filter, add/edit/deactivate/restore, and a per-topic note saying whether it is ready for questions and why the legal-basis forms are off.
+  - New concept form and a **paste import** screen (rows copied from Excel or Word, Tab or `|` separated, header row skipped, quotes removed). It shows what will be imported and which lines will be skipped, with reasons, before anything is sent.
+  - **Generate screen** rebuilt around topics: four cards per topic with the form's name, "Generate all (N)", and clear text when a form is not available yet.
+  - **Approve selected** in the generated-questions list: tick the questions you have read, press Approve. There is deliberately no "approve everything pending", because a generated question that was deactivated on purpose looks the same as one still waiting. Only ticked questions that are generated and still inactive are switched on; a hand-written draft in the list is left alone.
+- Files: `supabase_concept_bank.sql`, `lib/models/concept.dart`, `lib/services/concept_service.dart`, `lib/utils/concept_import_parser.dart`, `lib/utils/concept_rules.dart`, `lib/screens/admin/admin_concepts_screen.dart`, `admin_concept_editor_screen.dart`, `admin_concept_import_screen.dart`, `concept_subject_topic_fields.dart`; changed `question_generation_service.dart`, `admin_service.dart`, `admin_template_generation_screen.dart`, `admin_questions_screen.dart`, README.
+
+**Checks**
+- **Database, on a local PostgreSQL 18 copy of the real schema and seed (old generator first, then the new file twice):**
+  - all 74 generated questions are inactive, generated, have 3 to 4 options, exactly one correct, no duplicate options, no empty reasons, no leftover `{{`;
+  - every question traces back to exactly one source concept, the correct option is that concept's answer, every wrong option comes from a sibling, and no wrong option overlaps the key's legal basis;
+  - 76 explicit pass/fail checks: students and logged-out users are refused by every tool, internal helpers cannot be called directly, duplicates and invalid text are refused, import row numbers are right, approval touches only the selected generated questions, students see approved questions and not pending ones, audit rows are written;
+  - 3 questions made by the OLD generator are recognised as already used after upgrading.
+- **App:** `flutter analyze` 0 errors, 0 warnings (the same 17 style notes as before). `flutter test`: 80 pass (31 new: 20 for the paste parser, 11 for the legal-basis and readiness rules). New screens rendered in light and dark and swept on 12 device profiles: 96 renders, 0 layout problems. Three layout problems seen in the first renders (cramped buttons, cut-off helper text, import preview below the fold) were fixed.
+
+**Not done, and not claimed**
+- A "which is NOT…" form: it needs a different data model (concepts from outside the group), so it was left out rather than faked.
+- **Not run on the live project yet:** you have to run `supabase_concept_bank.sql` in the SQL Editor, and the app changes need the new APK. Until the SQL is run, the new Concepts and Approve screens will show errors.
+- Each form still depends on enough concepts: a group needs 3 or more, and the legal-basis forms need a distinct legal basis on every concept. Faculty still have to enter the concepts; this only multiplies what each concept gives.
+- Questions of the form "legal basis to term" and "term to legal basis" are hard memorisation items; Faculty review each one before it reaches students.
+- The manuscript still describes the old one-question-per-concept ceiling (21) and has not been updated.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
-- **Template-based generation is capped at 21 questions, ever**, across its 4 seeded topics, until someone manually adds more rows to `concept_bank` — this is a content task, not something the generator can do for itself. Since Session 28 it is the only generator, so this cap is now the cap on generated questions overall.
+- **Template-based generation is limited by the concept bank.** Since Session 58 each concept can make up to four questions (74 from the 21 seeded concepts) and Faculty add concepts in the app, but a group still needs 3 or more concepts, and the two legal-basis forms need a distinct legal basis on every concept in the group.
 
 - **Daily Challenge** shows an explanation either way (better than the old Quiz screen was), but still uses the plain overall `explanation` field, not the richer per-option "why THIS specific wrong choice fails" rationale, and does not call `MasteryService.recordAttempt()`. Only the main Quiz flow does, as of Session 9.
 - **The quiz Results screen** has no per-question answer review at all (Daily Challenge's own separate results screen does have one). A student who wants to see *why* they missed something after finishing has to remember it from the quiz itself.
@@ -1154,6 +1193,8 @@ You asked, before the release, to remove the Facebook sign-up and keep only Goog
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 58: `supabase_concept_bank.sql`, `lib/models/concept.dart`, `lib/services/concept_service.dart`, `lib/utils/concept_import_parser.dart`, `lib/utils/concept_rules.dart`, `lib/screens/admin/admin_concepts_screen.dart`, `admin_concept_editor_screen.dart`, `admin_concept_import_screen.dart`, `concept_subject_topic_fields.dart`, `test/concept_import_parser_test.dart`, `test/concept_rules_test.dart`.
 
 Session 56: `supabase_audit_fixes.sql`, `test/notification_time_test.dart`.
 

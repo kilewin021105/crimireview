@@ -9,6 +9,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crimireview/screens/achievements_screen.dart';
+import 'package:crimireview/screens/admin/admin_concept_editor_screen.dart';
+import 'package:crimireview/screens/admin/admin_concept_import_screen.dart';
+import 'package:crimireview/screens/admin/admin_concepts_screen.dart';
 import 'package:crimireview/screens/admin/admin_question_editor_screen.dart';
 import 'package:crimireview/screens/admin/admin_questions_screen.dart';
 import 'package:crimireview/screens/admin/admin_settings_screen.dart';
@@ -61,6 +64,14 @@ class Shot {
 
 Future<void> tapText(WidgetTester tester, String text) async {
   final finder = find.text(text);
+  if (finder.evaluate().isNotEmpty) {
+    await tester.tap(finder.first, warnIfMissed: false);
+  }
+}
+
+/// Ticks the first tick box on screen (the review list's approve flow).
+Future<void> tapFirstCheckbox(WidgetTester tester) async {
+  final finder = find.byType(Checkbox);
   if (finder.evaluate().isNotEmpty) {
     await tester.tap(finder.first, warnIfMissed: false);
   }
@@ -260,5 +271,56 @@ List<Shot> screenCatalog() => [
       Shot('admin_questions', (_) => const AdminQuestionsScreen(showBackButton: false)),
       Shot('admin_editor', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(0, _subject.id))),
       Shot('admin_students', (_) => const AdminStudentsScreen(showBackButton: false)),
-      Shot('admin_templates', (_) => const AdminTemplateGenerationScreen(), dark: false),
+      Shot('admin_templates', (_) => const AdminTemplateGenerationScreen()),
+      Shot('admin_concepts', (_) => const AdminConceptsScreen()),
+      Shot(
+        'admin_concept_new',
+        (_) => const AdminConceptEditorScreen(
+          concepts: sampleConcepts,
+          presetSubjectId: 'corrections',
+          presetTopic: 'Probation Law',
+        ),
+      ),
+      Shot('admin_concept_edit',
+          (_) => AdminConceptEditorScreen(existing: sampleConcepts.first, concepts: sampleConcepts),
+          dark: false),
+      Shot(
+        'admin_concept_import',
+        (_) => const AdminConceptImportScreen(
+          concepts: sampleConcepts,
+          presetSubjectId: 'corrections',
+          presetTopic: 'Probation Law',
+          initialText: 'Term | Definition | Legal basis\n'
+              'Pardon | An act of grace by the Chief Executive that exempts a person from punishment. | Const. Art. VII, Sec. 19\n'
+              'Reprieve | A temporary suspension of the execution of a sentence by the Chief Executive.\n'
+              'Commutation | A reduction of a sentence to a lighter penalty granted by the Chief Executive. | Const. Art. VII, Sec. 19\n'
+              'this line has no separator\n'
+              'Amnesty | short',
+        ),
+      ),
+      Shot(
+        'admin_concept_import_tall',
+        (_) => const AdminConceptImportScreen(
+          concepts: sampleConcepts,
+          presetSubjectId: 'corrections',
+          presetTopic: 'Probation Law',
+          initialText: 'Term | Definition | Legal basis\n'
+              'Pardon | An act of grace by the Chief Executive that exempts a person from punishment. | Const. Art. VII, Sec. 19\n'
+              'Reprieve | A temporary suspension of the execution of a sentence by the Chief Executive.\n'
+              'Commutation | A reduction of a sentence to a lighter penalty granted by the Chief Executive. | Const. Art. VII, Sec. 19\n'
+              'this line has no separator\n'
+              'Amnesty | short',
+        ),
+        dark: false,
+        size: const Size(390, 1500),
+      ),
+      // Generated questions waiting for review, one ticked.
+      Shot(
+        'admin_review',
+        (_) => const AdminQuestionsScreen(
+          initialSource: QuestionSource.generated,
+          initialTemplateId: 'tpl_sample',
+        ),
+        act: tapFirstCheckbox,
+      ),
     ];

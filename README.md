@@ -194,6 +194,12 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
     - profile photos can only point at the student's own upload (or their Google photo);
     - a password reset signs the account out on every device;
     - the internal email functions can only be run by the database.
+12. **`supabase_concept_bank.sql`** (run after step 7) — the concept bank screen and more question forms:
+    - Faculty can add, edit, deactivate and bulk-import concepts from **Admin Panel → Questions → book icon (Concepts)**, no SQL needed;
+    - one concept can now make up to **four** questions (term to definition, definition to term, legal basis to term, term to legal basis);
+    - the "N available" count and the generator share one rule, so asking for exactly N always creates N;
+    - Faculty can tick generated questions and approve them in one step.
+    Safe to run more than once; the file ends with a rollback block.
 
 ## Google sign-in
 
@@ -222,7 +228,22 @@ Core tables used by the app:
 
 ## Question generation
 
-Questions are generated only through **Admin Panel → Questions → Generate from Templates** (step 7 above). It runs entirely inside the database — no API key, no upload, no cost — and every generated item lands inactive until an admin reviews and restores it.
+Questions are generated only through **Admin Panel → Questions → Generate from Templates** (steps 7 and 12 above). It runs entirely inside the database — no API key, no upload, no cost — and every generated item lands inactive until an admin reviews and approves it.
+
+**Feeding it:** open **Concepts** (the book icon, or "Manage concepts" on the Generate screen). A concept is a term, its meaning, and optionally its legal basis. Add one at a time, or paste many rows from Excel or Word (term, definition, legal basis, separated by Tabs or `|`). A new topic gets its four templates automatically.
+
+**What it makes:** each concept can become up to four questions, one per form:
+
+| Form | The student sees | And picks |
+|---|---|---|
+| Term to definition | the term | its meaning |
+| Definition to term | the meaning | the term |
+| Legal basis to term | a legal basis | the term it covers |
+| Term to legal basis | the term | its legal basis |
+
+A group of concepts needs at least **3** (the others become the wrong answers). The two legal-basis forms are used only when every concept in the group has its own legal basis and no basis contains another (otherwise two answers could both be right). The Concepts screen says when they are off and why.
+
+**Approving:** in the review list (Generated only), tick the questions you have read and press **Approve**. Only ticked questions are switched on, and only generated ones that are still inactive.
 
 The old "Generate from Document" (PDF → AI) path has been removed from the app. Step 8 (`supabase_security_fixes_v2.sql`) also drops the `document_uploads` table it left behind; the separate `supabase_remove_document_generation.sql` lists the two leftovers SQL can't remove (the storage bucket and the Edge Function).
 
