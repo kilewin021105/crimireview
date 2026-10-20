@@ -1182,6 +1182,58 @@ You asked, before the release, to remove the Facebook sign-up and keep only Goog
 
 ---
 
+## 2026-10-20 — Session 59: upload a CSV file of concepts for many topics; topics are created automatically (same branch)
+
+You asked for teachers to upload their concepts as a file, with the topics made automatically. The Session 58 import took pasted rows for **one** topic chosen on screen. Now a CSV file can hold the whole concept bank, with the subject and topic of every concept in the file.
+
+**How it works**
+- **Concepts → upload icon** (or the link "Have a CSV file with many topics?" on the paste screen) opens **Upload a CSV file**:
+  1. "Get the template" shares a ready-made file (header row + three seeded RPC Art. 11 examples).
+  2. "Choose CSV file" opens the phone's file chooser.
+  3. A preview, then Import.
+- **Columns:** `subject, topic, term, definition, legal_basis` (optional), `group` (optional).
+  - Subject accepts the app's names, short names, ids, the 2018 names and the common abbreviations (CLJ, LEA, CDI). An unknown subject skips only that line.
+  - A topic not yet in the bank is **created automatically**, with its four question forms. An existing topic is matched ignoring letter case and extra spaces.
+- **The preview** shows, before anything is sent:
+  - how many concepts in how many topics, and how many topics are new;
+  - each topic with "New topic", "+N concepts", and whether it will be **ready for questions** (all four forms, term and definition forms only, or not yet because a group needs 3 concepts);
+  - every skipped line with its **line number** and reason;
+  - columns that are not used.
+- **Lines that are skipped:**
+  - a term already in that topic, including deactivated ones, as the database does;
+  - a term repeated in the file, or a definition repeated in the same group;
+  - a field that is too short or too long, or contains `{{ }}`;
+  - a topic with several groups but no group given;
+  - an invalid group name.
+- **Import:** one request per topic and group, at most 200 rows each, through the existing `admin_import_concepts`. **No new SQL**: it uses `supabase_concept_bank.sql` from Session 58.
+  - Rows the database refuses are reported with their line in the file.
+  - A topic that fails (for example, no connection) doesn't stop the others.
+  - Uploading the same file again is safe: rows already saved are skipped.
+  - The result screen offers **Generate questions**, which opens the Generate screen.
+- **Reading real files:**
+  - quoted cells with commas, line breaks and doubled quotes;
+  - comma, semicolon or Tab as the separator;
+  - UTF-8 with or without Excel's mark, UTF-16, and Excel's older Windows character set (so ñ and curly quotes survive).
+  - Limits: at most 1,000 concepts and 2 MB per file. Only `.csv` or `.txt` files are accepted; an Excel `.xlsx` gets a message explaining how to save as CSV.
+
+**Files:** new `lib/utils/concept_csv.dart`, `lib/screens/admin/admin_concept_csv_import_screen.dart`, `test/concept_csv_test.dart`. Changed: `concept_service.dart` (`importCsvPlan`), `admin_concepts_screen.dart` (upload button), `admin_concept_import_screen.dart` (link), screenshot catalog, README, `pubspec.yaml`.
+
+**New package:** `file_picker` 11.0.3, for choosing the file. It adds no Android permission, only the system file chooser.
+
+**Checks:**
+- `flutter analyze`: 0 errors, 0 warnings (the same 17 style notes).
+- `flutter test`: 112 pass, including 32 new for the CSV reader and import:
+  - template round trip; quotes and line breaks; separators; character sets; header names; subjects; topics and groups; duplicates; field rules; line numbers; readiness; the 1,000 limit;
+  - a 450-row topic sent as 200 + 200 + 50, with refused rows mapped back to file lines and a failed topic not stopping the rest.
+- New screen rendered in light and dark. Concept screens swept on 12 devices: 120 renders, 0 problems.
+
+**Not done:**
+- **Not tried on a phone or against the live database yet.** The database part needs `supabase_concept_bank.sql` (Session 58), which has not been run live. Until then, the upload's Import fails like the other concept tools.
+- An APK has not been built with the new `file_picker` package.
+- Excel `.xlsx` files are not read directly: save as CSV first.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is limited by the concept bank.** Since Session 58 each concept can make up to four questions (74 from the 21 seeded concepts) and Faculty add concepts in the app, but a group still needs 3 or more concepts, and the two legal-basis forms need a distinct legal basis on every concept in the group.
@@ -1193,6 +1245,8 @@ You asked, before the release, to remove the Facebook sign-up and keep only Goog
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 59: `lib/utils/concept_csv.dart`, `lib/screens/admin/admin_concept_csv_import_screen.dart`, `test/concept_csv_test.dart`.
 
 Session 58: `supabase_concept_bank.sql`, `lib/models/concept.dart`, `lib/services/concept_service.dart`, `lib/utils/concept_import_parser.dart`, `lib/utils/concept_rules.dart`, `lib/screens/admin/admin_concepts_screen.dart`, `admin_concept_editor_screen.dart`, `admin_concept_import_screen.dart`, `concept_subject_topic_fields.dart`, `test/concept_import_parser_test.dart`, `test/concept_rules_test.dart`.
 

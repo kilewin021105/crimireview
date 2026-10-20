@@ -5,8 +5,10 @@ import '../../models/subject.dart';
 import '../../services/concept_service.dart';
 import '../../utils/concept_import_parser.dart';
 import '../../utils/concept_rules.dart';
+import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/ui/ui.dart';
+import 'admin_concept_csv_import_screen.dart';
 import 'concept_subject_topic_fields.dart';
 
 /// Add many concepts to one topic in one go, by pasting rows copied from
@@ -74,6 +76,16 @@ class _AdminConceptImportScreenState extends State<AdminConceptImportScreen> {
       !_parsed.tooMany &&
       _topic.trim().isNotEmpty &&
       !_needsGroup;
+
+  /// The CSV upload (many topics in one file). When it saves anything, this
+  /// screen closes too, so the Concepts list reloads.
+  Future<void> _openCsvImport() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      SlidePageRoute(page: AdminConceptCsvImportScreen(concepts: widget.concepts)),
+    );
+    if (changed == true && mounted) Navigator.pop(context, true);
+  }
 
   Future<void> _import() async {
     setState(() {
@@ -212,6 +224,14 @@ class _AdminConceptImportScreenState extends State<AdminConceptImportScreen> {
                               'One concept per line with three columns: term, definition, legal basis (optional). '
                               'Copy the cells from Excel or Word, or separate the columns with the | sign.',
                               style: text.bodySmall,
+                            ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: _importing ? null : _openCsvImport,
+                                icon: const Icon(Icons.upload_file_rounded, size: 18),
+                                label: const Text('Have a CSV file with many topics? Upload it'),
+                              ),
                             ),
                             const SizedBox(height: 14),
                             TextField(

@@ -8,6 +8,7 @@ import '../../utils/error_messages.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/ui/ui.dart';
+import 'admin_concept_csv_import_screen.dart';
 import 'admin_concept_editor_screen.dart';
 import 'admin_concept_import_screen.dart';
 
@@ -100,6 +101,14 @@ class _AdminConceptsScreenState extends State<AdminConceptsScreen> {
     if (changed == true) _load();
   }
 
+  Future<void> _openCsvImport() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      SlidePageRoute(page: AdminConceptCsvImportScreen(concepts: _concepts)),
+    );
+    if (changed == true) _load();
+  }
+
   Future<void> _toggleActive(Concept c) async {
     final goingActive = !c.isActive;
     if (!goingActive) {
@@ -147,8 +156,15 @@ class _AdminConceptsScreenState extends State<AdminConceptsScreen> {
         subtitle: _loading ? 'Loading...' : '$active active · $topics topic${topics == 1 ? '' : 's'}',
         actions: [
           ToolbarIconButton(
+            icon: Icons.upload_file_rounded,
+            tooltip: 'Upload a CSV file (many topics)',
+            size: 40,
+            onPressed: _loading || _error != null ? null : _openCsvImport,
+          ),
+          const SizedBox(width: 8),
+          ToolbarIconButton(
             icon: Icons.content_paste_rounded,
-            tooltip: 'Import many',
+            tooltip: 'Paste rows (one topic)',
             size: 40,
             onPressed: _loading ? null : () => _openImport(),
           ),

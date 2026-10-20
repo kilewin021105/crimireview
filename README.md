@@ -230,7 +230,14 @@ Core tables used by the app:
 
 Questions are generated only through **Admin Panel → Questions → Generate from Templates** (steps 7 and 12 above). It runs entirely inside the database — no API key, no upload, no cost — and every generated item lands inactive until an admin reviews and approves it.
 
-**Feeding it:** open **Concepts** (the book icon, or "Manage concepts" on the Generate screen). A concept is a term, its meaning, and optionally its legal basis. Add one at a time, or paste many rows from Excel or Word (term, definition, legal basis, separated by Tabs or `|`). A new topic gets its four templates automatically.
+**Feeding it:** open **Concepts** (the book icon, or "Manage concepts" on the Generate screen). A concept is a term, its meaning, and optionally its legal basis. Add one at a time, paste many rows for one topic from Excel or Word (term, definition, legal basis, separated by Tabs or `|`), or **upload a CSV file for many topics at once** (upload icon). A new topic gets its four templates automatically.
+
+**CSV upload** (`lib/utils/concept_csv.dart`, screen `admin_concept_csv_import_screen.dart`):
+- **First row = column names:** `subject, topic, term, definition, legal_basis, group`. The last two are optional. "Get the template" on the screen shares a ready-made file.
+- **Subject:** one of the six subject names, written as in the app (e.g. "Criminal Law and Jurisprudence"). Short names, the 2018 names and the usual abbreviations (CLJ, LEA, CDI) are also accepted.
+- **Topic:** any name. An existing topic is matched ignoring letter case and extra spaces; a new one is created on import. **Group** is needed only when a topic already has more than one group.
+- **Saving the file:** from Excel use *File → Save As → CSV UTF-8*, from Google Sheets *File → Download → Comma-separated values*. Semicolon and Tab separated files, and Excel's older Windows character set, are read too.
+- **Checks before saving:** the screen checks every line first. It shows which topics are new, whether each will be ready to make questions, and which lines will be skipped and why (with line numbers). At most 1,000 concepts per file; they are sent per topic, at most 200 per request. Uploading the same file again is safe, because concepts already saved are skipped.
 
 **What it makes:** each concept can become up to four questions, one per form:
 

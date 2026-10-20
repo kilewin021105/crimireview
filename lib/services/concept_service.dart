@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/concept.dart';
+import '../utils/concept_csv.dart';
 import '../utils/concept_import_parser.dart';
 import '../utils/error_messages.dart';
 import 'supabase_service.dart';
@@ -39,6 +42,29 @@ class ConceptImportResult {
     this.inserted = 0,
     this.rejected = const [],
     this.topic,
+  });
+}
+
+/// What happened when a CSV file was imported ([ConceptService.importCsvPlan]).
+class ConceptCsvImportReport {
+  final int inserted;
+
+  /// Lines the database refused, with the reason, numbered as in the file.
+  final List<ImportProblem> rejected;
+
+  /// Topics that could not be sent at all (for example, no connection), with
+  /// the reason. Their concepts were not saved; importing the same file again
+  /// is safe, because concepts already saved are skipped.
+  final List<String> failedTopics;
+
+  /// Topics that received at least one concept, as "subject::topic".
+  final Set<String> topicsUpdated;
+
+  const ConceptCsvImportReport({
+    required this.inserted,
+    required this.rejected,
+    required this.failedTopics,
+    required this.topicsUpdated,
   });
 }
 
@@ -170,6 +196,66 @@ class ConceptService {
       return ConceptImportResult(
           success: false, error: friendlyError(e, fallback: 'Could not import the concepts.'));
     }
+  }
+
+  /// Imports every topic of a checked CSV file ([planConceptCsv]), one topic
+  /// (and group) per request and at most [kConceptMaxImportRows] rows each,
+  /// through the same database function as the paste import. New topics are
+  /// created there, with their four question forms.
+  ///
+  /// A request that fails does not stop the others. [onProgress] is told how
+  /// many requests are done out of how many.
+  Future<ConceptCsvImportReport> importCsvPlan(
+    ConceptCsvPlan plan, {
+    void Function(int done, int total)? onProgress,
+  }) async {
+    final chunks = <(ConceptCsvBatch, List<ConceptDraft>)>[];
+    for (final batch in plan.batches) {
+      for (var i = 0; i < batch.rows.length; i += kConceptMaxImportRows) {
+        chunks.add((
+          batch,
+          batch.rows.sublist(i, math.min(i + kConceptMaxImportRows, batch.rows.length)),
+        ));
+      }
+    }
+
+    var inserted = 0;
+    final rejected = <ImportProblem>[];
+    final failed = <String>[];
+    final updated = <String>{};
+
+    for (var i = 0; i < chunks.length; i++) {
+      onProgress?.call(i, chunks.length);
+      final (batch, rows) = chunks[i];
+      final result = await importConcepts(
+        subjectId: batch.subjectId,
+        topic: batch.topic,
+        siblingGroup: batch.group,
+        rows: rows,
+      );
+      if (!result.success) {
+        failed.add('"${batch.topic}" (${rows.length} concept${rows.length == 1 ? '' : 's'}): '
+            '${result.error ?? 'Could not import the concepts.'}');
+        continue;
+      }
+      inserted += result.inserted;
+      if (result.inserted > 0) {
+        updated.add('${batch.subjectId}::${(result.topic ?? batch.topic).toLowerCase()}');
+      }
+      for (final r in result.rejected) {
+        final line = r.row >= 1 && r.row <= rows.length ? rows[r.row - 1].line : 0;
+        rejected.add(ImportProblem(line, r.term.isEmpty ? r.reason : '"${r.term}": ${r.reason}'));
+      }
+    }
+    onProgress?.call(chunks.length, chunks.length);
+
+    rejected.sort((a, b) => a.line.compareTo(b.line));
+    return ConceptCsvImportReport(
+      inserted: inserted,
+      rejected: rejected,
+      failedTopics: failed,
+      topicsUpdated: updated,
+    );
   }
 
   Map<String, dynamic> _asMap(dynamic result) {
