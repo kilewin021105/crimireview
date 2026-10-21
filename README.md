@@ -34,7 +34,7 @@ Five tabs (students): a bottom bar on phones, a side navigation rail on tablets 
 - **Progress:** stats, streak, subject breakdown, achievements entry.
 - **Settings:** theme, notifications/sound/haptics, profile, password, sign in/out.
 
-**Admin Panel** *(an account with `role = 'admin'` lands here instead of the student tabs)*: its own shell — a bottom bar on phones, a side navigation rail on tablets/desktop/web — with a dashboard of content and student stats, question bank CRUD and template generation, and a read-only student monitor (tap a student for their full record: level reached per subject, topic mastery, recent quizzes). See `supabase_schema_v2.sql` section 13 for how to promote an account.
+**Admin Panel** *(an account with `role = 'admin'` lands here instead of the student tabs)*: its own shell — a bottom bar on phones, a side navigation rail on tablets/desktop/web — with a dashboard of content and student stats, question bank CRUD, and a read-only student monitor (tap a student for their full record: level reached per subject, topic mastery, recent quizzes). See `supabase_schema_v2.sql` section 13 for how to promote an account.
 
 ## Architecture Overview
 
@@ -167,7 +167,7 @@ assets/
 └── ...                     # icon, ml, modules, sounds
 ```
 
-There is no `lib/data/` anymore — question content used to be compiled into the app there (`questions_database.dart`, 6045 lines; `question_bank.dart`, 968 lines), which is exactly what panel note 7 flagged ("do NOT put your questions in your code"). Both files were deleted once `daily_challenge_screen.dart` and `flashcard_screen.dart` — the last two screens still reading from them — were migrated to `QuestionRepository`. Every question now lives in `public.questions` in Supabase, authored through the Admin Panel, bulk-imported, or auto-generated (see `supabase_schema_v2.sql` sections 5–6 for the generation templates).
+There is no `lib/data/` anymore — question content used to be compiled into the app there (`questions_database.dart`, 6045 lines; `question_bank.dart`, 968 lines), which is exactly what panel note 7 flagged ("do NOT put your questions in your code"). Both files were deleted once `daily_challenge_screen.dart` and `flashcard_screen.dart` — the last two screens still reading from them — were migrated to `QuestionRepository`. Every question now lives in `public.questions` in Supabase, authored through the Admin Panel or bulk-imported. (This version of the app has no question generator; see **Question generation** below.)
 
 ## Supabase Setup
 
@@ -185,7 +185,7 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
 4. `supabase_schema_v2.sql` — the question bank (`public.questions`), the admin role + `is_admin()`, Automatic Item Generation tables, Bayesian Knowledge Tracing state (`topic_mastery`), question exposure tracking, and the admin audit log. Section 13 of this file explains how to promote your account to admin.
 5. `supabase_seed_questions.sql` *(optional)* — 759 questions migrated out of the old hardcoded Dart files, ready to seed the bank so it isn't empty on first run. Regenerate with `dart run tools/export_questions_to_sql.dart` if the source files still existed — they don't anymore, so this script is now historical.
 6. `supabase_admin_management.sql` — lets an existing admin promote/demote another user from inside the app (Admin Panel → Students → "⋮") instead of needing SQL Editor access every time.
-7. `supabase_template_generation.sql` — the free, no-API-key "Generate from Templates" path (the only question generator in the app): one Postgres function that turns the `question_templates`/`concept_bank` data from step 4 into real questions. Works immediately after this file runs, no further setup.
+7. `supabase_template_generation.sql` *(optional; only for the question generator, which is not in this version of the app; see **Question generation** below)* — one Postgres function that turns the `question_templates`/`concept_bank` data from step 4 into questions.
 8. **`supabase_security_fixes_v2.sql`** — pre-launch security fixes: profiles (emails, schools, roles) are no longer readable by other users or logged-out visitors; the leaderboard is served by `get_leaderboard()` with public fields only; daily scores are private and insert-only; password reset re-checks the emailed code; code emails are rate-limited; avatars are limited to 2 MB images; name lengths are capped. **Requires app v1.0.1 or newer** for Forgot Password and the leaderboard.
 9. `supabase_enforce_email_verification.sql` — makes the database refuse to create an account unless the email passed the 6-digit check, so Supabase's public sign-up API can't be used to skip it. Google accounts are let through (Google already proved the email). **Test a new sign-up in the app right after running it**; the file has a one-line rollback. To add a user by hand afterwards, see the file's header.
 10. `supabase_social_login.sql` — new accounts from Google get their real name and profile photo instead of being named after their email address.
@@ -194,7 +194,7 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
     - profile photos can only point at the student's own upload (or their Google photo);
     - a password reset signs the account out on every device;
     - the internal email functions can only be run by the database.
-12. **`supabase_concept_bank.sql`** (run after step 7) — the concept bank screen and more question forms:
+12. `supabase_concept_bank.sql` *(optional; only for the question generator, which is not in this version of the app)* — the concept bank screen and more question forms:
     - Faculty can add, edit, deactivate and bulk-import concepts from **Admin Panel → Questions → book icon (Concepts)**, no SQL needed;
     - one concept can now make up to **four** questions (term to definition, definition to term, legal basis to term, term to legal basis);
     - the "N available" count and the generator share one rule, so asking for exactly N always creates N;
@@ -229,31 +229,13 @@ Core tables used by the app:
 
 ## Question generation
 
-Questions are generated only through **Admin Panel → Questions → Generate from Templates** (steps 7 and 12 above). It runs entirely inside the database — no API key, no upload, no cost — and every generated item lands inactive until an admin reviews and approves it.
+**This version of the app has no question generator.** The branch `adaptive-focus` keeps the Admin Panel to what the adaptive learning story needs: the question bank, the student monitor with each student's full record, and settings. "Generate from Templates", the Concepts screens (add, paste, CSV upload) and the approve-selected review list were removed from the app here (CHANGELOG Session 61).
 
-**Feeding it:** open **Concepts** (the book icon, or "Manage concepts" on the Generate screen). A concept is a term, its meaning, and optionally its legal basis. Add one at a time, paste many rows for one topic from Excel or Word (term, definition, legal basis, separated by Tabs or `|`), or **upload a CSV file for many topics at once** (upload icon). A new topic gets its four templates automatically.
+**To bring them back,** switch to the branch that has them: `git switch student-record` (generator, concepts, CSV upload and the student record) or `git switch concept-bank-and-forms` (generator, concepts and CSV upload, without the student record). Then run `flutter pub get`, because the CSV upload needs the `file_picker` package.
 
-**CSV upload** (`lib/utils/concept_csv.dart`, screen `admin_concept_csv_import_screen.dart`):
-- **First row = column names:** `subject, topic, term, definition, legal_basis, group`. The last two are optional. "Get the template" on the screen shares a ready-made file.
-- **Subject:** one of the six subject names, written as in the app (e.g. "Criminal Law and Jurisprudence"). Short names, the 2018 names and the usual abbreviations (CLJ, LEA, CDI) are also accepted.
-- **Topic:** any name. An existing topic is matched ignoring letter case and extra spaces; a new one is created on import. **Group** is needed only when a topic already has more than one group.
-- **Saving the file:** from Excel use *File → Save As → CSV UTF-8*, from Google Sheets *File → Download → Comma-separated values*. Semicolon and Tab separated files, and Excel's older Windows character set, are read too.
-- **Checks before saving:** the screen checks every line first. It shows which topics are new, whether each will be ready to make questions, and which lines will be skipped and why (with line numbers). At most 1,000 concepts per file; they are sent per topic, at most 200 per request. Uploading the same file again is safe, because concepts already saved are skipped.
+**The database is unchanged.** The SQL files (steps 7 and 12) and the tables `question_templates` and `concept_bank` stay, so switching back needs no database work. Questions the generator made earlier stay in the bank: active ones are served to students like any other question, and the admin list labels them "generated".
 
-**What it makes:** each concept can become up to four questions, one per form:
-
-| Form | The student sees | And picks |
-|---|---|---|
-| Term to definition | the term | its meaning |
-| Definition to term | the meaning | the term |
-| Legal basis to term | a legal basis | the term it covers |
-| Term to legal basis | the term | its legal basis |
-
-A group of concepts needs at least **3** (the others become the wrong answers). The two legal-basis forms are used only when every concept in the group has its own legal basis and no basis contains another (otherwise two answers could both be right). The Concepts screen says when they are off and why.
-
-**Approving:** in the review list (Generated only), tick the questions you have read and press **Approve**. Only ticked questions are switched on, and only generated ones that are still inactive.
-
-The old "Generate from Document" (PDF → AI) path has been removed from the app. Step 8 (`supabase_security_fixes_v2.sql`) also drops the `document_uploads` table it left behind; the separate `supabase_remove_document_generation.sql` lists the two leftovers SQL can't remove (the storage bucket and the Edge Function).
+The old "Generate from Document" (PDF → AI) path was removed earlier. Step 8 (`supabase_security_fixes_v2.sql`) also drops the `document_uploads` table it left behind; the separate `supabase_remove_document_generation.sql` lists the two leftovers SQL can't remove (the storage bucket and the Edge Function).
 
 ### Security notes
 

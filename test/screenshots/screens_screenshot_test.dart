@@ -30,8 +30,6 @@ import 'package:crimireview/services/storage_service.dart';
 import 'package:crimireview/services/theme_service.dart';
 
 import 'package:crimireview/services/admin_service.dart';
-import 'package:crimireview/services/concept_service.dart';
-import 'package:crimireview/services/question_generation_service.dart';
 
 import 'admin_fakes.dart';
 import 'screen_catalog.dart';
@@ -188,8 +186,6 @@ void main() {
     await _loadFont('Roboto', ['$material/roboto-regular.ttf', '$material/roboto-bold.ttf']);
     if (_outDir.isNotEmpty) Directory(_outDir).createSync(recursive: true);
     AdminService.debugInstance = FakeAdminService();
-    ConceptService.debugInstance = FakeConceptService();
-    QuestionGenerationService.debugInstance = FakeQuestionGenerationService();
 
     // Learning models the dashboard reads: a few BKT topic records, and
     // the bundled ML model (readiness, recommended difficulty).

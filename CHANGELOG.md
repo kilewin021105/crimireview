@@ -1279,8 +1279,48 @@ You asked that tapping a student's stats row (Mastered, Needs review, Tracked, L
 
 ---
 
+## 2026-10-22 — Session 61: branch `adaptive-focus` — the question generator and the Concepts screens removed from the app
+
+You asked for a separate branch without the two Admin Panel features **Generate from Templates** and **Concepts**, so the system and the defense focus on how the adaptive learning works. You can switch back if the panel asks for them.
+
+**Where things are now**
+- **`adaptive-focus`** (new, made from `student-record`): the app without the generator and the Concepts screens. It keeps the student record screen (Session 60), which shows each student's level reached and mastery and supports the adaptive explanation.
+- **`student-record`** and **`concept-bank-and-forms`**: unchanged, with both features. Switching back is `git switch student-record` (or `concept-bank-and-forms`), then `flutter pub get`.
+
+**Removed from the app (everything connected to the two features was traced first)**
+- **Screens:** Generate from Templates; Concepts list; concept form; paste import; CSV upload; the shared subject/topic fields.
+- **Services and logic:** `question_generation_service.dart`, `concept_service.dart`, the `Concept` model, `concept_import_parser.dart`, `concept_rules.dart`, `concept_csv.dart`, and `AdminService.approveGenerated`.
+- **Admin → Questions:**
+  - the two toolbar buttons (Concepts, Generate from templates);
+  - the "Generated only" filter and the tick-to-approve bar;
+  - the deep link that opened one generated batch.
+  - Compared with `main`, the screen now differs only by these removals.
+- **Dashboard:** the "Auto-generated" tile is replaced by **"Topics mastered"**, the number of topics students have mastered according to the BKT model. Six tiles keep the grid even.
+- **Package `file_picker`** (only the CSV upload used it): removed from `pubspec.yaml`, `pubspec.lock` and the macOS plugin list, restored exactly to `main`'s versions of those three files.
+- **Tests:** the 63 tests of the removed code (paste parser 20, rules 11, CSV 32), and the screenshot fakes and screens for them.
+- **README:** the Admin Panel description, steps 7 and 12 (marked optional, generator only), and a new "Question generation" section explaining this branch and how to switch back.
+
+**Not changed, on purpose**
+- **The database.** No SQL was run and no tables or functions were dropped, so switching back needs no database work. The SQL files stay in the repo, marked optional.
+- **Questions the generator made earlier** (14 on the live project on 2026-10-21: 5 active, 9 inactive) stay in the bank. Active ones are served to students like any other question, and the admin list still labels them "generated", because that is where they came from. An inactive one can still be switched on with **Restore** in its menu.
+- `AdminService.listQuestions` keeps its `source` / `templateId` parameters (unused here) so the feature branch can be merged back without changing the service.
+- Earlier CHANGELOG entries (Sessions 12, 18, 28, 58, 59) are history and stay as written.
+
+**Checks**
+- No code anywhere in `lib/`, `test/` or `pubspec.yaml` refers to the removed parts (searched).
+- `flutter analyze`: 0 errors, 0 warnings (the same 17 style notes).
+- `flutter test`: 67 pass, which is the previous 130 minus the 63 removed tests.
+- Admin screens (shell and dashboard, wide shell, questions, editor, students, student record) swept on 12 devices: 72 renders, 0 layout problems.
+
+**Worth knowing for the defense**
+- Pre-oral **panel note 1** asked that questions be generated automatically. On this branch the app does not do that. If the panel asks, the honest answer is that template generation was built and tested (CHANGELOG Sessions 18, 58, 59) and is kept on a separate branch, and the presented version focuses on the adaptive learning.
+- The manuscript (and the defense guide) still describe template generation. Decide which version you present and make them match.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
+- **On branch `adaptive-focus` there is no question generator in the app** (Session 61); the two notes below describe the feature branches.
 - **Template-based generation is limited by the concept bank.** Since Session 58 each concept can make up to four questions (74 from the 21 seeded concepts) and Faculty add concepts in the app, but a group still needs 3 or more concepts, and the two legal-basis forms need a distinct legal basis on every concept in the group.
 
 - **Daily Challenge** shows an explanation either way (better than the old Quiz screen was), but still uses the plain overall `explanation` field, not the richer per-option "why THIS specific wrong choice fails" rationale, and does not call `MasteryService.recordAttempt()`. Only the main Quiz flow does, as of Session 9.
@@ -1292,6 +1332,8 @@ You asked that tapping a student's stats row (Mastered, Needs review, Tracked, L
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
 
 Session 59: `lib/utils/concept_csv.dart`, `lib/screens/admin/admin_concept_csv_import_screen.dart`, `test/concept_csv_test.dart`.
+
+Session 61 (`adaptive-focus`): no new files. Removed on that branch: the generator and Concepts screens, services, models, utilities and their tests (listed in the Session 61 entry).
 
 Session 60: `supabase_student_record.sql`, `lib/models/student_record.dart`, `lib/screens/admin/admin_student_record_screen.dart`, `test/student_record_test.dart`.
 

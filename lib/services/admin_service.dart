@@ -175,12 +175,11 @@ class AdminService extends ChangeNotifier {
   /// field (students only ever see active rows) -- the admin list screen
   /// needs that flag to know whether "toggle" means deactivate or restore.
   ///
-  /// [source] / [templateId] scope the list to one Automatic Item Generation
-  /// batch -- e.g. `source: QuestionSource.generated, templateId: <template
-  /// id>` is exactly the "review this template's output" view opened from
-  /// `AdminTemplateGenerationScreen`. Both are optional and independent of
-  /// [includeInactive]: a pending-review batch is inactive by definition,
-  /// so callers that want to see it must also pass `includeInactive: true`.
+  /// [source] / [templateId] narrow the list by how a question was made and
+  /// by the template that made it. This app version's screens do not use
+  /// them (the question generator is on the `concept-bank-and-forms` and
+  /// `student-record` branches); they stay so that branch can be merged
+  /// back without changing this service.
   Future<List<AdminQuestionEntry>> listQuestions({
     String? subjectId,
     Difficulty? difficulty,
@@ -263,26 +262,6 @@ class AdminService extends ChangeNotifier {
         .update({'is_active': active}).eq('id', questionId);
     unawaited(_logAction(active ? 'restore' : 'delete', targetId: questionId));
     QuestionRepository.instance.invalidate();
-  }
-
-  /// Approves the generated questions in [ids]: switches them on for
-  /// students. The database changes only questions that are `generated` and
-  /// still inactive, so a hand-written draft in the list is left alone.
-  /// Returns how many were approved; throws if the database refuses.
-  ///
-  /// The caller sends exactly the ids the admin ticked. There is deliberately
-  /// no "approve everything pending": a generated question that was
-  /// deactivated on purpose looks the same as one still waiting for review.
-  Future<int> approveGenerated(List<String> ids) async {
-    final result = await _client.rpc('admin_approve_generated', params: {
-      'p_ids': ids,
-    });
-    final map = result is Map ? result : const <dynamic, dynamic>{};
-    if (map['success'] != true) {
-      throw Exception((map['error'] ?? 'Could not approve the questions.').toString());
-    }
-    QuestionRepository.instance.invalidate();
-    return (map['approved'] as num?)?.toInt() ?? 0;
   }
 
   /// Hard delete. Only for genuine mistakes (e.g. a duplicate just created);

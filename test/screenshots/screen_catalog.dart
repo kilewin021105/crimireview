@@ -9,17 +9,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crimireview/screens/achievements_screen.dart';
-import 'package:crimireview/screens/admin/admin_concept_csv_import_screen.dart';
-import 'package:crimireview/screens/admin/admin_concept_editor_screen.dart';
-import 'package:crimireview/screens/admin/admin_concept_import_screen.dart';
-import 'package:crimireview/screens/admin/admin_concepts_screen.dart';
 import 'package:crimireview/screens/admin/admin_question_editor_screen.dart';
 import 'package:crimireview/screens/admin/admin_questions_screen.dart';
 import 'package:crimireview/screens/admin/admin_settings_screen.dart';
 import 'package:crimireview/screens/admin/admin_shell_screen.dart';
 import 'package:crimireview/screens/admin/admin_student_record_screen.dart';
 import 'package:crimireview/screens/admin/admin_students_screen.dart';
-import 'package:crimireview/screens/admin/admin_template_generation_screen.dart';
 import 'package:crimireview/screens/auth_screen.dart';
 import 'package:crimireview/screens/change_password_screen.dart';
 import 'package:crimireview/screens/daily_challenge_screen.dart';
@@ -66,14 +61,6 @@ class Shot {
 
 Future<void> tapText(WidgetTester tester, String text) async {
   final finder = find.text(text);
-  if (finder.evaluate().isNotEmpty) {
-    await tester.tap(finder.first, warnIfMissed: false);
-  }
-}
-
-/// Ticks the first tick box on screen (the review list's approve flow).
-Future<void> tapFirstCheckbox(WidgetTester tester) async {
-  final finder = find.byType(Checkbox);
   if (finder.evaluate().isNotEmpty) {
     await tester.tap(finder.first, warnIfMissed: false);
   }
@@ -128,15 +115,6 @@ Map<String, Object> questionBankPrefs() => {
       ]),
       QuestionRepository.cacheTimestampKey: DateTime.now().toIso8601String(),
     };
-
-/// A concepts file as a teacher would save it from Excel (screenshots only).
-const String _sampleConceptCsv = 'subject,topic,term,definition,legal_basis,group\r\n'
-    'Correctional Administration,Executive Clemency,Pardon,An act of grace by the Chief Executive that exempts a person from the punishment the law inflicts for a crime.,"Const. Art. VII, Sec. 19",\r\n'
-    'Correctional Administration,Executive Clemency,Commutation,A reduction of a sentence to a lighter penalty granted by the Chief Executive.,"Const. Art. VII, Sec. 19",\r\n'
-    'Correctional Administration,Executive Clemency,Reprieve,A temporary suspension of the execution of a sentence granted by the Chief Executive.,"Const. Art. VII, Sec. 19",\r\n'
-    'Corrections,probation law,Probationer,A person placed on probation by the court after conviction.,"PD 968, Sec. 3",\r\n'
-    'Criminal Law and Jurisprudence,Justifying Circumstances,Self-Defense,Acting in defense of one\'s own person or rights under the conditions of Article 11.,RPC Art. 11(1),\r\n'
-    'Ethics,Values,Integrity,Doing what is right even when no one is watching.,,\r\n';
 
 List<Shot> screenCatalog() => [
       Shot('splash', (_) => const SplashScreen(), seeded: false, pumps: 6),
@@ -291,78 +269,5 @@ List<Shot> screenCatalog() => [
         (_) => const AdminStudentRecordScreen(userId: 'user_juan', name: 'Juan Dela Cruz', email: 'juan@example.com'),
         dark: false,
         size: const Size(390, 2600),
-      ),
-      Shot('admin_templates', (_) => const AdminTemplateGenerationScreen()),
-      Shot('admin_concepts', (_) => const AdminConceptsScreen()),
-      Shot(
-        'admin_concept_new',
-        (_) => const AdminConceptEditorScreen(
-          concepts: sampleConcepts,
-          presetSubjectId: 'corrections',
-          presetTopic: 'Probation Law',
-        ),
-      ),
-      Shot('admin_concept_edit',
-          (_) => AdminConceptEditorScreen(existing: sampleConcepts.first, concepts: sampleConcepts),
-          dark: false),
-      Shot(
-        'admin_concept_import',
-        (_) => const AdminConceptImportScreen(
-          concepts: sampleConcepts,
-          presetSubjectId: 'corrections',
-          presetTopic: 'Probation Law',
-          initialText: 'Term | Definition | Legal basis\n'
-              'Pardon | An act of grace by the Chief Executive that exempts a person from punishment. | Const. Art. VII, Sec. 19\n'
-              'Reprieve | A temporary suspension of the execution of a sentence by the Chief Executive.\n'
-              'Commutation | A reduction of a sentence to a lighter penalty granted by the Chief Executive. | Const. Art. VII, Sec. 19\n'
-              'this line has no separator\n'
-              'Amnesty | short',
-        ),
-      ),
-      Shot(
-        'admin_concept_import_tall',
-        (_) => const AdminConceptImportScreen(
-          concepts: sampleConcepts,
-          presetSubjectId: 'corrections',
-          presetTopic: 'Probation Law',
-          initialText: 'Term | Definition | Legal basis\n'
-              'Pardon | An act of grace by the Chief Executive that exempts a person from punishment. | Const. Art. VII, Sec. 19\n'
-              'Reprieve | A temporary suspension of the execution of a sentence by the Chief Executive.\n'
-              'Commutation | A reduction of a sentence to a lighter penalty granted by the Chief Executive. | Const. Art. VII, Sec. 19\n'
-              'this line has no separator\n'
-              'Amnesty | short',
-        ),
-        dark: false,
-        size: const Size(390, 1500),
-      ),
-      // CSV upload: before a file is chosen, and with a sample file that adds
-      // a new topic, adds to an existing one, and has two lines to skip.
-      Shot('admin_concept_csv_empty', (_) => const AdminConceptCsvImportScreen(concepts: sampleConcepts)),
-      Shot(
-        'admin_concept_csv',
-        (_) => const AdminConceptCsvImportScreen(
-          concepts: sampleConcepts,
-          initialCsvText: _sampleConceptCsv,
-          initialFileName: 'Corrections concepts.csv',
-        ),
-      ),
-      Shot(
-        'admin_concept_csv_tall',
-        (_) => const AdminConceptCsvImportScreen(
-          concepts: sampleConcepts,
-          initialCsvText: _sampleConceptCsv,
-          initialFileName: 'Corrections concepts.csv',
-        ),
-        dark: false,
-        size: const Size(390, 1900),
-      ),
-      // Generated questions waiting for review, one ticked.
-      Shot(
-        'admin_review',
-        (_) => const AdminQuestionsScreen(
-          initialSource: QuestionSource.generated,
-          initialTemplateId: 'tpl_sample',
-        ),
-        act: tapFirstCheckbox,
       ),
     ];

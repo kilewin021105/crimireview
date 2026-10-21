@@ -7,9 +7,7 @@ import '../../utils/error_messages.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/ui/ui.dart';
-import 'admin_concepts_screen.dart';
 import 'admin_question_editor_screen.dart';
-import 'admin_template_generation_screen.dart';
 
 /// The question bank the admin actually edits.
 ///
@@ -23,23 +21,9 @@ class AdminQuestionsScreen extends StatefulWidget {
   /// previous route to pop back to).
   final bool showBackButton;
 
-  /// Pre-seeds the source filter -- set by `AdminTemplateGenerationScreen`
-  /// after a successful run to `QuestionSource.generated` so the admin
-  /// lands directly on the AIG output instead of the full bank.
-  final QuestionSource? initialSource;
-
-  /// Pre-seeds the template filter, scoping the list to one template's batch
-  /// (`template_id` on `public.questions` = the `question_templates.id` that
-  /// produced it -- see `supabase_template_generation.sql`). Unlike
-  /// [initialSource], this isn't user-togglable from the filter row: it's a
-  /// deep link into one specific review batch.
-  final String? initialTemplateId;
-
   const AdminQuestionsScreen({
     super.key,
     this.showBackButton = true,
-    this.initialSource,
-    this.initialTemplateId,
   });
 
   @override
@@ -53,15 +37,8 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
   String? _subjectId;
   Difficulty? _difficulty;
   bool _includeInactive = true;
-  late QuestionSource? _source;
 
   final List<AdminQuestionEntry> _questions = [];
-
-  /// Ids of generated questions the admin has ticked for approval. Only used
-  /// while the list is showing generated questions ([_reviewMode]).
-  final Set<String> _selected = {};
-  bool _approving = false;
-
   bool _loading = true;
   bool _loadingMore = false;
   bool _hasMore = true;
@@ -70,7 +47,6 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
   @override
   void initState() {
     super.initState();
-    _source = widget.initialSource;
     _reload();
   }
 
@@ -85,7 +61,6 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
       _loading = true;
       _error = null;
       _questions.clear();
-      _selected.clear();
       _hasMore = true;
     });
     try {
@@ -94,8 +69,6 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
         difficulty: _difficulty,
         includeInactive: _includeInactive,
         search: _searchController.text,
-        source: _source,
-        templateId: widget.initialTemplateId,
         limit: _pageSize,
         offset: 0,
       );
@@ -123,8 +96,6 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
         difficulty: _difficulty,
         includeInactive: _includeInactive,
         search: _searchController.text,
-        source: _source,
-        templateId: widget.initialTemplateId,
         limit: _pageSize,
         offset: _questions.length,
       );
@@ -143,47 +114,6 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
 
   void _showSnack(String message, {bool isError = false}) {
     showAppSnack(context, message, tone: isError ? BannerTone.danger : BannerTone.success);
-  }
-
-  /// True while the list shows generated questions: the cards get a tick box
-  /// and the approve bar appears.
-  bool get _reviewMode => _source == QuestionSource.generated;
-
-  /// Generated questions on screen that are still waiting for review.
-  List<AdminQuestionEntry> get _pending => _questions
-      .where((e) => !e.isActive && e.question.source == QuestionSource.generated)
-      .toList();
-
-  bool get _showApproveBar => _reviewMode && !_loading && _error == null && _pending.isNotEmpty;
-
-  Future<void> _approveSelected() async {
-    final ids = _selected.toList();
-    if (ids.isEmpty || _approving) return;
-    final many = ids.length != 1;
-    final confirmed = await showConfirmDialog(
-      context,
-      title: 'Approve ${ids.length} question${many ? 's' : ''}?',
-      message: 'Students will see ${many ? 'them' : 'it'} right away. '
-          'Only approve questions you have read. You can deactivate any of them later.',
-      confirmLabel: 'Approve',
-      icon: Icons.verified_rounded,
-    );
-    if (!confirmed || !mounted) return;
-
-    setState(() => _approving = true);
-    try {
-      final approved = await AdminService.instance.approveGenerated(ids);
-      if (!mounted) return;
-      _showSnack(approved == ids.length
-          ? 'Approved $approved question${approved == 1 ? '' : 's'}'
-          : 'Approved $approved of ${ids.length} (the rest were already active)');
-    } catch (e) {
-      if (!mounted) return;
-      _showSnack(friendlyError(e, fallback: 'Could not approve the questions.'), isError: true);
-    }
-    if (!mounted) return;
-    setState(() => _approving = false);
-    _reload();
   }
 
   Future<void> _openEditor([Question? existing]) async {
@@ -239,44 +169,17 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
 
     return Scaffold(
       appBar: AppTopBar(
-        title: widget.initialTemplateId != null ? 'Generated batch' : 'Question bank',
+        title: 'Question bank',
         subtitle: _loading
             ? 'Loading...'
             : '${_questions.length}${_hasMore ? '+' : ''} question${_questions.length == 1 ? '' : 's'} shown',
         showBack: widget.showBackButton,
-        // Only on the tab-root instance -- a screen already deep-linked into
-        // one template's review batch (widget.showBackButton == true) doesn't
-        // need a second way to start another generation run.
-        actions: widget.showBackButton
-            ? null
-            : [
-                ToolbarIconButton(
-                  icon: Icons.menu_book_rounded,
-                  tooltip: 'Concepts',
-                  size: 40,
-                  onPressed: () => Navigator.push(
-                    context,
-                    SlidePageRoute(page: const AdminConceptsScreen()),
-                  ),
-                ),
-                ToolbarIconButton(
-                  icon: Icons.auto_fix_high_rounded,
-                  tooltip: 'Generate from templates',
-                  size: 40,
-                  onPressed: () => Navigator.push(
-                    context,
-                    SlidePageRoute(page: const AdminTemplateGenerationScreen()),
-                  ),
-                ),
-              ],
       ),
-      floatingActionButton: _showApproveBar
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _openEditor(),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('New question'),
-            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openEditor(),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New question'),
+      ),
       body: Column(
         children: [
           Padding(
@@ -340,80 +243,12 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
                             ),
                           ),
           ),
-          if (_showApproveBar) _buildApproveBar(),
         ],
       ),
     );
   }
 
-  Widget _buildApproveBar() {
-    final p = context.palette;
-    final text = context.textStyles;
-    final pending = _pending;
-    final allSelected = pending.every((e) => _selected.contains(e.question.id));
-    return Container(
-      decoration: BoxDecoration(
-        color: p.surface,
-        border: Border(top: BorderSide(color: p.border)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: ContentWidth(
-            maxWidth: 1000,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${pending.length} waiting for review', style: text.titleSmall),
-                          Text(
-                            _selected.isEmpty
-                                ? 'Tick the questions you have read.'
-                                : '${_selected.length} selected',
-                            style: text.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _approving
-                          ? null
-                          : () => setState(() {
-                                if (allSelected) {
-                                  _selected.clear();
-                                } else {
-                                  _selected.addAll(pending.map((e) => e.question.id));
-                                }
-                              }),
-                      child: Text(allSelected ? 'Clear' : 'Select all'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                PrimaryButton(
-                  label: _selected.isEmpty ? 'Approve selected' : 'Approve ${_selected.length}',
-                  icon: Icons.verified_rounded,
-                  height: 46,
-                  loading: _approving,
-                  onPressed: _selected.isEmpty || _approving ? null : _approveSelected,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildFilters() {
-    final p = context.palette;
     final subject = _subjectId == null ? null : _subjectFor(_subjectId!);
     return Column(
       children: [
@@ -475,21 +310,6 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
                   _reload();
                 },
               ),
-              // Only offered when the screen wasn't already deep-linked into
-              // one upload's batch (widget.initialTemplateId) -- that case
-              // is already scoped tighter than this chip would express.
-              if (widget.initialTemplateId == null) ...[
-                const SizedBox(width: 8),
-                FilterChip(
-                  avatar: Icon(Icons.auto_awesome_rounded, size: 16, color: p.textSecondary),
-                  label: const Text('Generated only'),
-                  selected: _source == QuestionSource.generated,
-                  onSelected: (v) {
-                    setState(() => _source = v ? QuestionSource.generated : null);
-                    _reload();
-                  },
-                ),
-              ],
             ],
           ),
         ),
@@ -515,21 +335,6 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
           children: [
             Row(
               children: [
-                if (_reviewMode && !entry.isActive && q.source == QuestionSource.generated)
-                  Checkbox(
-                    value: _selected.contains(q.id),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    onChanged: _approving
-                        ? null
-                        : (v) => setState(() {
-                              if (v == true) {
-                                _selected.add(q.id);
-                              } else {
-                                _selected.remove(q.id);
-                              }
-                            }),
-                  ),
                 Expanded(
                   child: Wrap(
                     spacing: 6,

@@ -254,13 +254,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildStatGrid() {
     final p = context.palette;
     final total = _questionStats['total'] ?? 0;
-    final generated = _questionStats['generated'] ?? 0;
 
     var studentsRemediation = 0;
+    var topicsMastered = 0;
     var pKnownSum = 0.0;
     var pKnownCount = 0;
     for (final row in _students) {
       studentsRemediation += (row['topics_needing_remediation'] as num?)?.toInt() ?? 0;
+      topicsMastered += (row['topics_mastered'] as num?)?.toInt() ?? 0;
       final avg = (row['avg_p_known'] as num?)?.toDouble();
       if (avg != null && ((row['topics_tracked'] as num?)?.toInt() ?? 0) > 0) {
         pKnownSum += avg;
@@ -274,7 +275,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       StatTile(icon: Icons.psychology_rounded, value: '$avgMasteryPercent%', label: 'Avg. mastery', color: p.gold),
       StatTile(icon: Icons.flag_rounded, value: '$studentsRemediation', label: 'Topics to review', color: p.danger),
       StatTile(icon: Icons.storage_rounded, value: '$total', label: 'Total in bank', color: p.info),
-      StatTile(icon: Icons.auto_awesome_rounded, value: '$generated', label: 'Auto-generated', color: const Color(0xFFE3478C)),
+      // Topics students have mastered (Bayesian Knowledge Tracing, p(known)
+      // at least 0.90 with 4 or more answers), summed over all students.
+      StatTile(icon: Icons.verified_rounded, value: '$topicsMastered', label: 'Topics mastered', color: p.success),
       StatTile(icon: Icons.history_rounded, value: '${_auditLog.length}', label: 'Recent changes', color: p.primary),
     ];
 

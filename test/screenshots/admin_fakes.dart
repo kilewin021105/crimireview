@@ -1,12 +1,9 @@
 // Sample data for the admin screens in screenshot runs (no database).
 
-import 'package:crimireview/models/concept.dart';
 import 'package:crimireview/models/question.dart';
 import 'package:crimireview/models/student_record.dart';
 import 'package:crimireview/models/subject.dart';
 import 'package:crimireview/services/admin_service.dart';
-import 'package:crimireview/services/concept_service.dart';
-import 'package:crimireview/services/question_generation_service.dart';
 
 class FakeAdminService extends AdminService {
   FakeAdminService() : super.forTesting();
@@ -65,9 +62,6 @@ class FakeAdminService extends AdminService {
         {'action': 'restore', 'target_id': 'cr_bjmp_009', 'created_at': _ago(50)},
       ];
 
-  @override
-  Future<int> approveGenerated(List<String> ids) async => ids.length;
-
   String _ago(double hours) =>
       DateTime.now().subtract(Duration(minutes: (hours * 60).round())).toIso8601String();
 
@@ -84,17 +78,6 @@ class FakeAdminService extends AdminService {
   }) async {
     if (offset > 0) return [];
     const subjects = CriminologySubjects.all;
-    // The review list: generated questions waiting for approval, and one that
-    // was approved earlier.
-    if (source == QuestionSource.generated) {
-      return [
-        for (var i = 0; i < 5; i++)
-          AdminQuestionEntry(
-            isActive: i == 4,
-            question: sampleGeneratedQuestion(i, 'criminal_jurisprudence'),
-          ),
-      ];
-    }
     return [
       for (var i = 0; i < 6; i++)
         AdminQuestionEntry(
@@ -129,92 +112,6 @@ Question sampleAdminQuestion(int i, String subjectId) => Question(
       source: i == 2 ? QuestionSource.generated : QuestionSource.admin,
       version: 1 + i % 3,
     );
-
-/// A generated question as the review list shows it: the stem the generator
-/// writes for each form.
-Question sampleGeneratedQuestion(int i, String subjectId) {
-  const stems = [
-    'Under "Justifying Circumstances", which of the following BEST describes Self-Defense?',
-    'Which term under "Justifying Circumstances" matches the following description: Acting in defense of one\'s own person or rights.',
-    'Under "Justifying Circumstances", which of the following is covered by RPC Art. 11(3)?',
-    'Under "Justifying Circumstances", which provision is the legal basis of Defense of a Relative?',
-    'Under "Exempting Circumstances", which of the following BEST describes Irresistible Force?',
-  ];
-  return Question(
-    id: 'gen_tpl_$i',
-    subject: subjectId,
-    topic: i == 4 ? 'Exempting Circumstances' : 'Justifying Circumstances',
-    questionText: stems[i % stems.length],
-    answerOptions: const [
-      AnswerOption(text: 'Defense of a Stranger', isCorrect: false, rationale: 'That statement defines another concept.'),
-      AnswerOption(text: 'Self-Defense', isCorrect: true, rationale: 'Correct.'),
-      AnswerOption(text: 'Defense of a Relative', isCorrect: false, rationale: 'That statement defines another concept.'),
-    ],
-    difficulty: Difficulty.values[i % 3],
-    explanation: 'Self-Defense is a justifying circumstance.',
-    legalBasis: 'RPC Art. 11(1)',
-    source: QuestionSource.generated,
-    version: 1,
-    templateId: 'tpl_sample',
-  );
-}
-
-class FakeQuestionGenerationService extends QuestionGenerationService {
-  FakeQuestionGenerationService() : super.forTesting();
-
-  @override
-  Future<List<TemplateStatus>> listTemplateStatus() async => const [
-        // Justifying Circumstances: all four forms, partly used.
-        TemplateStatus(id: 'a1', subjectId: 'criminal_jurisprudence', topic: 'Justifying Circumstances', difficulty: 'medium', form: 'term_to_definition', totalConcepts: 6, conceptsRemaining: 3),
-        TemplateStatus(id: 'a2', subjectId: 'criminal_jurisprudence', topic: 'Justifying Circumstances', difficulty: 'medium', form: 'definition_to_term', totalConcepts: 6, conceptsRemaining: 6),
-        TemplateStatus(id: 'a3', subjectId: 'criminal_jurisprudence', topic: 'Justifying Circumstances', difficulty: 'hard', form: 'basis_to_term', totalConcepts: 6, conceptsRemaining: 6),
-        TemplateStatus(id: 'a4', subjectId: 'criminal_jurisprudence', topic: 'Justifying Circumstances', difficulty: 'hard', form: 'term_to_basis', totalConcepts: 6, conceptsRemaining: 0),
-        // Police Organization: two concepts share a legal basis, so the basis forms are unavailable.
-        TemplateStatus(id: 'b1', subjectId: 'law_enforcement', topic: 'Police Organization and Administration', difficulty: 'easy', form: 'term_to_definition', totalConcepts: 5, conceptsRemaining: 5),
-        TemplateStatus(id: 'b2', subjectId: 'law_enforcement', topic: 'Police Organization and Administration', difficulty: 'medium', form: 'definition_to_term', totalConcepts: 5, conceptsRemaining: 1),
-        TemplateStatus(id: 'b3', subjectId: 'law_enforcement', topic: 'Police Organization and Administration', difficulty: 'hard', form: 'basis_to_term', totalConcepts: 0, conceptsRemaining: 0),
-        TemplateStatus(id: 'b4', subjectId: 'law_enforcement', topic: 'Police Organization and Administration', difficulty: 'hard', form: 'term_to_basis', totalConcepts: 0, conceptsRemaining: 0),
-      ];
-
-  @override
-  Future<Map<String, dynamic>> generateFromTemplate({required String templateId, int count = 5}) async =>
-      {'success': true, 'inserted': count, 'skipped': 0, 'considered': count};
-}
-
-class FakeConceptService extends ConceptService {
-  FakeConceptService() : super.forTesting();
-
-  @override
-  Future<List<Concept>> listConcepts() async => sampleConcepts;
-
-  @override
-  Future<ConceptSaveResult> saveConcept({
-    String? id,
-    required String subjectId,
-    required String topic,
-    required String term,
-    required String definition,
-    String? legalBasis,
-    String? siblingGroup,
-  }) async =>
-      const ConceptSaveResult(success: true, id: 'cb_new');
-
-  @override
-  Future<ConceptSaveResult> setActive(String id, bool active) async =>
-      const ConceptSaveResult(success: true);
-}
-
-const List<Concept> sampleConcepts = [
-  Concept(id: 'c1', subjectId: 'criminal_jurisprudence', topic: 'Justifying Circumstances', term: 'Self-Defense', definition: 'Acting in defense of one\'s own person or rights, provided there is unlawful aggression, reasonable necessity of the means employed to prevent or repel it, and lack of sufficient provocation.', legalBasis: 'RPC Art. 11(1)', siblingGroup: 'rpc_art11_justifying'),
-  Concept(id: 'c2', subjectId: 'criminal_jurisprudence', topic: 'Justifying Circumstances', term: 'Defense of a Relative', definition: 'Acting in defense of the person or rights of a spouse, ascendant, descendant or sibling, provided the first two requisites of self-defense are present.', legalBasis: 'RPC Art. 11(2)', siblingGroup: 'rpc_art11_justifying'),
-  Concept(id: 'c3', subjectId: 'criminal_jurisprudence', topic: 'Justifying Circumstances', term: 'Defense of a Stranger', definition: 'Acting in defense of a person who is not a relative, provided there is unlawful aggression and reasonable necessity of the means employed.', legalBasis: 'RPC Art. 11(3)', siblingGroup: 'rpc_art11_justifying'),
-  Concept(id: 'c4', subjectId: 'criminal_jurisprudence', topic: 'Justifying Circumstances', term: 'Obedience to a Lawful Order', definition: 'Acting in obedience to an order issued by a superior for some lawful purpose.', legalBasis: 'RPC Art. 11(6)', siblingGroup: 'rpc_art11_justifying', isActive: false),
-  Concept(id: 'c5', subjectId: 'law_enforcement', topic: 'Police Organization and Administration', term: 'Philippine National Police (PNP)', definition: 'The national police force, civilian in character and national in scope, mandated to enforce the law and maintain peace and order.', legalBasis: 'RA 6975, as amended by RA 8551', siblingGroup: 'dilg_law_enforcement'),
-  Concept(id: 'c6', subjectId: 'law_enforcement', topic: 'Police Organization and Administration', term: 'National Police Commission (NAPOLCOM)', definition: 'The agency attached to the DILG that exercises administrative control and operational supervision over the PNP.', legalBasis: 'RA 6975, as amended by RA 8551', siblingGroup: 'dilg_law_enforcement'),
-  Concept(id: 'c7', subjectId: 'law_enforcement', topic: 'Police Organization and Administration', term: 'Bureau of Fire Protection (BFP)', definition: 'The bureau under the DILG responsible for preventing and suppressing all destructive fires.', legalBasis: 'RA 6975, Sec. 53', siblingGroup: 'dilg_law_enforcement'),
-  Concept(id: 'c8', subjectId: 'corrections', topic: 'Probation Law', term: 'Probation', definition: 'A disposition under which a convicted offender is released subject to conditions imposed by the court.', siblingGroup: 'corrections_probation_law'),
-  Concept(id: 'c9', subjectId: 'corrections', topic: 'Probation Law', term: 'Parole', definition: 'The conditional release of a prisoner after serving the minimum of an indeterminate sentence.', siblingGroup: 'corrections_probation_law'),
-];
 
 List<Map<String, dynamic>> _segs(List<List<int>> answeredCorrect) => [
       for (var i = 0; i < answeredCorrect.length; i++)
