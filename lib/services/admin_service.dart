@@ -377,10 +377,20 @@ class AdminService extends ChangeNotifier {
   /// read-only function that checks `is_admin()` itself. The tables keep
   /// their own-rows-only rules for everyone else. Throws with a plain message
   /// when the database refuses.
+  ///
+  /// A database error is reported as such, with what to do, instead of the
+  /// generic "please try again": retrying cannot fix a missing or outdated
+  /// function. Connection problems are rethrown unchanged, so the screen
+  /// still says "No internet" for those.
   Future<StudentRecord> studentRecord(String userId) async {
-    final result = await _client.rpc('admin_student_record', params: {
-      'p_user_id': userId,
-    });
+    dynamic result;
+    try {
+      result = await _client.rpc('admin_student_record', params: {
+        'p_user_id': userId,
+      });
+    } on PostgrestException catch (e) {
+      throw Exception(studentRecordErrorMessage(e.code));
+    }
     final map = result is Map
         ? result.map((k, v) => MapEntry(k.toString(), v))
         : const <String, dynamic>{};
@@ -388,6 +398,18 @@ class AdminService extends ChangeNotifier {
       throw Exception((map['error'] ?? "Couldn't load this student's record.").toString());
     }
     return StudentRecord.fromJson(map);
+  }
+
+  /// What to tell an admin when the database itself fails to build a
+  /// student record. [code] is the PostgREST / Postgres error code.
+  @visibleForTesting
+  static String studentRecordErrorMessage(String? code) {
+    if (code == 'PGRST202') {
+      return 'This screen needs supabase_student_record.sql. '
+          'Run it in the Supabase SQL Editor, then try again.';
+    }
+    return 'The database could not build this record (error ${code ?? 'unknown'}). '
+        'Run the latest supabase_student_record.sql in the Supabase SQL Editor, then try again.';
   }
 
   /// Promotes or demotes a user by email. This is the same operation the

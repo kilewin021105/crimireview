@@ -1265,6 +1265,18 @@ You asked that tapping a student's stats row (Mastered, Needs review, Tracked, L
 - **Update the website Privacy Policy before releasing this.** It says Faculty see "name, email, points and mastery, read-only". With this screen, Faculty also see each student's level progress and quiz history (still read-only).
 - The figures are what the phone last synced. A student who studied offline appears up to date only after their phone reconnects.
 
+**Fix, same day: "Couldn't load the record" on the live project.**
+- **What you saw:** after running `supabase_student_record.sql`, every record showed "Couldn't load this student's record. Please try again."
+- **The cause, checked on the live database:** the function exists, but calling it failed with `column r.created_at does not exist`. On the live project, `quiz_results` (and `daily_challenge_scores`) store the time in a column named **`completed_at`**. The live tables were created from the first schema (commit `847b1eb`), and `supabase_schema.sql` in the repo names it `created_at`. My local test copy was built from the repo file, so it passed there.
+- **The fix (`supabase_student_record.sql`):** the quiz time is read from the row as JSON, `completed_at` first and then `created_at`, so the function works with either name and never names a column that may not exist. The result still uses the key `created_at`, so the app already installed needs no rebuild for this.
+- **Checks:**
+  - the old version reproduces your exact error on a `completed_at` table;
+  - the new version passes all 18 checks on both table layouts;
+  - on the live data, run as a read-only query with no changes (counts only, no personal details), it returns all 24 of the student's quizzes, each with a time.
+- **App:** a database error is now shown as itself, with what to do (for example "The database could not build this record (error 42703). Run the latest supabase_student_record.sql…"), instead of a "try again" that retrying could never fix. Connection problems still say "No internet". 3 new tests (130 pass).
+- **You need to:** run the updated `supabase_student_record.sql` in the SQL Editor once more. It replaces the first version.
+- Nothing else in the app reads those time columns; the app only inserts into these tables, so it is not affected.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about

@@ -24,7 +24,8 @@
 --
 -- HOW TO RUN
 --   Supabase Dashboard > SQL Editor > New query > paste this file > Run.
---   Safe to run more than once.
+--   Safe to run more than once. If you ran the first version (it failed with
+--   "column r.created_at does not exist"), run this file again: it replaces it.
 --
 -- HOW TO UNDO
 --   DROP FUNCTION IF EXISTS public.admin_student_record(UUID);
@@ -108,14 +109,31 @@ BEGIN
       WHERE m.user_id = p_user_id
     ), '[]'::jsonb),
 
+    -- The time a quiz was saved is "completed_at" on projects created from
+    -- the first schema (this app's live project) and "created_at" in
+    -- supabase_schema.sql. Reading the row as JSON works with either name,
+    -- so this function never refers to a column that may not exist. The
+    -- result keeps the key "created_at", which the app reads.
     'quizzes', COALESCE((
-      SELECT jsonb_agg(to_jsonb(q) ORDER BY q.created_at DESC)
+      SELECT jsonb_agg(q.item ORDER BY q.taken_at DESC NULLS LAST)
       FROM (
-        SELECT r.subject_id, r.difficulty, r.score, r.total_questions,
-               r.correct_answers, r.time_taken_seconds, r.created_at
+        SELECT jsonb_build_object(
+                 'subject_id',         r.subject_id,
+                 'difficulty',         r.difficulty,
+                 'score',              r.score,
+                 'total_questions',    r.total_questions,
+                 'correct_answers',    r.correct_answers,
+                 'time_taken_seconds', r.time_taken_seconds,
+                 'created_at',         t.taken_at
+               ) AS item,
+               t.taken_at
         FROM public.quiz_results r
+        CROSS JOIN LATERAL (
+          SELECT COALESCE(to_jsonb(r)->>'completed_at',
+                          to_jsonb(r)->>'created_at')::timestamptz AS taken_at
+        ) t
         WHERE r.user_id = p_user_id
-        ORDER BY r.created_at DESC
+        ORDER BY t.taken_at DESC NULLS LAST
         LIMIT 30
       ) q
     ), '[]'::jsonb),

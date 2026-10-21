@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:crimireview/models/question.dart';
 import 'package:crimireview/models/student_record.dart';
+import 'package:crimireview/services/admin_service.dart';
+import 'package:crimireview/utils/error_messages.dart';
 
 List<Map<String, dynamic>> segs(List<List<int>> answeredCorrect) => [
       for (var i = 0; i < answeredCorrect.length; i++)
@@ -83,6 +85,23 @@ void main() {
     });
   });
 
+  group('database errors are shown, not hidden behind "try again"', () {
+    test('a column error names the code and the file to run', () {
+      final message = AdminService.studentRecordErrorMessage('42703');
+      expect(message, contains('42703'));
+      expect(message, contains('supabase_student_record.sql'));
+      // The record screen passes the error through friendlyError; the message
+      // must survive it unchanged.
+      expect(friendlyError(Exception(message), fallback: 'FALLBACK'), message);
+    });
+
+    test('a missing function says the file has not been run', () {
+      final message = AdminService.studentRecordErrorMessage('PGRST202');
+      expect(message, startsWith('This screen needs supabase_student_record.sql'));
+      expect(friendlyError(Exception(message), fallback: 'FALLBACK'), message);
+    });
+  });
+
   group('StudentRecord', () {
     final json = {
       'success': true,
@@ -159,6 +178,17 @@ void main() {
     test('last active is the latest date from any source', () {
       final r = StudentRecord.fromJson(json);
       expect(r.lastActive, DateTime.parse('2026-10-21T01:00:00Z').toLocal());
+    });
+
+    test('quiz times arrive under "created_at" whichever column the table uses', () {
+      // The database function returns the time as "created_at" even on
+      // projects whose quiz_results column is named completed_at.
+      final r = StudentRecord.fromJson({
+        'quizzes': [
+          {'subject_id': 'criminology', 'difficulty': 'easy', 'score': 80, 'created_at': '2026-10-18T09:30:00+00:00'},
+        ],
+      });
+      expect(r.recentQuizzes.single.takenAt, DateTime.parse('2026-10-18T09:30:00Z').toLocal());
     });
 
     test('an empty response does not throw', () {
