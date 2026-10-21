@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../services/admin_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/error_messages.dart';
+import '../../utils/page_transitions.dart';
 import '../../widgets/ui/ui.dart';
 import '../../utils/responsive.dart';
+import 'admin_student_record_screen.dart';
 
 enum _SortBy { points, mastery, remediation, recent }
 
@@ -103,6 +105,26 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     } else {
       _showSnack('Failed: ${result['error'] ?? 'unknown error'}', isError: true);
     }
+  }
+
+  /// Opens the student's full record: level reached per subject, topic
+  /// mastery and recent quizzes.
+  void _openRecord(Map<String, dynamic> row) {
+    final userId = (row['user_id'] ?? '').toString();
+    if (userId.isEmpty) {
+      _showSnack("Couldn't open this student's record.", isError: true);
+      return;
+    }
+    Navigator.push(
+      context,
+      SlidePageRoute(
+        page: AdminStudentRecordScreen(
+          userId: userId,
+          name: (row['display_name'] ?? 'Student').toString(),
+          email: (row['email'] ?? '').toString(),
+        ),
+      ),
+    );
   }
 
   void _showSnack(String message, {bool isError = false}) {
@@ -282,6 +304,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         email.toLowerCase() == (SupabaseService.instance.currentUser?.email ?? '').toLowerCase();
 
     return AppCard(
+      onTap: () => _openRecord(row),
       padding: const EdgeInsets.fromLTRB(14, 12, 4, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,6 +400,13 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
                       _buildMetric(
                         lastPracticed == null ? '—' : _timeAgo(lastPracticed),
                         'Last active',
+                      ),
+                      Tooltip(
+                        message: 'Open full record',
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Icon(Icons.chevron_right_rounded, size: 22, color: p.textTertiary),
+                        ),
                       ),
                     ],
                   ),

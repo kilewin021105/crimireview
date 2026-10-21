@@ -34,7 +34,7 @@ Five tabs (students): a bottom bar on phones, a side navigation rail on tablets 
 - **Progress:** stats, streak, subject breakdown, achievements entry.
 - **Settings:** theme, notifications/sound/haptics, profile, password, sign in/out.
 
-**Admin Panel** *(an account with `role = 'admin'` lands here instead of the student tabs)*: its own shell — a bottom bar on phones, a side navigation rail on tablets/desktop/web — with a dashboard of content and student stats, question bank CRUD and template generation, and a read-only student mastery monitor. See `supabase_schema_v2.sql` section 13 for how to promote an account.
+**Admin Panel** *(an account with `role = 'admin'` lands here instead of the student tabs)*: its own shell — a bottom bar on phones, a side navigation rail on tablets/desktop/web — with a dashboard of content and student stats, question bank CRUD and template generation, and a read-only student monitor (tap a student for their full record: level reached per subject, topic mastery, recent quizzes). See `supabase_schema_v2.sql` section 13 for how to promote an account.
 
 ## Architecture Overview
 
@@ -200,6 +200,7 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
     - the "N available" count and the generator share one rule, so asking for exactly N always creates N;
     - Faculty can tick generated questions and approve them in one step.
     Safe to run more than once; the file ends with a rollback block.
+13. `supabase_student_record.sql` — lets Faculty open a student's full record from **Admin Panel → Students** (tap a student): level reached and segments per subject, topic mastery, recent quizzes. One read-only, admin-only function; no table rules change. Safe to run more than once.
 
 ## Google sign-in
 

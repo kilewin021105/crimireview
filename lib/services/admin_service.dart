@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/question.dart';
+import '../models/student_record.dart';
 import 'question_repository.dart';
 import 'supabase_service.dart';
 
@@ -367,6 +368,26 @@ class AdminService extends ChangeNotifier {
       }).toList();
     }
     return list;
+  }
+
+  /// One student's full record for the Students screen's detail page: level
+  /// reached and segments per subject, topic mastery, and recent quizzes.
+  ///
+  /// Read through `admin_student_record` (supabase_student_record.sql), a
+  /// read-only function that checks `is_admin()` itself. The tables keep
+  /// their own-rows-only rules for everyone else. Throws with a plain message
+  /// when the database refuses.
+  Future<StudentRecord> studentRecord(String userId) async {
+    final result = await _client.rpc('admin_student_record', params: {
+      'p_user_id': userId,
+    });
+    final map = result is Map
+        ? result.map((k, v) => MapEntry(k.toString(), v))
+        : const <String, dynamic>{};
+    if (map['success'] != true) {
+      throw Exception((map['error'] ?? "Couldn't load this student's record.").toString());
+    }
+    return StudentRecord.fromJson(map);
   }
 
   /// Promotes or demotes a user by email. This is the same operation the

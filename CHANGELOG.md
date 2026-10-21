@@ -1234,6 +1234,39 @@ You asked for teachers to upload their concepts as a file, with the topics made 
 
 ---
 
+## 2026-10-21 — Session 60: Faculty can open a student's full record (branch `student-record`, stacked on `concept-bank-and-forms`)
+
+You asked that tapping a student's stats row (Mastered, Needs review, Tracked, Last active) in **Admin Panel → Students** show that student's record: their progress and which difficulty they have reached.
+
+**Found first:** Faculty could not see levels or quiz history at all. `user_progress` (levels and segments) and `quiz_results` only let a student read their **own** rows. Only `topic_mastery` was readable by admins, which is all the Students list used.
+
+**What changed**
+- **New SQL file `supabase_student_record.sql`** (run it in the SQL Editor; safe to re-run; one-line undo in its header). It adds one function, `admin_student_record(user_id)`:
+  - **read-only** (marked STABLE; it writes nothing), and it checks `is_admin()` itself;
+  - returns, in one call: the profile, every subject's progress with the 4 segments of each level, every topic's mastery (weakest first), the 30 most recent quizzes, and counts of quizzes, Daily Challenges and badges;
+  - **no table rule is changed**: students still read only their own rows, and nobody can change a student's data through it.
+- **App:**
+  - **Students:** tapping a student card (the stats row now ends with a `›`) opens the record. The card's height is unchanged, so the two-column tablet layout still fits.
+  - **New record screen** (`admin_student_record_screen.dart`):
+    - **Summary:** points, rank, quizzes, accuracy, streak, last active, mastered, needs review, Daily Challenges, badges, questions answered, best streak, join date.
+    - **Level reached:** all six subjects in official order. Each says "Not started", "On Easy", "On Medium", "On Hard" or "All levels passed", and shows the 4 segments of every level: green = passed (10 answered, 75% or more), amber = tried but not passed, grey = not tried; a level not yet open says "Locked". The rule is the same gate as the student's difficulty sheet (Medium after all 4 Easy segments, Hard after all 4 Medium).
+    - **Topic mastery:** weakest first, with the percentage, a bar, and Mastered / Needs review / band. "Mastered" and "Needs review" use exactly the rules behind the Students list's counts, so the two screens agree.
+    - **Recent quizzes:** subject, level, score, correct out of total, when.
+    - A note that the figures are read-only and come from the student's phone when it syncs.
+- Files: new `supabase_student_record.sql`, `lib/models/student_record.dart`, `lib/screens/admin/admin_student_record_screen.dart`, `test/student_record_test.dart`; changed `admin_service.dart` (`studentRecord`), `admin_students_screen.dart`, screenshot fakes and catalog, README.
+
+**Checks**
+- **Database** (local PostgreSQL 18 copy, file applied twice): 18 of 18 checks pass. An admin gets the right profile, subjects, segments, mastery (only that student's, weakest first), the 30 newest of 35 quizzes, and the counts. A student with no data gets empty lists. A student is refused, even for their own record. A logged-out visitor has no access. An unknown or empty id is refused. Nothing is written.
+- **App:** `flutter analyze` 0 errors, 0 warnings (the same 17 style notes). `flutter test`: 127 pass, 15 new: segment reading (always 4, bad data ignored, correct never above answered), the level gate (including "10 answered is required, not just 75%"), totals, the mastered and needs-review rules, unknown difficulty, last active, an empty response.
+- Record screen and Students list rendered in light and dark and swept on 12 devices: 36 renders, 0 layout problems.
+
+**Not done, needs you**
+- **Run `supabase_student_record.sql`** in the SQL Editor. Until then, opening a record says it couldn't be loaded.
+- **Update the website Privacy Policy before releasing this.** It says Faculty see "name, email, points and mastery, read-only". With this screen, Faculty also see each student's level progress and quiz history (still read-only).
+- The figures are what the phone last synced. A student who studied offline appears up to date only after their phone reconnects.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **Template-based generation is limited by the concept bank.** Since Session 58 each concept can make up to four questions (74 from the 21 seeded concepts) and Faculty add concepts in the app, but a group still needs 3 or more concepts, and the two legal-basis forms need a distinct legal basis on every concept in the group.
@@ -1247,6 +1280,8 @@ You asked for teachers to upload their concepts as a file, with the topics made 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
 
 Session 59: `lib/utils/concept_csv.dart`, `lib/screens/admin/admin_concept_csv_import_screen.dart`, `test/concept_csv_test.dart`.
+
+Session 60: `supabase_student_record.sql`, `lib/models/student_record.dart`, `lib/screens/admin/admin_student_record_screen.dart`, `test/student_record_test.dart`.
 
 Session 58: `supabase_concept_bank.sql`, `lib/models/concept.dart`, `lib/services/concept_service.dart`, `lib/utils/concept_import_parser.dart`, `lib/utils/concept_rules.dart`, `lib/screens/admin/admin_concepts_screen.dart`, `admin_concept_editor_screen.dart`, `admin_concept_import_screen.dart`, `concept_subject_topic_fields.dart`, `test/concept_import_parser_test.dart`, `test/concept_rules_test.dart`.
 

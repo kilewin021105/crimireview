@@ -2,6 +2,7 @@
 
 import 'package:crimireview/models/concept.dart';
 import 'package:crimireview/models/question.dart';
+import 'package:crimireview/models/student_record.dart';
 import 'package:crimireview/models/subject.dart';
 import 'package:crimireview/services/admin_service.dart';
 import 'package:crimireview/services/concept_service.dart';
@@ -39,6 +40,7 @@ class FakeAdminService extends AdminService {
   Map<String, dynamic> _student(String name, String email, int points, double p, int mastered,
           int remediation, int tracked, String role, int? hoursAgo) =>
       {
+        'user_id': 'user_${email.split('@').first}',
         'display_name': name,
         'email': email,
         'total_points': points,
@@ -51,6 +53,9 @@ class FakeAdminService extends AdminService {
             ? null
             : DateTime.now().subtract(Duration(hours: hoursAgo)).toIso8601String(),
       };
+
+  @override
+  Future<StudentRecord> studentRecord(String userId) async => StudentRecord.fromJson(sampleStudentRecordJson());
 
   @override
   Future<List<Map<String, dynamic>>> recentAuditLog({int limit = 30}) async => [
@@ -210,3 +215,76 @@ const List<Concept> sampleConcepts = [
   Concept(id: 'c8', subjectId: 'corrections', topic: 'Probation Law', term: 'Probation', definition: 'A disposition under which a convicted offender is released subject to conditions imposed by the court.', siblingGroup: 'corrections_probation_law'),
   Concept(id: 'c9', subjectId: 'corrections', topic: 'Probation Law', term: 'Parole', definition: 'The conditional release of a prisoner after serving the minimum of an indeterminate sentence.', siblingGroup: 'corrections_probation_law'),
 ];
+
+List<Map<String, dynamic>> _segs(List<List<int>> answeredCorrect) => [
+      for (var i = 0; i < answeredCorrect.length; i++)
+        {'segmentIndex': i, 'questionsAnswered': answeredCorrect[i][0], 'correctAnswers': answeredCorrect[i][1]},
+    ];
+
+/// A student part-way through: Criminal Law on Hard, Criminology on Medium,
+/// Forensic Science still on Easy, the other subjects not started.
+Map<String, dynamic> sampleStudentRecordJson() {
+  String ago(int hours) => DateTime.now().subtract(Duration(hours: hours)).toUtc().toIso8601String();
+  return {
+    'success': true,
+    'profile': {
+      'user_id': 'user_juan',
+      'email': 'juan@example.com',
+      'display_name': 'Juan Dela Cruz',
+      'school': 'Buenavista Community College',
+      'role': 'student',
+      'rank': 'Scholar',
+      'total_points': 1240,
+      'current_streak': 4,
+      'best_streak': 9,
+      'joined_at': '2026-09-02T08:00:00Z',
+    },
+    'subjects': [
+      {
+        'subject_id': 'criminal_jurisprudence',
+        'questions_answered': 100,
+        'correct_answers': 81,
+        'easy_correct': 34, 'easy_total': 40,
+        'medium_correct': 33, 'medium_total': 40,
+        'hard_correct': 14, 'hard_total': 20,
+        'easy_segments': _segs([[10, 9], [10, 8], [10, 9], [10, 8]]),
+        'medium_segments': _segs([[10, 8], [10, 8], [10, 9], [10, 8]]),
+        'hard_segments': _segs([[10, 8], [10, 6]]),
+        'last_study_date': ago(5),
+      },
+      {
+        'subject_id': 'criminology',
+        'questions_answered': 50,
+        'correct_answers': 36,
+        'easy_correct': 33, 'easy_total': 40,
+        'medium_correct': 3, 'medium_total': 10,
+        'easy_segments': _segs([[10, 8], [10, 9], [10, 8], [10, 8]]),
+        'medium_segments': _segs([[10, 3]]),
+        'last_study_date': ago(30),
+      },
+      {
+        'subject_id': 'criminalistics',
+        'questions_answered': 20,
+        'correct_answers': 13,
+        'easy_correct': 13, 'easy_total': 20,
+        'easy_segments': _segs([[10, 8], [10, 5]]),
+        'last_study_date': ago(72),
+      },
+    ],
+    'mastery': [
+      {'subject_id': 'criminalistics', 'topic': 'Dactyloscopy', 'p_known': 0.34, 'attempts': 6, 'correct': 2, 'is_mastered': false, 'last_practiced': ago(72)},
+      {'subject_id': 'criminology', 'topic': 'Strain Theory', 'p_known': 0.52, 'attempts': 5, 'correct': 3, 'is_mastered': false, 'last_practiced': ago(30)},
+      {'subject_id': 'criminal_jurisprudence', 'topic': 'Exempting Circumstances', 'p_known': 0.71, 'attempts': 8, 'correct': 6, 'is_mastered': false, 'last_practiced': ago(5)},
+      {'subject_id': 'criminal_jurisprudence', 'topic': 'Justifying Circumstances', 'p_known': 0.94, 'attempts': 9, 'correct': 8, 'is_mastered': true, 'last_practiced': ago(5)},
+    ],
+    'quizzes': [
+      {'subject_id': 'criminal_jurisprudence', 'difficulty': 'hard', 'score': 60, 'total_questions': 10, 'correct_answers': 6, 'created_at': ago(5)},
+      {'subject_id': 'criminal_jurisprudence', 'difficulty': 'hard', 'score': 80, 'total_questions': 10, 'correct_answers': 8, 'created_at': ago(7)},
+      {'subject_id': 'criminology', 'difficulty': 'medium', 'score': 30, 'total_questions': 10, 'correct_answers': 3, 'created_at': ago(30)},
+      {'subject_id': 'criminalistics', 'difficulty': 'easy', 'score': 50, 'total_questions': 10, 'correct_answers': 5, 'created_at': ago(72)},
+    ],
+    'quiz_count': 17,
+    'daily_challenges': 6,
+    'achievements': 4,
+  };
+}

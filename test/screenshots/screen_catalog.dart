@@ -17,6 +17,7 @@ import 'package:crimireview/screens/admin/admin_question_editor_screen.dart';
 import 'package:crimireview/screens/admin/admin_questions_screen.dart';
 import 'package:crimireview/screens/admin/admin_settings_screen.dart';
 import 'package:crimireview/screens/admin/admin_shell_screen.dart';
+import 'package:crimireview/screens/admin/admin_student_record_screen.dart';
 import 'package:crimireview/screens/admin/admin_students_screen.dart';
 import 'package:crimireview/screens/admin/admin_template_generation_screen.dart';
 import 'package:crimireview/screens/auth_screen.dart';
@@ -281,6 +282,16 @@ List<Shot> screenCatalog() => [
       Shot('admin_questions', (_) => const AdminQuestionsScreen(showBackButton: false)),
       Shot('admin_editor', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(0, _subject.id))),
       Shot('admin_students', (_) => const AdminStudentsScreen(showBackButton: false)),
+      Shot(
+        'admin_student_record',
+        (_) => const AdminStudentRecordScreen(userId: 'user_juan', name: 'Juan Dela Cruz', email: 'juan@example.com'),
+      ),
+      Shot(
+        'admin_student_record_tall',
+        (_) => const AdminStudentRecordScreen(userId: 'user_juan', name: 'Juan Dela Cruz', email: 'juan@example.com'),
+        dark: false,
+        size: const Size(390, 2600),
+      ),
       Shot('admin_templates', (_) => const AdminTemplateGenerationScreen()),
       Shot('admin_concepts', (_) => const AdminConceptsScreen()),
       Shot(
