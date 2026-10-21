@@ -259,6 +259,8 @@ List<Shot> screenCatalog() => [
           dark: false, size: const Size(1280, 800), act: (t) => tapText(t, 'Settings')),
       Shot('admin_questions', (_) => const AdminQuestionsScreen(showBackButton: false)),
       Shot('admin_editor', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(0, _subject.id))),
+      Shot('admin_editor_stands_out', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(1, _subject.id)),
+          size: const Size(390, 1600)),
       Shot('admin_students', (_) => const AdminStudentsScreen(showBackButton: false)),
       Shot(
         'admin_student_record',

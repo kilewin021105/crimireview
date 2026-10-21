@@ -34,7 +34,7 @@ Five tabs (students): a bottom bar on phones, a side navigation rail on tablets 
 - **Progress:** stats, streak, subject breakdown, achievements entry.
 - **Settings:** theme, notifications/sound/haptics, profile, password, sign in/out.
 
-**Admin Panel** *(an account with `role = 'admin'` lands here instead of the student tabs)*: its own shell — a bottom bar on phones, a side navigation rail on tablets/desktop/web — with a dashboard of content and student stats, question bank CRUD, and a read-only student monitor (tap a student for their full record: level reached per subject, topic mastery, recent quizzes). See `supabase_schema_v2.sql` section 13 for how to promote an account.
+**Admin Panel** *(an account with `role = 'admin'` lands here instead of the student tabs)*: its own shell — a bottom bar on phones, a side navigation rail on tablets/desktop/web — with a dashboard of content and student stats, question bank CRUD (the editor warns when the correct answer is much longer than the wrong ones, so students can't guess it by length), and a read-only student monitor (tap a student for their full record: level reached per subject, topic mastery, recent quizzes). See `supabase_schema_v2.sql` section 13 for how to promote an account.
 
 ## Architecture Overview
 
@@ -201,6 +201,7 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
     - Faculty can tick generated questions and approve them in one step.
     Safe to run more than once; the file ends with a rollback block.
 13. `supabase_student_record.sql` — lets Faculty open a student's full record from **Admin Panel → Students** (tap a student): level reached and segments per subject, topic mastery, recent quizzes. One read-only, admin-only function; no table rules change. Safe to run more than once.
+14. `supabase_rebalance_options_hard.sql`, `_medium.sql`, `_easy.sql` *(review first)* — rewritten wrong answer options for the 759 imported questions, so the correct answer can no longer be spotted by being the longest (CHANGELOG Session 62). Review `content_review/rebalance_review.html` before running. Only the wrong options and their reasons change, and a question Faculty edited in the meantime is skipped. Each file is safe to run twice and has a matching `_rollback.sql`. Regenerate them with `dart run tools/rebalance_options.dart`.
 
 ## Google sign-in
 

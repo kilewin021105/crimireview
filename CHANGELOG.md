@@ -1316,6 +1316,74 @@ You asked for a separate branch without the two Admin Panel features **Generate 
 - Pre-oral **panel note 1** asked that questions be generated automatically. On this branch the app does not do that. If the panel asks, the honest answer is that template generation was built and tested (CHANGELOG Sessions 18, 58, 59) and is kept on a separate branch, and the presented version focuses on the adaptive learning.
 - The manuscript (and the defense guide) still describe template generation. Decide which version you present and make them match.
 
+## 2026-10-22 — Session 62: quiz answers no longer guessable by length (branch `adaptive-focus`)
+
+You noticed the correct answer was usually the longest, most complete-sounding option, so students could pass without knowing the material. You asked for the options to be harder to predict, more so at higher levels. You chose "I rewrite, you review": the wrong options of every imported question are rewritten, you review them before anything goes live, and Faculty get an automatic warning for new questions.
+
+**What was measured first (all 759 imported questions, identical to the live bank)**
+- The correct answer was the longest option 84% of the time (Easy 79%, Medium 86%, Hard 91%). By chance it would be 25%.
+- In 72% it also **stood out**: it was the longest and at least 1.4 times longer than the longest wrong option (Easy 61%, Medium 71%, Hard 81%).
+- Many wrong options were obviously wrong ("No moral issues", "Only blood", "Color of gun"), so a student could rule them out without studying.
+
+**What changed in the questions (once the SQL is run; nothing is live yet)**
+- Only the **wrong options and their "why this is wrong" reasons** change. The question, the correct option, its position and the explanation stay exactly as they are.
+- Each wrong option is now a real look-alike from the same topic: a related term, a neighbouring law, a sibling concept. Its reason says what it actually is ("That is parole", "That is RA 9208"). Hard and Medium use close near-misses, for example a correct rule with the wrong number or the wrong agency. Easy uses look-alikes that a student who studied can tell apart.
+- Lengths were deliberately varied, so the correct answer is sometimes the longest, sometimes the shortest, and usually in between.
+- **642 questions rewritten**: Hard 216, Medium 224, Easy 202. **117 kept as they are** (Hard 19, Medium 31, Easy 67), each with a written reason, because their options were already fair (for example four article numbers, or four ages in the same form).
+
+| Level | Correct is longest, before → after | Stands out, before → after |
+|---|---|---|
+| Easy | 78.8% → 28.6% | 61.0% → 0% |
+| Medium | 85.5% → 19.6% | 71.4% → 0% |
+| Hard | 91.1% → 18.3% | 81.3% → 0% |
+
+**16 questions flagged for Faculty.** These are not about option length; while rewriting, the stored correct answer itself looked wrong, outdated or disputed. They are listed at the top of the review page with the reason. The most important:
+- **ca_073** says the Board of Pardons and Parole *supervises* parolees. The Board *grants* parole; the Parole and Probation Administration supervises them.
+- **le_031, le_032, lea_073**: the PNP minimum height. RA 11549 (2021) lowered it to 1.57 m (5'2") for men and 1.52 m (4'11") for women. In le_031 and le_032 the option currently marked wrong is now the legal requirement.
+- **cdi_086** uses the US meaning of entrapment; under Philippine law that is instigation, and cdi_135 teaches the Philippine meaning, so the two contradict.
+- **cr_017 and qb_crim_002** name two different "Fathers of Fingerprint Identification" (Galton and Vucetich).
+- **cj_002, qb_cl_009** ("Below 15"; the law says 15 and under), **cj_004** (death penalty prohibited by RA 9346), **cj_056, cj_089** (penalty depends on the paragraph or article), **cdi_050** (answer too broad), **le_004** (oldest vs most common patrol), **le_054** (17 PROs, possibly 18 since the Negros Island Region), **le_035** (NEAP expansion not verified).
+- The rewrite does **not** change these answers; that is for Faculty, in the Admin Panel.
+
+**How it is packaged**
+- `content_review/snapshot_imported.jsonl`: the 759 questions exactly as they are live (their fingerprint matched the live table).
+- `content_review/rewrites/<level>_NN.jsonl`: the rewrites, one line per question, in 16 batches by level and subject.
+- `tools/rebalance_options.dart` checks every rewrite and writes the outputs only if all checks pass:
+  - three wrong options;
+  - no duplicate options, and no wrong option the same as the correct one;
+  - a reason for each wrong option;
+  - no "all/none of the above";
+  - the correct answer does not stand out, which is checked for kept questions too;
+  - a warning when a wrong option is much shorter than the answer.
+- `content_review/rebalance_review.html`: **the review page**. It shows each question with its old and new options side by side, by level and subject, with the flags and the kept list.
+- Six SQL files, one pair per level, so each stays under 400 KB for the SQL Editor:
+  - `supabase_rebalance_options_hard.sql`, `_medium.sql`, `_easy.sql` apply the rewrites;
+  - each has a matching `_rollback.sql` that undoes it.
+  - A question changes only if its options are still exactly the snapshot, so an edit Faculty make in the meantime is never overwritten.
+  - Its version goes up by 1, so phones download the new options.
+  - Each file is safe to run twice and reports changed / already done / skipped.
+
+**The automatic check for Faculty (new and edited questions)**
+- `lib/utils/answer_length_check.dart` uses the same rule as the tool: the correct option is the longest and at least 1.4 times the longest wrong one.
+- **Question editor:** an orange warning, "The correct answer stands out", appears above the answer options while Faculty type. It asks them to make the wrong options about as long, using real look-alike answers from the same topic. It is advice only and does not block saving.
+- **Question bank list:** questions with the giveaway show an "Answer stands out" label, so old ones can be found and fixed.
+
+**Checks**
+- Rewrite tool: 759 of 759 imported questions reviewed, 0 errors, 0 warnings.
+- On a local copy of the database identical to live (same fingerprint):
+  - **apply:** 216 / 224 / 202 changed; run again: 0 changed;
+  - after applying, every question still has exactly one correct option, in the same position with the same text, and the same number of options;
+  - question text and explanations are unchanged, every new wrong option has a reason, and the version rose by 1 only on changed questions;
+  - **rollback:** everything restored exactly (same fingerprint as before); run again: 0 changed;
+  - a Faculty edit made before applying or before rolling back was skipped both times and kept.
+- `flutter analyze`: 0 errors, 0 warnings. `flutter test`: 75 pass (67 + 8 new for the length check).
+- Question editor and question list rendered on all 12 sweep devices: 0 layout problems.
+
+**What you need to do**
+1. Open `content_review/rebalance_review.html` in a browser and review the changes (and the 16 flags).
+2. When you approve, run the three apply files in the Supabase SQL Editor, one at a time, in any order. This changes the live bank, so it affects **every** branch and every installed app, not just `adaptive-focus`.
+3. Fix the flagged answers in the Admin Panel; the new length warning will guide the options.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
@@ -1332,6 +1400,8 @@ You asked for a separate branch without the two Admin Panel features **Generate 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
 
 Session 59: `lib/utils/concept_csv.dart`, `lib/screens/admin/admin_concept_csv_import_screen.dart`, `test/concept_csv_test.dart`.
+
+Session 62 (`adaptive-focus`): `tools/rebalance_options.dart`, `content_review/` (snapshot, rewrites, review page), `supabase_rebalance_options_{hard,medium,easy}.sql` and their `_rollback.sql` files, `lib/utils/answer_length_check.dart`, `test/answer_length_check_test.dart`.
 
 Session 61 (`adaptive-focus`): no new files. Removed on that branch: the generator and Concepts screens, services, models, utilities and their tests (listed in the Session 61 entry).
 

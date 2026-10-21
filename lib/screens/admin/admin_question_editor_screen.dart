@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/question.dart';
 import '../../models/subject.dart';
 import '../../services/admin_service.dart';
+import '../../utils/answer_length_check.dart';
 import '../../utils/error_messages.dart';
 import '../../widgets/ui/ui.dart';
 import '../../utils/responsive.dart';
@@ -268,6 +269,34 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
                         subtitle:
                             'Tap a letter to mark the correct option. The rationale is what a student sees when they pick that option.',
                         children: [
+                          // Live warning while typing: a correct answer much
+                          // longer than the others can be guessed by length.
+                          ListenableBuilder(
+                            listenable: Listenable.merge([for (final o in _options) o.text]),
+                            builder: (context, _) {
+                              final standsOut = _correctIndex >= 0 &&
+                                  _correctIndex < _options.length &&
+                                  answerStandsOutByLength(
+                                    _options[_correctIndex].text.text,
+                                    [
+                                      for (var i = 0; i < _options.length; i++)
+                                        if (i != _correctIndex) _options[i].text.text,
+                                    ],
+                                  );
+                              if (!standsOut) return const SizedBox.shrink();
+                              return const Padding(
+                                padding: EdgeInsets.only(bottom: 12),
+                                child: InlineBanner(
+                                  tone: BannerTone.warning,
+                                  icon: Icons.straighten_rounded,
+                                  title: 'The correct answer stands out',
+                                  message: 'It is much longer than the other options, so students can guess it '
+                                      'by length. Make the wrong options about as long, using real look-alike '
+                                      'answers from the same topic.',
+                                ),
+                              );
+                            },
+                          ),
                           for (var i = 0; i < _options.length; i++) _buildOptionCard(i),
                           if (_options.length < _maxOptions)
                             Align(

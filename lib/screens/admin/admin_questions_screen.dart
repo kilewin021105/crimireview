@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/question.dart';
 import '../../models/subject.dart';
 import '../../services/admin_service.dart';
+import '../../utils/answer_length_check.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
@@ -350,6 +351,15 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
                         color: p.forDifficulty(q.difficulty.index),
                         fontSize: 10.5,
                       ),
+                      // The correct option is much longer than the others,
+                      // so students can guess it by length.
+                      if (questionAnswerStandsOut(q))
+                        Pill(
+                          label: 'Answer stands out',
+                          icon: Icons.straighten_rounded,
+                          color: p.warning,
+                          fontSize: 10.5,
+                        ),
                       if (q.source != QuestionSource.admin)
                         Pill(
                           label: q.source.name,

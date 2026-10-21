@@ -100,12 +100,21 @@ Question sampleAdminQuestion(int i, String subjectId) => Question(
         'Who proposed strain theory?',
         'Which agency supervises probationers in the Philippines?',
       ][i % 6],
-      answerOptions: const [
-        AnswerOption(text: 'Self-defense', isCorrect: true, rationale: 'Listed in Article 11.'),
-        AnswerOption(text: 'Insanity', isCorrect: false, rationale: 'An exempting circumstance (Art. 12).'),
-        AnswerOption(text: 'Minority', isCorrect: false, rationale: ''),
-        AnswerOption(text: 'Uncontrollable fear', isCorrect: false, rationale: ''),
-      ],
+      // Question 1's correct answer is much longer than the others, so the
+      // "Answer stands out" warning shows in the list and the editor.
+      answerOptions: i % 6 == 1
+          ? const [
+              AnswerOption(text: 'Being aware of the need to plan and setting objectives', isCorrect: true, rationale: 'Planning starts with recognizing the need.'),
+              AnswerOption(text: 'Budgeting', isCorrect: false, rationale: 'Comes after the plan is chosen.'),
+              AnswerOption(text: 'Evaluation', isCorrect: false, rationale: 'The last step.'),
+              AnswerOption(text: 'Staffing', isCorrect: false, rationale: ''),
+            ]
+          : const [
+              AnswerOption(text: 'Self-defense', isCorrect: true, rationale: 'Listed in Article 11.'),
+              AnswerOption(text: 'Insanity', isCorrect: false, rationale: 'An exempting circumstance (Art. 12).'),
+              AnswerOption(text: 'Minority', isCorrect: false, rationale: ''),
+              AnswerOption(text: 'Uncontrollable fear', isCorrect: false, rationale: ''),
+            ],
       difficulty: Difficulty.values[i % 3],
       explanation: 'Self-defense is a justifying circumstance.',
       legalBasis: 'RPC Art. 11',
