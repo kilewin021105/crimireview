@@ -1414,6 +1414,61 @@ You gave a set of working rules: the official manuals are the source of truth, e
 
 **Not changed:** no code, no database, and no change to the manuscript itself. Phase 3 (fixing the manuscript) waits for your approval of this baseline.
 
+## 2026-10-22 — Session 64: Chapters 1 to 3 rewritten as a Word file in the team's format (no code changed)
+
+You shared the team's own manuscript, `CrimiReview_GRP49_Chapter1-3 (1).pdf`, and asked for the chapters to be made like it while following the manual, with no mistakes in the citations or in Chapter 2. You chose the **full version** of the system (template generation, Concepts and the student record, as on `student-record`) and a **Word file**.
+
+**What was made**
+- `CrimiReview_Chapters1-3_revised.docx`, with a PDF copy, in the Desktop folder `CrimiReview manuscript`. It has 31 pages: the title page, the Vision and Mission page, Chapters 1 to 3 and the References.
+- The file is built by a script, so every rebuild runs two checks. Every in-text citation must have a reference entry and every reference must be cited. Every Chapter 2 paragraph must have 4 to 6 sentences.
+
+**Formatting, per the manual**
+- Times New Roman 12, double spacing, and a 0.5 in first-line indent.
+- Margins of 1 in, with 1.5 in on the left. The title page has 1 in on every side and no page number (p. 7).
+- Page numbers sit at the top right of every other page.
+- Chapter titles are centered and bold. Subheadings are flush left and bold.
+- The Vision and Mission page uses the manual's text for the BCC **and** the RDC (p. 9). The RDC wording in the team's file differed from the manual.
+
+**Chapter 2, per p. 25 of the manual**
+- One continuous section with no subheadings.
+- 17 paragraphs, each with 4 to 6 sentences.
+- Related literature comes from reports, laws and policy documents. Related studies come from journals.
+- The legal bases are the 1987 Constitution, RA 10173, RA 11131 and the UN 2030 Agenda (SDG 4, target 4.3).
+- **Table 1** compares CrimiReview with two CLE reviewer apps and two LET reviewers.
+
+**Citations: every source was checked at its publisher, Crossref, OpenAlex, the app store or the official site**
+- **Fixed:**
+  - The team's file mixed numbered and APA citations, and the numbers were wrong. Everything is now APA 7.
+  - Gligorea et al. was cited but missing from the reference list; it was added.
+  - The Albina et al. entry was wrong. It is now the 2022 *European Journal of Educational Research* paper.
+  - "Gerarda et al." is Gerard et al. (2025), *Journal of Criminal Justice Education*, 36(4).
+  - "Haas, D." is the developer DODO LABS PTE. LTD.
+  - Lasala et al. was missing the co-author Dioneda.
+  - Two first authors are named Yang, so their citations now carry initials (C. Yang et al., 2021; H. L. Yang & Xiang, 2024).
+  - Laws now follow the manual's format.
+- **Dropped:**
+  - Prado was cited but had no entry, and Pacturan et al. (2024) could not be found anywhere.
+  - Mayne and Green (2023) could not be found. The real paper is from 2020, in *Science & Justice*.
+  - Gerard (2022), "European Journal of Criminology Education", is really a conference paper with an unclear author.
+  - Mertens (2022) could not be read to confirm what it says.
+- 33 references remain, and each is cited in the text.
+
+**System facts corrected against the code**
+- The team's file described a second generator that used a large language model on uploaded PDFs, together with an "LLM API" software item. The app does not have it; it was removed in `supabase_remove_document_generation.sql`. Only template generation with Faculty approval remains.
+- The minimum Android version is 7.0 (API 24), not Android 10.
+- The subject names now follow Board Resolution No. 01, s. 2021.
+- Sign-in is described as Google only, as on the current branch.
+
+**Still open, for the team to confirm**
+- The members' full names with middle initials (the file keeps the team's surname-first names), and the defense month on the title page ("March 2026").
+- Recommended phone and computer specifications are the team's own values, not measured.
+- The Official Gazette link for the Constitution could not be opened to confirm it. RA 10173 and RA 11131 cite the NPC and Senate copies instead.
+- Adviser questions Q-01 (title page margins), Q-05 (Statement of the Problem, left out as in the team's file) and Q-07 (the five-year rule; Vygotsky 1978, Ryan & Deci 2000 and Corbett & Anderson 1995 are older foundational works).
+- Content validation by criminology faculty is described as a role, but it has not been done yet.
+- Chapter 4 is not included.
+
+**Not changed:** no code and no database.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
