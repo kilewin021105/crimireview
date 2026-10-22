@@ -1469,6 +1469,53 @@ You shared the team's own manuscript, `CrimiReview_GRP49_Chapter1-3 (1).pdf`, an
 
 **Not changed:** no code and no database.
 
+## 2026-10-22 — Session 65: Chapter 4 written to the manual, with redrawn diagrams and real test results (no code changed)
+
+You approved Chapter 4. It describes the full version (branch `student-record`), like Chapters 1 to 3.
+
+**What was made**
+- `CrimiReview_Chapters1-4.docx`, with a PDF copy, in the Desktop folder `CrimiReview manuscript`. It holds the title page, the Vision and Mission page, Chapters 1 to 4 and the References, 100 pages in all. The earlier Chapters 1 to 3 file is kept beside it.
+- The subfolder `Chapter 4 figures` holds the diagrams as editable SVG and as PNG, plus the 35 screenshots used.
+
+**Chapter 4: "Methodology, Results, and Discussion", sections 4.1 to 4.12 as in the manual (pp. 30 to 41)**
+- **4.1 and 4.2:** the team's manual review process figure, the requirements taken from the pre-oral panel's comments, and the actor lists for Faculty and Students.
+- **4.3:** the team's system framework figure, kept, with its text corrected. The Admin Panel is in the same app, not a separate web app. The verification codes are sent by Resend; there is no LLM.
+- **4.4: the use case diagram was redrawn** with the five corrections from your instructor's marked printout:
+  - the actors are named "Students" and "Faculty";
+  - there is a system boundary;
+  - Insert, Update and Delete Question are «extend» of Manage Questions;
+  - the use case is "Send Verification Code", without "Reset";
+  - there is no "Log Admin Action".
+  It also adds the full version's use cases: Manage Concepts, Generate Questions, Approve Generated Questions, View Student Record, Read Modules, Reset Password, Leaderboard/Achievements and Profile/Settings.
+- **4.5:** 17 use case narratives (Tables 2 to 18) in the manual's table layout, checked against the code. For example, the sign-up code is sent before the account is created, and the code expires in 10 minutes.
+- **4.6: all 17 activity diagrams were redrawn** in the manual's two-lane style. The team's Oct 5 drawings had overlapping labels, broken boxes, and a removed document/LLM generator in Figure 7.
+- **4.7: the ERD was redrawn from the live database** (read-only check), plus the `form` column that the full version adds. The team's ERD had tables and columns that do not exist, such as `users.password`, a `time_taken_seconds` table and `subject.stem_template`. Live, four user tables reference `user_profiles`, and `questions.created_by` has no foreign key.
+- **4.8:** iterative development with real dates (first commit May 23, v1.0.0 on Oct 7, v1.0.1 on Oct 12, 2026) and the four kinds of testing.
+- **4.9:** 18 figures of 35 screens from the screenshot harness, labelled as sample data.
+- **4.10: real results only:**
+  - `flutter test`: 130 of 130 pass (commit 9f69147);
+  - `flutter analyze`: 0 errors, 0 warnings, 17 informational notes;
+  - layout sweep: 540 renders, 0 problems;
+  - the database tests recorded in this log: 49, 9, 76 and 18 checks, all passing.
+  The ISO/IEC 25010 user evaluation has not been run, so its table is an empty, highlighted shell.
+- **4.11 and 4.12:** the recommendations follow the manual's guidelines. The implementation plan's durations are proposals, highlighted for the team.
+
+**Also changed**
+- ISO/IEC 25010:2023 is now in the References. It was checked on iso.org: Edition 2, November 2023, standard 78176. It is cited in Chapter 1's third objective and in 4.10.
+- The build also checks that every figure number mentioned in the text exists.
+
+**Found while checking, not fixed in the code**
+- The screenshot harness's `tab_quiz` and `tab_cards` shots tap the dashboard shortcut, not the bottom tab, so they show the Home screen. The correct shots were made in a scratch copy, which has since been deleted. The harness itself was not changed.
+
+**Still open, for the team**
+- The ISO/IEC 25010 evaluation and its results (Table 22).
+- Confirm the durations in Table 23.
+- Faculty content validation.
+- Phone captures of the email verification screen, if wanted. The harness shows a "failed to send" banner there because it runs offline, so that screen was left out.
+- The items from Session 64: names, month, Gazette link, Q-01, Q-05, Q-07.
+
+**Not changed:** no code and no database.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
