@@ -1384,6 +1384,36 @@ You noticed the correct answer was usually the longest, most complete-sounding o
 2. When you approve, run the three apply files in the Supabase SQL Editor, one at a time, in any order. This changes the live bank, so it affects **every** branch and every installed app, not just `adaptive-focus`.
 3. Fix the flagged answers in the Admin Panel; the new length warning will guide the options.
 
+## 2026-10-22 — Session 63: requirements baseline from the Capstone Project Manual (no code changed)
+
+You gave a set of working rules: the official manuals are the source of truth, every requirement gets an ID and a source page, nothing is marked verified without evidence, and the first deliverable is a requirements analysis and compliance checklist. You then provided the official manual, `ITCAPSTONEMANUAL2025-1.pdf` (BCC BSIT Capstone Project Manual, 57 pages).
+
+**What was made**
+- **CrimiReview Compliance Checklist**, a published page: https://claude.ai/artifact/HcqDVtcXSr9fNhqjMjVt6U.
+  - **91 requirements** (REQ-001 to REQ-091) extracted from the manual. Each has its source page, whether it is mandatory, the planned response, how it is checked, the evidence and the deliverable.
+  - **13 questions for the adviser** (Q-01 to Q-13): places where the manual is unclear or contradicts itself. Examples: title page margins (p. 3 against p. 7), which cover parts are bold (p. 6), whether Chapter 1 keeps a Statement of the Problem (p. 2 and 54 against p. 19 to 23), Chapter 2 subheadings (p. 25 against p. 19), and the five-year rule for sources (p. 25).
+  - **The documents still needed from the team**: the template, the rubric, the approved concept paper, the pre-oral comments, the manuscript as a Word file, the adviser's name, the members' full names and the defense month.
+  - Statuses and notes are kept in the page's shared store. People with Contributor access or above can change them, and each change records who made it and when.
+- The requirements were checked against the manuscript (Chapters 1 to 4, revised draft of October 17, 2026) and the project's code.
+
+**Result of the check: 27 verified, 36 need review, 28 failed**
+- **Failed, in the manuscript text:**
+  - Chapter 2 uses the four separate subheadings the manual forbids, and its Related Literature cites journal papers.
+  - Quotations lack page numbers.
+  - About 27 of 47 Chapter 2 paragraphs fall outside the 4 to 6 sentence rule (approximate, automated count).
+  - Chapter 3 gives no recommended hardware specifications.
+  - Chapter 4 is titled "System Design" instead of "Methodology, Results, and Discussion", and it has no Recommendations section and no screenshots in 4.9.
+  - The reference list sits between Chapters 2 and 3, and laws are not in the manual's format.
+  - The Vision and Mission page lacks the RDC's.
+- **Failed because not written yet:** the cover and title pages, Approval Sheet, Acknowledgement, Abstract and keywords, Table of Contents, lists of tables and figures, appendices, curricula vitae, and the results (no evaluation has been run).
+- **Needs review:**
+  - Everything about margins, fonts, spacing and page numbers, because the manuscript is a web page and only the Word file can show these.
+  - The author names, which appear surname first without middle initials.
+  - The cover date ("March 2026").
+  - Whether the manuscript describes the version of the system that will be defended. It still describes Facebook sign-in and template generation, and does not mention the student record screen or the rewritten answer options.
+
+**Not changed:** no code, no database, and no change to the manuscript itself. Phase 3 (fixing the manuscript) waits for your approval of this baseline.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
