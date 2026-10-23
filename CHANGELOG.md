@@ -1573,6 +1573,25 @@ The feature existed before (Sessions 12–19, using the Claude API). It was neve
 - The manuscript (Chapters 1–4) still describes the version without this feature. Update it only once the feature is kept for the defense.
 - A PDF uploader handles **content** changes (new laws, revised topics). A **new subject or new subject weights** still needs an app update, because the six subjects and their weights are in `lib/models/subject.dart`.
 
+## 2026-10-24 — Session 67: the Gemini function went live; VS Code red lines removed (same branch)
+
+**Live check (read-only)**
+- On 2026-10-23 you ran the SQL, replaced the Edge Function code and added the key.
+- Checked on the live project afterwards:
+  - the function is version 6, identical to this branch's code, with JWT verification on;
+  - `document_uploads` has the three faculty rules;
+  - the `document-uploads` bucket is private, PDF only, 20 MB.
+- A call as a logged-out user was refused with "Sign in first." (401), so the new code runs.
+- The Gemini key itself can only be checked by a real upload from a faculty account, which hasn't happened yet.
+
+**Red lines in `index.ts`**
+- VS Code checked the Edge Function as Node TypeScript, so it didn't know Deno's `Deno` global or `npm:` imports. The errors were "Cannot find name 'Deno'", "Cannot find module 'npm:@supabase/supabase-js@2'" and an implicit `any` on `req`.
+- These were editor-only: Supabase runs the file on Deno.
+- Added two editor-only files that Supabase and Deno never read or deploy:
+  - `supabase/functions/tsconfig.json`;
+  - `supabase/functions/editor-types.d.ts`, which describes `Deno.env`, `Deno.serve` and the Supabase client import.
+- Checked with TypeScript 5.6: 0 errors. VS Code now shows no problems in the file. The function code is unchanged, so nothing needs redeploying.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
