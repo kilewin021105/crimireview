@@ -202,6 +202,7 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
     Safe to run more than once; the file ends with a rollback block.
 13. `supabase_student_record.sql` — lets Faculty open a student's full record from **Admin Panel → Students** (tap a student): level reached and segments per subject, topic mastery, recent quizzes. One read-only, admin-only function; no table rules change. Safe to run more than once.
 14. `supabase_rebalance_options_hard.sql`, `_medium.sql`, `_easy.sql` *(review first)* — rewritten wrong answer options for the 759 imported questions, so the correct answer can no longer be spotted by being the longest (CHANGELOG Session 62). Review `content_review/rebalance_review.html` before running. Only the wrong options and their reasons change, and a question Faculty edited in the meantime is skipped. Each file is safe to run twice and has a matching `_rollback.sql`. Regenerate them with `dart run tools/rebalance_options.dart`.
+15. `supabase_document_generation.sql` *(branch `pdf-uploader-gemini`)* — the "Generate from PDF" feature. Run it **after step 8**, which dropped the old table this file recreates. See **Generate questions from a PDF (Google Gemini)** below for the Edge Function and the free API key.
 
 ## Google sign-in
 
@@ -230,13 +231,30 @@ Core tables used by the app:
 
 ## Question generation
 
-**This version of the app has no question generator.** The branch `adaptive-focus` keeps the Admin Panel to what the adaptive learning story needs: the question bank, the student monitor with each student's full record, and settings. "Generate from Templates", the Concepts screens (add, paste, CSV upload) and the approve-selected review list were removed from the app here (CHANGELOG Session 61).
+**This version of the app has no template generator.** (Branch `pdf-uploader-gemini` adds the PDF generator described in the next section.) The branch `adaptive-focus` keeps the Admin Panel to what the adaptive learning story needs: the question bank, the student monitor with each student's full record, and settings. "Generate from Templates", the Concepts screens (add, paste, CSV upload) and the approve-selected review list were removed from the app here (CHANGELOG Session 61).
 
 **To bring them back,** switch to the branch that has them: `git switch student-record` (generator, concepts, CSV upload and the student record) or `git switch concept-bank-and-forms` (generator, concepts and CSV upload, without the student record). Then run `flutter pub get`, because the CSV upload needs the `file_picker` package.
 
 **The database is unchanged.** The SQL files (steps 7 and 12) and the tables `question_templates` and `concept_bank` stay, so switching back needs no database work. Questions the generator made earlier stay in the bank: active ones are served to students like any other question, and the admin list labels them "generated".
 
-The old "Generate from Document" (PDF → AI) path was removed earlier. Step 8 (`supabase_security_fixes_v2.sql`) also drops the `document_uploads` table it left behind; the separate `supabase_remove_document_generation.sql` lists the two leftovers SQL can't remove (the storage bucket and the Edge Function).
+## Generate questions from a PDF (Google Gemini)
+
+On branch `pdf-uploader-gemini`, Faculty can upload a PDF, such as a reviewer, a new law or a revised syllabus, from **Admin Panel → Questions → PDF icon**. Google Gemini writes questions taken only from that PDF. They are saved **inactive** and appear to students only after a faculty member approves them on the **Review** screen. This is how the question bank keeps up when the curriculum or the laws change. Gemini's free tier is enough; no credit card is needed.
+
+**One-time setup (about 10 minutes):**
+1. **Free API key:** sign in at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) with a Google account, then **Create API key** and copy it. Keep it secret: never put it in the app or in Git.
+2. **Database:** run `supabase_document_generation.sql` in the SQL Editor (Supabase step 15). It creates the `document_uploads` table and the private `document-uploads` bucket (PDF only, 20 MB), both for Faculty only.
+3. **Edge Function:** Supabase dashboard → *Edge Functions → Deploy a new function → Via Editor*. Name it exactly `generate-questions-from-document`, paste the contents of `supabase/functions/generate-questions-from-document/index.ts`, and deploy. Leave **Verify JWT** on. (With the Supabase CLI instead: `supabase functions deploy generate-questions-from-document --project-ref wbhobbehgqlzfborscvx`.)
+4. **Secret:** *Edge Functions → Secrets* → add `GEMINI_API_KEY` with the key from step 1. Optional: `GEMINI_MODEL` to choose a model; the default is `gemini-flash-latest`.
+5. **App:** run `flutter pub get` (the PDF picker needs the `file_picker` package), then build the APK.
+6. **Check:** as a faculty account, upload a short PDF and ask for 5 questions. Within about a minute the upload shows "5 questions to review". If it shows "Failed", its message says what to fix, such as a missing key or the free limit being reached.
+
+**Good to know:**
+- **Limits:** the free tier has a daily limit that Google changes from time to time; see [aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit). When it is reached, uploads fail with a clear message until the next day.
+- **Privacy:** only the PDF and the chosen subject and topic are sent to Google, never student data. On the free tier Google may use what is sent to improve its models, so upload review material only.
+- **Mistakes:** Gemini can make mistakes. The review screen shows each question with its answer, legal basis and explanation, and nothing reaches students without approval.
+- **Security:** the function checks that the caller is a signed-in admin and processes each upload only once, so the quota can't be used up by others.
+- **Removing the feature:** run `supabase_remove_document_generation.sql`, which also lists the two leftovers SQL can't remove (the storage bucket and the Edge Function).
 
 ### Security notes
 

@@ -4,6 +4,7 @@ import 'package:crimireview/models/question.dart';
 import 'package:crimireview/models/student_record.dart';
 import 'package:crimireview/models/subject.dart';
 import 'package:crimireview/services/admin_service.dart';
+import 'package:crimireview/services/document_generation_service.dart';
 
 class FakeAdminService extends AdminService {
   FakeAdminService() : super.forTesting();
@@ -77,6 +78,13 @@ class FakeAdminService extends AdminService {
     int offset = 0,
   }) async {
     if (offset > 0) return [];
+    // One PDF upload's batch (review screen): three waiting, one approved.
+    if (templateId != null) {
+      return [
+        for (var i = 0; i < 4; i++)
+          AdminQuestionEntry(isActive: i == 3, question: sampleGeneratedQuestion(i, templateId)),
+      ];
+    }
     const subjects = CriminologySubjects.all;
     return [
       for (var i = 0; i < 6; i++)
@@ -193,4 +201,60 @@ Map<String, dynamic> sampleStudentRecordJson() {
     'daily_challenges': 6,
     'achievements': 4,
   };
+}
+
+
+Question sampleGeneratedQuestion(int i, String uploadId) => Question(
+      id: 'gen_$i',
+      subject: 'criminal_jurisprudence',
+      topic: 'Justifying Circumstances',
+      questionText: [
+        'Under Article 11 of the Revised Penal Code, which is NOT a requisite of self-defense?',
+        'Defense of a relative covers which relatives of the accused?',
+        'What justifying circumstance applies to a person who acts to avoid a greater evil?',
+        'Who incurs no criminal liability when acting in obedience to an order?',
+      ][i],
+      answerOptions: const [
+        AnswerOption(text: 'Unlawful aggression', isCorrect: false, rationale: 'This is the first requisite.'),
+        AnswerOption(text: 'Reasonable necessity of the means', isCorrect: false, rationale: 'This is the second requisite.'),
+        AnswerOption(text: 'Prior written warning', isCorrect: true, rationale: 'Article 11 does not require it.'),
+        AnswerOption(text: 'Lack of sufficient provocation', isCorrect: false, rationale: 'This is the third requisite.'),
+      ],
+      difficulty: Difficulty.values[i % 3],
+      explanation: 'Article 11(1) lists three requisites; a written warning is not one of them.',
+      legalBasis: 'RPC Art. 11',
+      source: QuestionSource.generated,
+      templateId: uploadId,
+      version: 1,
+    );
+
+/// Recent PDF uploads: one still being written, one ready, one failed.
+class FakeDocumentGenerationService extends DocumentGenerationService {
+  FakeDocumentGenerationService() : super.forTesting();
+
+  static DocumentUpload sample(String status, {int generated = 0, String? error, int minutesAgo = 1, String? topic}) =>
+      DocumentUpload(
+        id: 'doc_$status',
+        filename: {
+          'processing': 'RA_11131_Criminology_Profession_Act.pdf',
+          'completed': 'Justifying_Circumstances_Reviewer.pdf',
+          'failed': 'Corrections_Handout_2026.pdf',
+        }[status]!,
+        subjectId: {'processing': 'criminology', 'completed': 'criminal_jurisprudence', 'failed': 'corrections'}[status]!,
+        topic: topic,
+        requestedCount: 10,
+        status: status,
+        generatedCount: generated,
+        errorMessage: error,
+        createdAt: DateTime.now().subtract(Duration(minutes: minutesAgo)),
+      );
+
+  @override
+  Future<List<DocumentUpload>> recentUploads({int limit = 20}) async => [
+        sample('processing'),
+        sample('completed', generated: 4, minutesAgo: 30, topic: 'Justifying Circumstances',
+            error: '1 question(s) were skipped (incomplete or duplicate).'),
+        sample('failed', minutesAgo: 300,
+            error: "Gemini's free limit was reached. Try again later; the free quota resets every day."),
+      ];
 }

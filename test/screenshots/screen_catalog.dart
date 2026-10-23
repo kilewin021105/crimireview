@@ -10,6 +10,8 @@ import 'dart:io';
 
 import 'package:crimireview/screens/achievements_screen.dart';
 import 'package:crimireview/screens/admin/admin_question_editor_screen.dart';
+import 'package:crimireview/screens/admin/admin_document_generation_screen.dart';
+import 'package:crimireview/screens/admin/admin_document_review_screen.dart';
 import 'package:crimireview/screens/admin/admin_questions_screen.dart';
 import 'package:crimireview/screens/admin/admin_settings_screen.dart';
 import 'package:crimireview/screens/admin/admin_shell_screen.dart';
@@ -258,6 +260,10 @@ List<Shot> screenCatalog() => [
       Shot('admin_settings_wide', (_) => const AdminShellScreen(),
           dark: false, size: const Size(1280, 800), act: (t) => tapText(t, 'Settings')),
       Shot('admin_questions', (_) => const AdminQuestionsScreen(showBackButton: false)),
+      Shot('admin_pdf', (_) => const AdminDocumentGenerationScreen()),
+      Shot('admin_pdf_tall', (_) => const AdminDocumentGenerationScreen(), dark: false, size: const Size(390, 1500)),
+      Shot('admin_pdf_review',
+          (_) => AdminDocumentReviewScreen(upload: FakeDocumentGenerationService.sample('completed', generated: 4))),
       Shot('admin_editor', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(0, _subject.id))),
       Shot('admin_editor_stands_out', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(1, _subject.id)),
           size: const Size(390, 1600)),

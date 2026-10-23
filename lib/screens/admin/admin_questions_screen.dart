@@ -8,6 +8,7 @@ import '../../utils/error_messages.dart';
 import '../../utils/page_transitions.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/ui/ui.dart';
+import 'admin_document_generation_screen.dart';
 import 'admin_question_editor_screen.dart';
 
 /// The question bank the admin actually edits.
@@ -175,6 +176,17 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
             ? 'Loading...'
             : '${_questions.length}${_hasMore ? '+' : ''} question${_questions.length == 1 ? '' : 's'} shown',
         showBack: widget.showBackButton,
+        actions: [
+          ToolbarIconButton(
+            icon: Icons.picture_as_pdf_rounded,
+            tooltip: 'Generate from PDF',
+            size: 40,
+            onPressed: () async {
+              await Navigator.push(context, SlidePageRoute(page: const AdminDocumentGenerationScreen()));
+              if (mounted) _reload();
+            },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openEditor(),

@@ -1516,6 +1516,63 @@ You approved Chapter 4. It describes the full version (branch `student-record`),
 
 **Not changed:** no code and no database.
 
+## 2026-10-23 — Session 66: Generate questions from a PDF with Google Gemini (branch `pdf-uploader-gemini`, from `adaptive-focus`)
+
+You asked how CrimiReview can keep up when the criminology curriculum changes, then asked to bring back the PDF uploader with a free AI model. Gemini was chosen because:
+- its free tier needs no credit card;
+- it reads a PDF directly;
+- its JSON output can be forced into a fixed shape.
+
+The feature existed before (Sessions 12–19, using the Claude API). It was never switched on because the paid key was never added, and it was removed on Oct 7 (`f19b918`). This session restores it from git history, switches it to Gemini, and closes a security gap.
+
+**What faculty can do now**
+- Admin Panel → **Questions → PDF icon → Generate from PDF**: choose the subject, an optional topic, the difficulty (Mixed, Easy, Medium or Hard) and the number of questions (5 to 20), then pick a PDF of at most 20 MB.
+- **Recent uploads** shows each PDF as "Writing questions…", "N questions to review" or "Failed" with a plain reason. The screen refreshes itself every few seconds while Gemini works. An upload still working after 5 minutes is reported as stopped.
+- **Review**: every generated question is shown with its options (correct one marked), legal basis and explanation, plus the "Answer stands out" warning. Faculty tick the good ones and tap **Approve**. Each question can also be edited or deleted. Nothing is approved without a tick, and students see nothing before approval.
+
+**How it works**
+- **App** (`lib/services/document_generation_service.dart`):
+  - checks the file first: `.pdf`, at most 20 MB, real PDF bytes (`%PDF-`);
+  - uploads it to the private `document-uploads` bucket in the faculty member's own folder;
+  - adds a `document_uploads` row and starts the Edge Function.
+- **Edge Function** (`supabase/functions/generate-questions-from-document/index.ts`), rewritten for Gemini (`generateContent`, PDF sent inline, JSON schema):
+  - **New: checks the caller is a signed-in admin** (`is_admin()` with the caller's own token). The old function trusted anyone who knew an upload id.
+  - **New: claims the upload only while it is `pending`**, so one upload is sent to Gemini once at most, and nobody can repeat it to use up the free quota.
+  - Answers right away and finishes in the background.
+  - Keeps a question only if it has 4 different, non-empty options and exactly one correct answer.
+  - Inserts each kept question as `is_active = false`, `source = 'generated'`, `template_id` = the upload id.
+  - Writes an audit row (`generate`, method `pdf`), and marks the upload completed or failed with a plain message: missing key, invalid key, free limit reached, blocked, not a PDF, or nothing usable.
+  - Model: `gemini-flash-latest`, changeable with the `GEMINI_MODEL` secret.
+- **Database** (`supabase_document_generation.sql`, recreating what `supabase_security_fixes_v2.sql` dropped):
+  - faculty can read, add and delete uploads;
+  - a new upload must be `pending` and under the faculty member's own id;
+  - only the function can change a status;
+  - students and logged-out visitors get nothing;
+  - the bucket is private, PDF only, 20 MB.
+
+**Checks**
+- **Edge Function, 22 of 22 pass.** The real source ran under Node 24 with a fake Supabase and a fake Gemini. The checks cover:
+  - logged-out and student callers refused;
+  - unknown upload, and a second call that never reaches Gemini;
+  - 3 good questions saved and 3 bad ones skipped;
+  - inactive, tagged rows, with the correct answer index;
+  - the audit row;
+  - the request shape (inline PDF, JSON schema, key in a header);
+  - error messages for 429, an invalid key, a missing key and a blocked document;
+  - fenced JSON, a non-PDF file, the forced difficulty and the count cap.
+- **Database, 18 of 18 pass** on the local PostgreSQL 18 copy, with the file applied twice. Faculty can add and read uploads, but cannot set a status, add one under another id, ask for more than 20 questions, or upload into another folder. Students and anon see and do nothing. The service role can claim an upload. The bucket settings are right.
+- **App:**
+  - `flutter test`: 88 pass, including 13 new in `test/document_generation_test.dart`;
+  - `flutter analyze`: no new issues, only the same 17 informational notes;
+  - the new screens rendered in light and dark;
+  - the 12-device sweep: 48 renders, 0 layout problems.
+
+**Not done, and not claimed**
+- **Never run against the real Gemini or the live project.** There is no API key yet, and the SQL and function are not deployed. The README section "Generate questions from a PDF (Google Gemini)" gives the steps for you: free key, SQL, Edge Function, secret.
+- `pubspec.lock` and the generated plugin files are **not committed**: they already held your own uncommitted changes. `flutter pub get` adds `file_picker` to them.
+- The manuscript (Chapters 1–4) still describes the version without this feature. Update it only once the feature is kept for the defense.
+- A PDF uploader handles **content** changes (new laws, revised topics). A **new subject or new subject weights** still needs an app update, because the six subjects and their weights are in `lib/models/subject.dart`.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
