@@ -1697,6 +1697,81 @@ UNION ALL SELECT 'Upload form can target the TOS', COUNT(*)::text, '1'
 - One real TOS-targeted PDF upload. It is also the first real test of the Gemini key.
 - Pushing the branch, the release, and the manuscript.
 
+## 2026-10-25 — Session 70: manuscript revised to this branch; live check of the question bank (same branch)
+
+You asked for the manuscript in the Desktop folder `CrimiReview manuscript` to be revised to the capstone manual, with every figure updated, including the use case diagram and the system framework, and with the AI tools shown in the framework. You chose to describe **this branch** and to show **Google Gemini** as the AI tool in the framework.
+
+**New files (your team's files are untouched)**
+- `CrimiReview_Chapters1-4_revised.docx` and `.pdf` (106 pages) in the Desktop folder `CrimiReview manuscript`.
+- `Chapter 4 figures (revised Oct 25)/`: 20 diagrams as PNG and SVG, plus 33 screenshots.
+- `CrimiReview_Chapters1-4.docx`, which your team edited in Word on October 23, is not overwritten. That edit changed no wording: it enlarged Figure 1 to 5.58 inches and added blank lines between system steps in three use case tables. The revised file keeps both, with the blank lines in all 17 tables.
+
+**What changed in the text**
+- **Removed everywhere:** template-based generation, the concept bank and Manage Concepts, which this branch does not have.
+- **Added:**
+  - question drafting from PDF documents with Google Gemini;
+  - the PRC Tables of Specifications (Res. No. 02 s. 2024, as amended by Res. No. 06 s. 2025), with both added to the references after checking that their PRC links still open;
+  - TOS coverage;
+  - the TOS link and Bloom level on each question;
+  - the TOS-based study modules and notes;
+  - the readiness weighting.
+- **Corrected:** the readiness percentage on the home screen is computed from accuracy. The small simulated-data model gives only the recommended difficulty and the weak and strong subjects. The old text said the readiness estimate itself came from that model.
+- **Chapter 1:** introduction, objective 2, purpose, beneficiaries, scope, and limitations. The new limitations cover AI drafting, Gemini's free tier, and a new TOS needing an update.
+- **Chapter 2:**
+  - legal bases now include the TOS resolutions;
+  - the data privacy paragraph says what is sent to Gemini;
+  - Table 1 and the synthesis are updated.
+  - Every paragraph still has 4 to 6 sentences, and every citation still has a reference.
+- **Chapter 3:**
+  - Supabase now also stores the uploaded PDFs and runs the Gemini Edge Function;
+  - the database list now includes the TOS tables and the uploads;
+  - two new items: the Google Gemini API, and TypeScript and Deno;
+  - the Python item now includes PyMuPDF;
+  - peopleware and network are updated.
+- **Chapter 4:**
+  - 4.1 adds the adviser's TOS requirement.
+  - 4.2 actors are updated.
+  - 4.3 has a new framework figure, with the PRC TOS at the top and Google Gemini AI at the bottom.
+  - 4.4 has a new use case diagram: Generate Questions from PDF, View TOS Coverage, and Approve Draft Questions extending both.
+  - 4.5 has two new narratives, and the Take Quiz, Read Modules, View Dashboard and Manage Questions narratives are updated.
+  - 4.6 has two new activity diagrams.
+  - 4.7 has a new ERD from the live schema: 16 tables, with `document_uploads`, `tos_topics` and `tos_competencies`. The text explains the four live tables it leaves out.
+  - 4.8 adds the two October increments, including that the 600 questions and modules were drafted with AI assistance (Claude).
+  - 4.9 has new screenshots.
+  - 4.10 has new results.
+  - 4.11 and 4.12 are updated.
+
+**Results reported in 4.10 (all run on 2026-10-25, commit 5defda3)**
+- `flutter test`: 105 passed, 1 skipped (the screenshot test).
+- `flutter analyze`: no errors or warnings, 17 informational notes.
+- Screen sweep: 46 screens on 12 device profiles, 552 renders, 0 layout problems.
+- Edge Function under Node 24 with stand-ins: 31 of 31.
+- Database: new `tools/tos/db_checks/` runs 25 counted checks on a fresh copy of the untouched local database. All 25 pass, covering:
+  - the TOS data;
+  - the bank against every competency and Bloom level;
+  - the 742 / 49 / 33 alignment counts;
+  - the topic mastery renaming;
+  - the trigger;
+  - who can read or change what;
+  - repeated runs;
+  - an exact rollback.
+- **Correction during the check run:** check 13 first expected 4 backed-up mastery rows, and the real number is 3. The alignment backs up only the rows it renames; a row on a topic the TOS dropped stays as it was. Attempts were 15 before and after, so nothing was lost. The check was corrected to test exactly that.
+
+**Live database (read-only, Supabase connector)**
+- `generate-questions-from-document` is **version 7**, so the redeploy is confirmed.
+- `document_uploads` has 0 rows, so Gemini has not yet had a real upload.
+- `question_templates` and `concept_bank` still exist, with 0 rows. This branch does not use them.
+- **Between 12:02 and 12:12 PM today (04:02–04:12 UTC), a faculty account approved 616 questions in 53 batches through the app**, about 10 seconds per batch:
+  - all 600 TOS questions are now active;
+  - **11 of the 16 questions flagged on October 22 as having a wrong or outdated answer** are active again, unedited: ca_073, cdi_050, cdi_086, cr_017, le_004, le_031, le_032, le_035, le_054, lea_073 and qb_crim_002.
+- The bank now has 1,373 questions, 1,347 of them active.
+- Nothing was changed on the live project.
+
+**Not done, and not claimed**
+- The manuscript still says the questions have not been validated by subject experts, and that the 600 were drafted with AI assistance. Confirm both with your adviser.
+- The compliance checklist page was not updated.
+- The evaluation table (Table 22) and the plan durations are still highlighted placeholders.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
