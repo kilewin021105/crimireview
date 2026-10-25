@@ -11,6 +11,9 @@
 //      JSON schema, check every question, insert the good ones as INACTIVE
 //      rows (source = 'generated', template_id = upload id), write an audit
 //      row, and mark the upload completed or failed with a plain message.
+//      Gemini writes at most 5 questions per call; a bigger request continues
+//      in steps, each a fresh invocation (body.continue, service role only),
+//      so every step has its own time limit.
 //
 // When the upload names a PRC TOS topic or competency (document_uploads.tos_code,
 // added by supabase_tos_alignment.sql), the prompt asks for questions on that
@@ -24,10 +27,15 @@
 //   GEMINI_API_KEY          required. Free key from https://aistudio.google.com/apikey
 //   GEMINI_MODEL            optional. Defaults to "gemini-flash-latest".
 //   GEMINI_THINKING         optional. How much Gemini reasons before answering:
-//                           minimal, low (default), medium, high, or off (send no setting).
+//                           minimal (default), low, medium, high, or off (send no setting).
 //   GEMINI_TIMEOUT_SECONDS  optional. Defaults to 120. Supabase stops a function after
 //                           150 s on the free plan (400 s on paid plans); raise this only
 //                           on a paid plan.
+//   GEMINI_QUESTIONS_PER_STEP optional. Defaults to 5: Gemini writes at most this many
+//                           questions per call. A request for more is split into steps,
+//                           each run by a fresh invocation of this function with its own
+//                           time limit (it calls itself with the service role key), and the
+//                           questions of earlier steps are kept if a later step fails.
 // SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are injected
 // automatically.
 //
@@ -61,15 +69,17 @@ const OPTION_COUNT = 4;
 // with a clear "failed" message.
 const DEFAULT_TIMEOUT_SECONDS = 120;
 const MAX_TIMEOUT_SECONDS = 390;
+const DEFAULT_QUESTIONS_PER_STEP = 5;
 
 /**
  * How much Gemini reasons before it answers. Full reasoning on a long PDF is what
- * runs past the time limit, so ask for a little. Gemini 2.5 models take a token
- * budget; Gemini 3 and the "-latest" aliases take a level. A model that refuses
- * the setting is asked once more without it (see generate()).
+ * runs past the time limit, so ask for as little as the model allows. Gemini 2.5
+ * models take a token budget; Gemini 3 and the "-latest" aliases take a level. A
+ * model that refuses "minimal" is asked with "low", then without any setting
+ * (see askGemini()).
  */
 export function thinkingConfigFor(model: string, setting: string | undefined): Record<string, unknown> | null {
-  const level = (setting ?? "low").trim().toLowerCase();
+  const level = (setting ?? "minimal").trim().toLowerCase();
   if (!["minimal", "low", "medium", "high"].includes(level)) return null;
   if (/gemini-2\.5/.test(model)) {
     const budgets: Record<string, number> = { minimal: 0, low: 0, medium: 2048, high: -1 };
@@ -189,13 +199,132 @@ export function validQuestion(q: GeneratedQuestion): boolean {
   return texts.size === OPTION_COUNT;
 }
 
-async function generate(admin: SupabaseClient, upload: Record<string, any>, callerId: string): Promise<void> {
+/** Where a multi-step job is: its step number and the questions skipped so far. */
+type Job = { step: number; skipped: number };
+
+/**
+ * Sends the PDF and the prompt to Gemini before the time limit. A model that refuses
+ * the reasoning setting is asked again with a lighter one, then with none.
+ */
+async function askGemini(model: string, apiKey: string, contents: unknown, startedAt: number) {
+  const first = thinkingConfigFor(model, Deno.env.get("GEMINI_THINKING"));
+  const attempts: (Record<string, unknown> | null)[] = [first];
+  if (first?.thinkingLevel === "minimal") attempts.push({ thinkingLevel: "low" });
+  if (first) attempts.push(null);
+  const timeoutSeconds = Math.min(Number(Deno.env.get("GEMINI_TIMEOUT_SECONDS")) || DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Math.max(startedAt + timeoutSeconds * 1000 - Date.now(), 0));
+  try {
+    let res!: Response;
+    let raw = "";
+    for (const thinkingConfig of attempts) {
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents,
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: RESPONSE_SCHEMA,
+              temperature: 0.4,
+              ...(thinkingConfig ? { thinkingConfig } : {}),
+            },
+          }),
+        },
+      );
+      raw = await res.text();
+      if (!(res.status === 400 && thinkingConfig && /thinking/i.test(raw))) break;
+      console.warn(`Gemini ${model} refused ${JSON.stringify(thinkingConfig)}; asking again with less.`);
+    }
+    console.log(`Gemini ${model} answered ${res.status} after ${((Date.now() - startedAt) / 1000).toFixed(1)} s.`);
+    return { res, raw };
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error(
+        `Gemini did not finish within ${timeoutSeconds} seconds, so this part was stopped before ` +
+          "Supabase's time limit. Try a shorter PDF (one chapter at a time) or fewer questions.",
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Starts the next step of a job in a fresh invocation (its own time limit). */
+async function continueJob(uploadId: string, callerId: string, job: Job): Promise<boolean> {
+  try {
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-questions-from-document`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ upload_id: uploadId, continue: true, caller_id: callerId, step: job.step, skipped: job.skipped }),
+    });
+    if (!res.ok) console.warn(`Step ${job.step} was refused (${res.status}): ${(await res.text()).slice(0, 200)}`);
+    return res.ok;
+  } catch (err) {
+    console.warn(`Step ${job.step} could not be started:`, err);
+    return false;
+  }
+}
+
+const normalized = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
+async function generate(
+  admin: SupabaseClient,
+  upload: Record<string, any>,
+  callerId: string,
+  job: Job = { step: 1, skipped: 0 },
+): Promise<void> {
   const startedAt = Date.now();
   const uploadId = upload.id as string;
-  const finish = (fields: Record<string, unknown>) =>
-    admin.from("document_uploads")
+  const requested = Math.min(Math.max(Number(upload.requested_count) || 10, 1), 20);
+  const perStep = Math.min(Math.max(Number(Deno.env.get("GEMINI_QUESTIONS_PER_STEP")) || DEFAULT_QUESTIONS_PER_STEP, 1), 20);
+  const doneBefore = Math.max(Number(upload.generated_count) || 0, 0);
+  const model = (Deno.env.get("GEMINI_MODEL") || DEFAULT_MODEL).trim();
+  let tos: { code: string; title: string; text: string; bloom: Record<string, number> } | null = null;
+  let saved = 0;
+  let skipped = job.skipped;
+
+  // The end of the whole job. It is "completed" as soon as one question was saved,
+  // so the questions of earlier steps survive a later failure.
+  const end = async (reason: string | null) => {
+    const total = doneBefore + saved;
+    await admin.from("admin_audit_log").insert({
+      admin_id: callerId || null,
+      action: "generate",
+      target_table: "questions",
+      target_id: uploadId,
+      details: {
+        method: "pdf", model, filename: upload.filename, tos_code: tos?.code ?? null, generated: total, skipped,
+        steps: job.step,
+      },
+    });
+    const skippedNote = skipped > 0 ? `${skipped} question(s) were skipped (incomplete or repeated).` : "";
+    const fields = total === 0
+      ? {
+        status: "failed",
+        generated_count: 0,
+        error_message: reason ?? (skipped > 0
+          ? `All ${skipped} questions from Gemini were incomplete or repeated, so none were saved. Try again or use a clearer PDF.`
+          : "Gemini returned no questions for this document."),
+      }
+      : {
+        status: "completed",
+        generated_count: total,
+        error_message: reason
+          ? `Saved ${total} of ${requested} questions before this happened: ${reason}`
+          : total < requested
+          ? `Saved ${total} of ${requested} questions. ${skippedNote}`.trim()
+          : skippedNote || null,
+      };
+    await admin.from("document_uploads")
       .update({ ...fields, completed_at: new Date().toISOString() })
       .eq("id", uploadId);
+  };
 
   try {
     const apiKey = Deno.env.get("GEMINI_API_KEY");
@@ -205,7 +334,8 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
           "Supabase: Edge Functions -> Secrets -> GEMINI_API_KEY.",
       );
     }
-    const model = (Deno.env.get("GEMINI_MODEL") || DEFAULT_MODEL).trim();
+    const count = Math.min(perStep, requested - doneBefore);
+    if (count <= 0) return await end(null);
 
     // 1. The PDF.
     const { data: blob, error: downloadError } = await admin.storage
@@ -217,7 +347,6 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
     if (new TextDecoder().decode(bytes.subarray(0, 5)) !== "%PDF-") throw new Error("The file is not a PDF.");
 
     // 2. The TOS competency or topic, when the upload names one.
-    let tos: { code: string; title: string; text: string; bloom: Record<string, number> } | null = null;
     if (upload.tos_code) {
       const code = String(upload.tos_code);
       const { data: comp } = await admin.from("tos_competencies")
@@ -238,8 +367,14 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
       if (!tos) throw new Error(`TOS code ${code} was not found. Run supabase_tos_alignment.sql first.`);
     }
 
-    // 3. Ask Gemini.
-    const count = Math.min(Math.max(Number(upload.requested_count) || 10, 1), 20);
+    // 3. The questions earlier steps already wrote, so Gemini does not repeat them.
+    let earlier: string[] = [];
+    if (doneBefore > 0) {
+      const { data: rows } = await admin.from("questions").select("question_text").eq("template_id", uploadId).limit(40);
+      earlier = ((rows ?? []) as { question_text: string }[]).map((r) => r.question_text);
+    }
+
+    // 4. Ask Gemini.
     const bloomMix = tos
       ? Object.entries(tos.bloom).map(([level, n]) => `${level} ${n}`).join(", ")
       : "";
@@ -254,6 +389,10 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
     const difficultyHint = upload.target_difficulty
       ? `Make every question ${upload.target_difficulty} difficulty.`
       : "Mix easy, medium and hard, mostly medium.";
+    const avoidHint = earlier.length
+      ? `\n\nDo not repeat or reword these questions, which were already written from this document:\n- ` +
+        earlier.join("\n- ")
+      : "";
     const prompt =
       `This PDF is review material for the "${upload.subject_id}" subject of the Philippine ` +
       `Criminologist Licensure Examination. Write exactly ${count} multiple-choice questions taken ONLY ` +
@@ -261,8 +400,7 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
       `itself states that law, article or case; otherwise use null. ${topicHint} ${difficultyHint}\n\n` +
       `Each question has exactly ${OPTION_COUNT} options with exactly one correct option, plausible wrong ` +
       `options of similar length to the correct one, and a specific rationale for every option saying why ` +
-      `it is right or wrong. Write in clear English.`;
-
+      `it is right or wrong. Write in clear English.${avoidHint}`;
     const contents = [{
       role: "user",
       parts: [
@@ -270,50 +408,8 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
         { text: prompt },
       ],
     }];
-    const thinking = thinkingConfigFor(model, Deno.env.get("GEMINI_THINKING"));
-    const timeoutSeconds = Math.min(Number(Deno.env.get("GEMINI_TIMEOUT_SECONDS")) || DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Math.max(startedAt + timeoutSeconds * 1000 - Date.now(), 0));
-    const ask = async (thinkingConfig: Record<string, unknown> | null) => {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents,
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: RESPONSE_SCHEMA,
-              temperature: 0.4,
-              ...(thinkingConfig ? { thinkingConfig } : {}),
-            },
-          }),
-        },
-      );
-      return { res: response, raw: await response.text() };
-    };
-    let res: Response;
-    let raw: string;
-    try {
-      ({ res, raw } = await ask(thinking));
-      if (res.status === 400 && thinking && /thinking/i.test(raw)) {
-        console.warn(`Gemini ${model} refused ${JSON.stringify(thinking)}; asking again without it.`);
-        ({ res, raw } = await ask(null));
-      }
-    } catch (err) {
-      if (controller.signal.aborted) {
-        throw new Error(
-          `Gemini did not finish within ${timeoutSeconds} seconds, so the upload was stopped before ` +
-            "Supabase's time limit. Try a shorter PDF (one chapter at a time) or fewer questions.",
-        );
-      }
-      throw err;
-    } finally {
-      clearTimeout(timer);
-    }
-    console.log(`Gemini ${model} answered ${res.status} after ${((Date.now() - startedAt) / 1000).toFixed(1)} s.`);
+    console.log(`Upload ${uploadId}, step ${job.step}: asking for ${count} of ${requested} questions.`);
+    const { res, raw } = await askGemini(model, apiKey, contents, startedAt);
     if (!res.ok) throw new Error(geminiError(res.status, raw));
 
     const data = JSON.parse(raw);
@@ -326,15 +422,15 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
     }
     const parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")) as { questions?: GeneratedQuestion[] };
 
-    // 4. Insert the good questions, inactive, one at a time so one bad or
-    //    duplicate item never loses the whole batch.
-    let inserted = 0;
-    let skipped = 0;
+    // 5. Insert the good questions, inactive, one at a time so one bad or
+    //    repeated item never loses the whole batch.
+    const seen = new Set(earlier.map(normalized));
     for (const q of (parsed.questions ?? []).slice(0, count)) {
-      if (!validQuestion(q)) {
+      if (!validQuestion(q) || seen.has(normalized(q.question_text!))) {
         skipped++;
         continue;
       }
+      seen.add(normalized(q.question_text!));
       const options = q.options!.map((o) => ({
         text: o.text!.trim(),
         is_correct: o.is_correct === true,
@@ -358,7 +454,7 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
         template_id: uploadId,
         version: 1,
         is_active: false,
-        created_by: callerId,
+        created_by: callerId || null,
       };
       if (tos) {
         // Only for a TOS upload: these columns exist once supabase_tos_alignment.sql has run.
@@ -370,40 +466,36 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
         skipped++;
         console.warn(`Skipped one generated question: ${error.message}`);
       } else {
-        inserted++;
+        saved++;
       }
     }
 
-    await admin.from("admin_audit_log").insert({
-      admin_id: callerId,
-      action: "generate",
-      target_table: "questions",
-      target_id: uploadId,
-      details: {
-        method: "pdf", model, filename: upload.filename, tos_code: tos?.code ?? null, generated: inserted, skipped,
-      },
-    });
-
-    if (inserted === 0) {
-      await finish({
-        status: "failed",
-        generated_count: 0,
-        error_message: skipped > 0
-          ? `All ${skipped} questions from Gemini were incomplete or duplicates, so none were saved. Try again or use a clearer PDF.`
-          : "Gemini returned no questions for this document.",
-      });
-    } else {
-      await finish({
-        status: "completed",
-        generated_count: inserted,
-        error_message: skipped > 0 ? `${skipped} question(s) were skipped (incomplete or duplicate).` : null,
-      });
+    // 6. Progress for the app, then the next step or the end. The number of steps is
+    //    planned from the request; a step that falls short leaves more for the next
+    //    one, and a shortfall at the end is reported, not retried.
+    const total = doneBefore + saved;
+    const maxSteps = Math.ceil(requested / perStep);
+    if (total < requested && job.step < maxSteps) {
+      await admin.from("document_uploads").update({ generated_count: total }).eq("id", uploadId);
+      if (await continueJob(uploadId, callerId, { step: job.step + 1, skipped })) return;
+      return await end("the next part could not be started.");
     }
+    await end(null);
   } catch (err) {
     console.error("generate-questions-from-document failed:", err);
-    await finish({ status: "failed", error_message: err instanceof Error ? err.message : String(err) })
-      .then(undefined, () => {});
+    await end(err instanceof Error ? err.message : String(err)).then(undefined, () => {});
   }
+}
+
+/** Replies at once and lets the work finish in the background. */
+function startInBackground(work: Promise<void>, uploadId: string): Response | Promise<Response> {
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime;
+  if (runtime?.waitUntil) {
+    runtime.waitUntil(work);
+    return json({ accepted: true, upload_id: uploadId }, 202);
+  }
+  return work.then(() => json({ done: true, upload_id: uploadId }, 200));
 }
 
 Deno.serve(async (req) => {
@@ -411,10 +503,34 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
 
   const url = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const authHeader = req.headers.get("Authorization") ?? "";
+  let body: Record<string, unknown> = {};
+  try {
+    body = (await req.json()) ?? {};
+  } catch {
+    // handled below
+  }
+  const uploadId = body.upload_id;
+  const admin = createClient(url, serviceKey);
 
-  // The caller must be a signed-in admin. Checked with the caller's own token,
-  // so the same public.is_admin() rule as the rest of the database applies.
+  // The next step of a job this function started itself: only the service role may ask.
+  if (body.continue === true) {
+    if (authHeader !== `Bearer ${serviceKey}`) return json({ error: "Not allowed." }, 403);
+    if (!uploadId || typeof uploadId !== "string") return json({ error: "upload_id is required." }, 400);
+    const { data: row } = await admin
+      .from("document_uploads")
+      .select()
+      .eq("id", uploadId)
+      .eq("status", "processing")
+      .maybeSingle();
+    if (!row) return json({ error: "Nothing to continue for this upload." }, 409);
+    const job = { step: Math.max(Number(body.step) || 2, 2), skipped: Math.max(Number(body.skipped) || 0, 0) };
+    return startInBackground(generate(admin, row, String(body.caller_id ?? row.uploaded_by ?? ""), job), uploadId);
+  }
+
+  // A new job: the caller must be a signed-in admin. Checked with the caller's own
+  // token, so the same public.is_admin() rule as the rest of the database applies.
   const asCaller = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: authHeader } },
   });
@@ -423,16 +539,7 @@ Deno.serve(async (req) => {
   if (!callerId) return json({ error: "Sign in first." }, 401);
   const { data: isAdmin, error: roleError } = await asCaller.rpc("is_admin");
   if (roleError || isAdmin !== true) return json({ error: "Only faculty administrators can do this." }, 403);
-
-  let uploadId: string | undefined;
-  try {
-    uploadId = (await req.json())?.upload_id;
-  } catch {
-    // handled below
-  }
   if (!uploadId || typeof uploadId !== "string") return json({ error: "upload_id is required." }, 400);
-
-  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   // Claim the row: only a pending upload moves to processing, exactly once.
   const { data: claimed, error: claimError } = await admin
@@ -445,13 +552,5 @@ Deno.serve(async (req) => {
   if (claimError) return json({ error: claimError.message }, 500);
   if (!claimed) return json({ error: "This upload was not found or was already processed." }, 409);
 
-  const work = generate(admin, claimed, callerId);
-  // deno-lint-ignore no-explicit-any
-  const runtime = (globalThis as any).EdgeRuntime;
-  if (runtime?.waitUntil) {
-    runtime.waitUntil(work);
-    return json({ accepted: true, upload_id: uploadId }, 202);
-  }
-  await work;
-  return json({ done: true, upload_id: uploadId }, 200);
+  return startInBackground(generate(admin, claimed, callerId), uploadId);
 });

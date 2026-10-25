@@ -89,12 +89,14 @@ void main() {
       expect(u.isWorking, isFalse);
     });
 
-    test('working for more than 5 minutes counts as stuck', () {
-      final old = DateTime.now().subtract(const Duration(minutes: 6)).toUtc().toIso8601String();
-      final u = DocumentUpload.fromJson(row('processing', created: old));
-      expect(u.isStuck(DateTime.now()), isTrue);
+    test('working longer than its steps may take counts as stuck', () {
+      String ago(int minutes) => DateTime.now().subtract(Duration(minutes: minutes)).toUtc().toIso8601String();
+      // 10 questions = 2 steps of 5 = up to 8 minutes.
+      expect(DocumentUpload.fromJson(row('processing')).stuckAfter, const Duration(minutes: 8));
+      expect(DocumentUpload.fromJson(row('processing', created: ago(9))).isStuck(DateTime.now()), isTrue);
+      expect(DocumentUpload.fromJson(row('processing', created: ago(6))).isStuck(DateTime.now()), isFalse);
       expect(DocumentUpload.fromJson(row('processing')).isStuck(DateTime.now()), isFalse);
-      expect(DocumentUpload.fromJson(row('completed', created: old)).isStuck(DateTime.now()), isFalse);
+      expect(DocumentUpload.fromJson(row('completed', created: ago(9))).isStuck(DateTime.now()), isFalse);
     });
 
     test('missing fields fall back safely', () {

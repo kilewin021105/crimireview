@@ -1811,6 +1811,61 @@ You uploaded a PDF from Generate from PDF, and it ended with "This took too long
 
 ---
 
+## 2026-10-25 — Session 72: "Gemini did not finish within 120 seconds" — the work is split into steps (same branch)
+
+The next upload of the same PDF ended as **Failed** with "Gemini did not finish within 120 seconds…".
+
+**What happened**
+- The Session 71 deadline worked: the upload was marked failed with a reason instead of being killed silently.
+- The logs show no "refused the reasoning setting" warning, so Gemini accepted it. Gemini was simply too slow to write 10 questions from a 4.2 MB PDF in one call.
+- One call can't take longer: Supabase's free plan stops every run of a function after 150 seconds.
+
+**Fix in `supabase/functions/generate-questions-from-document/index.ts`**
+- **5 questions per step, each step in a fresh run.**
+  - The function asks Gemini for at most 5 questions.
+  - When the request is bigger, the function then calls itself to start the next step. Each run has its own 150-second limit.
+  - 10 questions = 2 steps, and 20 questions = 4 steps.
+  - Only the function itself can start a next step. That call (`continue: true`) must carry the service role key; anyone else gets `403`. If the upload is no longer processing, the answer is `409`.
+- **No repeats across steps.** Each later step tells Gemini which questions the earlier steps already wrote. A question that is the same as an earlier one (ignoring case and spaces) is skipped.
+- **Earlier questions are kept.** If a later step fails, the upload ends as completed with the questions saved so far, for example "Saved 5 of 10 questions before this happened: …". Examples of a failed step: Gemini's limit, the deadline, or a next step that can't be started.
+  - It is marked failed only when no question was saved at all.
+- **The number of steps is fixed by the request.** A step that falls short asks for more in the next step, and a shortfall at the end is reported, not retried.
+- **Minimal reasoning by default** (was low). If a model refuses that setting, the function asks with low, then with none.
+- **New optional secret** `GEMINI_QUESTIONS_PER_STEP` (default 5). Use 3 if a step still runs out of time.
+- One audit row per upload, as before; it now also records the number of steps.
+
+**App**
+- `lib/services/document_generation_service.dart`:
+  - The "probably stopped" limit now grows with the request: 3 minutes per step plus 2. 10 questions = 8 minutes; it was 5 minutes for any request.
+  - `DocumentUpload.questionsPerStep = 5` matches the function's default.
+- `lib/screens/admin/admin_document_generation_screen.dart`:
+  - While an upload works, the card shows "Writing questions... 5 of 10".
+  - After uploading, the message says the questions are written 5 at a time and each part takes a minute or two.
+- `test/document_generation_test.dart`: the stuck test checks the new limit (8 minutes for 10 questions).
+
+**Checks**
+- Edge Function under Node 24 with stand-ins: **49 of 49 pass**. The 9 new or changed checks cover:
+  - 10 questions in steps of 4: calls for 4, 4 and 2, two fresh runs, one audit row;
+  - later steps are given the earlier questions;
+  - next steps are started with the service key;
+  - a later step hitting Gemini's limit keeps the first 3 of 6;
+  - repeated questions are skipped and the job still ends after its planned steps;
+  - `continue` is refused without the service key (`403`) and for an upload that is no longer processing (`409`);
+  - a refused next step ends the job as completed with the first part;
+  - the reasoning fallback goes minimal → low → none.
+- `flutter test`: 105 passed, 1 skipped. Screenshot sweep of the PDF screen: 36 renders pass. `flutter analyze` on the changed Dart files: no issues.
+- **Not checked:**
+  - a real Gemini call (no key here, and you shouldn't send one), so how long one 5-question step takes on your PDF is not known yet;
+  - whether Supabase accepts the function's call to itself. If it refuses, the upload ends with the first 5 questions and says "the next part could not be started", and the function's logs show the refusal.
+- **Limit:** if you set `GEMINI_QUESTIONS_PER_STEP` below 5, the app may call a long request "probably stopped" while it is still running. The app's limit assumes steps of 5.
+
+**What you need to do**
+1. Redeploy `generate-questions-from-document` with the new `index.ts`. It becomes version 9.
+2. Remove the failed upload with the trash icon.
+3. Upload again with **Subject: Law Enforcement Administration** and **Target in the TOS: LEA-3**, 10 questions. Expect about 2–4 minutes.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **On branch `adaptive-focus` there is no question generator in the app** (Session 61); the two notes below describe the feature branches.

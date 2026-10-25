@@ -47,9 +47,17 @@ class DocumentUpload {
   bool get isFailed => status == 'failed';
   bool get hasQuestions => status == 'completed' && generatedCount > 0;
 
-  /// A request still "working" after this long almost certainly died with
-  /// the function (it gives up well before that), so the screen says so.
-  bool isStuck(DateTime now) => isWorking && now.difference(createdAt) > const Duration(minutes: 5);
+  /// The Edge Function writes at most this many questions per step
+  /// (GEMINI_QUESTIONS_PER_STEP, default 5); every step runs in a fresh
+  /// invocation and gives up after two minutes.
+  static const int questionsPerStep = 5;
+
+  /// How long all the steps of this request may take, with room to spare.
+  Duration get stuckAfter => Duration(minutes: 3 * max<int>(1, (requestedCount / questionsPerStep).ceil()) + 2);
+
+  /// A request still "working" after [stuckAfter] almost certainly died with
+  /// the function (each step gives up well before that), so the screen says so.
+  bool isStuck(DateTime now) => isWorking && now.difference(createdAt) > stuckAfter;
 
   factory DocumentUpload.fromJson(Map<String, dynamic> json) => DocumentUpload(
         id: (json['id'] ?? '').toString(),

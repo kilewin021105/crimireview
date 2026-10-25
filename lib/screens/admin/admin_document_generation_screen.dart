@@ -140,7 +140,10 @@ class _AdminDocumentGenerationScreenState extends State<AdminDocumentGenerationS
         _sending = false;
         _file = null;
       });
-      showAppSnack(context, 'Uploaded. Gemini is writing the questions; this usually takes under a minute.',
+      showAppSnack(
+          context,
+          'Uploaded. CrimiReview writes ${DocumentUpload.questionsPerStep} questions at a time; '
+          'each part takes a minute or two.',
           tone: BannerTone.success, icon: Icons.auto_awesome_rounded);
       _load(quiet: true);
     } catch (e) {
@@ -407,7 +410,11 @@ class _AdminDocumentGenerationScreenState extends State<AdminDocumentGenerationS
     final subject = CriminologySubjects.getById(u.subjectId);
     final stuck = u.isStuck(now);
     final (String label, Color color, IconData icon) = u.isWorking && !stuck
-        ? ('Writing questions...', p.info, Icons.hourglass_top_rounded)
+        ? (
+            u.generatedCount > 0 ? 'Writing questions... ${u.generatedCount} of ${u.requestedCount}' : 'Writing questions...',
+            p.info,
+            Icons.hourglass_top_rounded,
+          )
         : u.hasQuestions
             ? ('${u.generatedCount} question${u.generatedCount == 1 ? '' : 's'} to review', p.success, Icons.task_alt_rounded)
             : ('Failed', p.danger, Icons.error_outline_rounded);
