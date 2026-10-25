@@ -1661,6 +1661,42 @@ You said your adviser requires every question to follow the Criminologist Licens
 3. Have the criminology faculty review and approve the drafts in Admin Panel → TOS coverage, checking each against the current law.
 4. The manuscript (Chapters 1-4) does not mention the TOS alignment yet.
 
+## 2026-10-25 — Session 69: the TOS files went live (same branch)
+
+**Live check (read-only)**
+- On 2026-10-25 you ran `supabase_tos_alignment.sql` and `supabase_tos_bank.sql` in the SQL Editor and redeployed `generate-questions-from-document` with the new `index.ts`.
+- Checked on the live project with the app's public key:
+  - `tos_topics` has 37 rows and `tos_competencies` has 146, so the alignment file ran;
+  - `admin_tos_coverage()` exists and refuses a logged-out caller ("Only faculty can view TOS coverage");
+  - the function still checks the sign-in token before it runs.
+- **Not checked from here:** the question counts and the function's version number. This session has no Supabase connector, and the public key cannot read inactive questions.
+- To check the counts yourself, run this read-only query in the SQL Editor. It was tested on the local copy after both files ran, and returned the expected column exactly:
+
+```sql
+SELECT 'TOS topics' AS what, COUNT(*)::text AS found, '37' AS expected FROM public.tos_topics
+UNION ALL SELECT 'TOS competencies', COUNT(*)::text, '146' FROM public.tos_competencies
+UNION ALL SELECT 'New TOS questions (active)', COUNT(*) || ' (' || COUNT(*) FILTER (WHERE is_active) || ')', '600 (0)'
+  FROM public.questions WHERE template_id = 'tos_2024'
+UNION ALL SELECT 'Old questions linked to a TOS topic', COUNT(*)::text, '742'
+  FROM public.questions WHERE tos_code IS NOT NULL AND template_id IS DISTINCT FROM 'tos_2024'
+UNION ALL SELECT 'Old questions students can see', COUNT(*)::text, '726'
+  FROM public.questions WHERE is_active AND template_id IS DISTINCT FROM 'tos_2024'
+UNION ALL SELECT 'Old questions switched off by the alignment', COUNT(*)::text, '33'
+  FROM public.tos_alignment_backup b JOIN public.questions q ON q.id = b.question_id
+ WHERE b.old_is_active AND NOT q.is_active
+UNION ALL SELECT 'Upload form can target the TOS', COUNT(*)::text, '1'
+  FROM information_schema.columns
+ WHERE table_schema = 'public' AND table_name = 'document_uploads' AND column_name = 'tos_code';
+```
+
+- The expected numbers come from the 759 imported questions. If faculty added or approved other questions after October 22, the "students can see" count is higher by that many.
+
+**Still to do**
+- A new app build from this branch: the TOS coverage screen, the editor's TOS pickers, the PDF upload's TOS target and the new study modules exist only there.
+- Faculty review and approval of the 600 drafts.
+- One real TOS-targeted PDF upload. It is also the first real test of the Gemini key.
+- Pushing the branch, the release, and the manuscript.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
