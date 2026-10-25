@@ -1904,10 +1904,15 @@ You deployed version 9 and uploaded twice more (10 questions, then 5). Both fail
   - a real call to `gemini-3.5-flash-lite` (no key here), so its speed on your PDF is not known;
   - whether your API key's project has access to that model. A 404 or 429 would say so in the upload's message.
 
+**Deployed (with your yes, through the Supabase connector)**
+- `generate-questions-from-document` is now **version 11**, active, with Verify JWT on.
+- Version 10 had been deployed in between, apparently from the dashboard.
+- Version 11 was read back: it has the new default model and the streaming code.
+- The logs show no upload after 12:11 UTC, so version 11 has not run yet.
+
 **What you need to do**
-1. Redeploy `generate-questions-from-document` with the new `index.ts`. It becomes version 10.
-2. In *Edge Functions → Secrets*, check for a `GEMINI_MODEL` secret. If there is one, delete it or set it to `gemini-3.5-flash-lite`.
-3. Upload the PDF again: Law Enforcement Administration, LEA-3, 5 or 10 questions.
+1. In *Edge Functions → Secrets*, check for a `GEMINI_MODEL` secret. If there is one, delete it or set it to `gemini-3.5-flash-lite`.
+2. Upload the PDF again: Law Enforcement Administration, LEA-3, 5 or 10 questions.
 
 ---
 
