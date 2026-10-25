@@ -1950,6 +1950,25 @@ You deployed version 9 and uploaded twice more (10 questions, then 5). Both fail
 - Built from the working tree, which includes your uncommitted `pubspec.lock` (with `file_picker` 11.0.3). That lock file is not in the commit.
 - **Not checked:** running the APK on a phone. No device is connected and the Android emulator is not installed. Tests were last run in Session 72 (105 passed, 1 skipped); no Dart code changed since.
 
+**Published (you asked: "publish it after you done building it")**
+- **Branch pushed:** `tos-aligned-bank` is now on GitHub at `94c84e2`. A release tag needs a commit that exists there.
+  - `main` is unchanged and nothing was merged; a pull request is still yours to open and merge.
+  - Before pushing, the 18 commits were scanned for API keys, tokens, passwords and private keys; none were found. The only email address is the placeholder `juan@example.com`.
+- **Release:** [v1.0.2](https://github.com/kilewin021105/crimireview/releases/tag/v1.0.2), published 2026-10-25 14:27 UTC and marked latest. Its tag points at `94c84e2`, and its asset is `app-release.apk` (61,849,151 bytes).
+- **The upload took three tries on a slow connection.**
+  - The first two stalled ("Upload body timed out due to inactivity", HTTP 408), and GitHub could not be reached for a while.
+  - During the retries the release was kept as a draft, so the website went on serving v1.0.1 and its link never broke.
+  - Each half-finished upload was deleted before the next try.
+  - The GitHub token was read from Git's credential store into a temporary file that was deleted after each try. It was never printed.
+- **Verified:**
+  - `crimireview.app/download` → `www.crimireview.app/download` → `…/releases/latest/download/app-release.apk` → `…/releases/download/v1.0.2/app-release.apk`.
+  - The file downloaded from there has SHA-256 `ea8b0553…40e4`, the same as the local build.
+- **Still open before you announce it:**
+  - The website's privacy page lists Supabase, Resend and Google sign-in. It does not say that a faculty member's PDFs go to Google Gemini, or that faculty can open a student's record.
+  - The 600 TOS questions and the module notes are AI-assisted drafts, and the release notes say so. Faculty review is still owed.
+  - The 20 generated LEA questions sit under Criminal Law.
+  - The APK is still debug-signed.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
