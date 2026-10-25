@@ -1,78 +1,328 @@
 {
-  "id": "criminal_jurisprudence",
-  "title": "Criminal Law and Jurisprudence",
-  "description": "Study of criminal law, procedure, evidence, and court testimony for the Philippine criminology board examination.",
-  "totalItems": 140,
-  "chapters": [
+ "id": "criminal_jurisprudence",
+ "title": "Criminal Law and Jurisprudence",
+ "description": "Study module for Criminal Law and Jurisprudence (20% of the Criminologist Licensure Examination), organized by the topics and competencies of the PRC Table of Specifications.",
+ "source": "PRB of Criminology Res. No. 02 s. 2024, as amended by Res. No. 06 s. 2025",
+ "totalItems": 100,
+ "status": "Written with AI assistance from the TOS competencies and the laws they name; for faculty review (content/tos/SOURCES.md).",
+ "chapters": [
+  {
+   "number": 1,
+   "code": "CLJ-1",
+   "title": "Introduction to the Criminal Justice System",
+   "itemCount": 5,
+   "introduction": "The criminal justice system is made up of the institutions that prevent crime, enforce the law, prosecute and try offenders, and correct them. The Philippine system has five pillars: law enforcement, prosecution, courts, correction and the community. This chapter shows what each pillar does and how a case moves from one to the next.",
+   "content": "## Introduction to the Criminal Justice System\n\n### 1.1 The law enforcement pillar\n\nTOS competency 1.1 (2 items): Explain the role and functions of the following law enforcement agencies: PNP, NBI, BFP and PDEA in the Criminal Justice System.\n\n- The PNP (R.A. 6975, as amended by R.A. 8551) is the national police force, civilian in character, under the DILG and administered by NAPOLCOM.\n- The NBI (R.A. 10867) is attached to the DOJ and investigates crimes of national interest, including transnational and sophisticated crimes.\n- PDEA leads the enforcement of the Comprehensive Dangerous Drugs Act; the Dangerous Drugs Board makes policy.\n- The BFP enforces the Fire Code (R.A. 9514) and investigates fires and arson; the Bureau of Immigration, the Bureau of Customs and the Philippine Coast Guard also enforce laws.\nMost cases enter the system here, through a complaint, a police report or an arrest.\n\n### 1.2 The prosecution pillar\n\nTOS competency 1.2 (1 item): Discuss the role of the prosecutor in the administration of justice specifically in conducting preliminary investigation and inquest proceedings.\n\n- The National Prosecution Service of the DOJ prosecutes crimes in the name of the People of the Philippines.\n- Preliminary investigation asks whether there is sufficient ground to believe a crime was committed and the respondent is probably guilty. It is required for offenses punishable by at least 4 years, 2 months and 1 day (Rule 112, Sec. 1).\n- Inquest is a summary inquiry into a warrantless arrest, to decide whether the person should be charged and kept in custody.\n- The Office of the Ombudsman investigates and prosecutes public officers.\n\n### 1.3 The court pillar\n\nTOS competency 1.3 (1 item): Describe the hierarchy of courts and the jurisdiction of trial courts.\n\n- First-level courts (MeTC, MTC, MTCC, MCTC) try offenses punishable by imprisonment not exceeding six years (B.P. 129, as amended by R.A. 7691).\n- Regional Trial Courts try offenses punishable by more than six years and hear appeals from first-level courts.\n- The Court of Appeals reviews decisions of the RTC; the Supreme Court is the court of last resort.\n- The Sandiganbayan tries graft and office-related offenses of officials with salary grade 27 or higher (P.D. 1606, as amended by R.A. 10660).\n\n### 1.4 The correction and community pillars\n\nTOS competency 1.4 (1 item): Understand the role and function of BJMP and BUCOR in the criminal Justice System\n\n- The BJMP (under the DILG) runs district, city and municipal jails; provincial jails belong to the provincial governments.\n- The Bureau of Corrections (under the DOJ, R.A. 10575) keeps national prisoners in the national penitentiaries.\n- The Parole and Probation Administration supervises probationers and parolees; the Board of Pardons and Parole grants parole and recommends executive clemency.\n- The community pillar includes families, schools, churches, NGOs, barangays and the media: it reports crime, settles disputes through barangay justice and accepts former offenders back.\n",
+   "keyPoints": [
     {
-      "number": 1,
-      "title": "Criminal Law Book I",
-      "itemCount": 47,
-      "introduction": "This chapter covers Criminal Law Book I with 47 review items essential for the board examination.",
-      "content": "## Criminal Law Book I\n\nStudy the following concepts and review items related to Criminal Law Book I. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- The three main theories are Classical (free will), Positivist (determinism), and Eclectic (combination of both)\n- Under RA 9344, a child below 15 years old is exempt from criminal liability (absolute irresponsibility)\n- Mala in se are acts that are inherently wrong or evil, such as murder, theft, and rape\n- Mala prohibita are acts that are wrong only because they are prohibited by statute, like illegal parking\n- A felony requires: (1) an act or omission, (2) punishable by the RPC, and (3) done with deceit or fault\n- Dolo refers to deceit or malice - the deliberate intent to do an unlawful act\n- Culpa refers to fault or negligence - lack of foresight or lack of skill\n- Aberratio ictus is mistake in the blow - when the offender hits a different person due to lack of skill or poor aim\n\n### Review Items (47 total):\n"
+     "code": "CLJ-1.1",
+     "title": "The law enforcement pillar",
+     "note": "Law enforcement agencies prevent crime, investigate offenses and arrest offenders; PDEA is the lead agency against illegal drugs (R.A. 9165, Sec. 82)."
     },
     {
-      "number": 2,
-      "title": "Justifying Circumstances",
-      "itemCount": 4,
-      "introduction": "This chapter covers Justifying Circumstances with 4 review items essential for the board examination.",
-      "content": "## Justifying Circumstances\n\nStudy the following concepts and review items related to Justifying Circumstances. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Insanity is an exempting circumstance under Article 12, not a justifying circumstance\n- Self-defense requires: (1) unlawful aggression, (2) reasonable necessity of means, and (3) lack of sufficient provocation\n- Unlawful aggression is the most essential element - without it, there is no self-defense\n- For defense of stranger, the defender must not be induced by revenge, resentment, or other evil motive\n\n### Review Items (4 total):\n"
+     "code": "CLJ-1.2",
+     "title": "The prosecution pillar",
+     "note": "Prosecutors decide whether there is probable cause to bring a person to court, through preliminary investigation or inquest."
     },
     {
-      "number": 3,
-      "title": "Criminal Law Book II",
-      "itemCount": 34,
-      "introduction": "This chapter covers Criminal Law Book II with 34 review items essential for the board examination.",
-      "content": "## Criminal Law Book II\n\nStudy the following concepts and review items related to Criminal Law Book II. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Murder is punishable by Reclusion Perpetua to Death under Article 248 of the RPC\n- Murder is homicide with qualifying circumstances like treachery, evident premeditation, or cruelty\n- Parricide is the killing of one's father, mother, child, or spouse.\n- Infanticide is the killing of a child less than 3 days old (72 hours)\n- Homicide becomes murder when attended by qualifying circumstances like treachery, evident premeditation, etc\n- Robbery with homicide is a special complex crime where killing occurs by reason or on occasion of robbery\n- Robbery involves violence against or intimidation of persons, or force upon things, while theft does not\n- Estafa (swindling) involves defrauding another through abuse of confidence, deceit, or fraudulent means\n\n### Review Items (34 total):\n"
+     "code": "CLJ-1.3",
+     "title": "The court pillar",
+     "note": "Courts try cases and decide guilt; which court hears a case depends on the penalty and, for public officers, on salary grade."
     },
     {
-      "number": 4,
-      "title": "Criminal Procedure",
-      "itemCount": 21,
-      "introduction": "This chapter covers Criminal Procedure with 21 review items essential for the board examination.",
-      "content": "## Criminal Procedure\n\nStudy the following concepts and review items related to Criminal Procedure. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Preliminary investigation determines whether there is probable cause to charge a person with an offense\n- Arraignment is the formal reading of the criminal information to the accused and asking for their plea\n- Bail is the security given for the release of a person in custody to guarantee their appearance in court\n- Bail is a matter of right before conviction for offenses not punishable by death, reclusion perpetua, or life imprisonment\n- A warrant of arrest is a written order issued by a judge directing law enforcement to arrest a person\n- Warrantless arrests are allowed: (1) in flagrante delicto, (2) hot pursuit, (3) escaped prisoner\n- In flagrante delicto means the person is caught in the actual commission of a crime\n- A subpoena is a court order requiring a person to appear in court or produce documents\n\n### Review Items (21 total):\n"
-    },
-    {
-      "number": 5,
-      "title": "Rules of Evidence",
-      "itemCount": 16,
-      "introduction": "This chapter covers Rules of Evidence with 16 review items essential for the board examination.",
-      "content": "## Rules of Evidence\n\nStudy the following concepts and review items related to Rules of Evidence. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Criminal cases require proof beyond reasonable doubt to convict the accused\n- Hearsay is testimony about what the witness heard from others, not from personal knowledge\n- Evidence obtained as a result of an illegal search or seizure is inadmissible in court\n- Circumstantial evidence proves facts from which the commission of a crime may be inferred\n- Corpus delicti is the body of the crime - proof that a crime has actually been committed\n- Direct evidence proves a fact directly without need for inference\n- Circumstantial evidence requires inference to connect it to the fact in issue\n- Testimonial evidence is oral testimony given by a witness in court\n\n### Review Items (16 total):\n"
-    },
-    {
-      "number": 6,
-      "title": "Exempting Circumstances",
-      "itemCount": 3,
-      "introduction": "This chapter covers Exempting Circumstances with 3 review items essential for the board examination.",
-      "content": "## Exempting Circumstances\n\nStudy the following concepts and review items related to Exempting Circumstances. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Minority (below 15 years old) is an exempting circumstance under Article 12 of the RPC\n- Exempting circumstances remove criminal liability but civil liability may still exist\n- An imbecile has a mental age of 2-7 years, while an idiot has a mental age below 2 years\n\n### Review Items (3 total):\n"
-    },
-    {
-      "number": 7,
-      "title": "Penalties and Punishment",
-      "itemCount": 6,
-      "introduction": "This chapter covers Penalties and Punishment with 6 review items essential for the board examination.",
-      "content": "## Penalties and Punishment\n\nStudy the following concepts and review items related to Penalties and Punishment. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Reclusion Perpetua has a duration of 20 years and 1 day to 40 years\n- Reclusion Temporal has a duration of 12 years and 1 day to 20 years\n- Prision Mayor has a duration of 6 years and 1 day to 12 years\n- Prision Correccional has a duration of 6 months and 1 day to 6 years\n- Arresto Mayor has a duration of 1 month and 1 day to 6 months\n- Arresto Menor has a duration of 1 day to 30 days\n\n### Review Items (6 total):\n"
-    },
-    {
-      "number": 8,
-      "title": "Mitigating Circumstances",
-      "itemCount": 2,
-      "introduction": "This chapter covers Mitigating Circumstances with 2 review items essential for the board examination.",
-      "content": "## Mitigating Circumstances\n\nStudy the following concepts and review items related to Mitigating Circumstances. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Voluntary surrender is a mitigating circumstance that reduces the penalty\n- Privileged mitigating circumstances reduce the penalty by one or two degrees (e.g.,  minority, incomplete self-defense)\n\n### Review Items (2 total):\n"
-    },
-    {
-      "number": 9,
-      "title": "Court Testimony",
-      "itemCount": 2,
-      "introduction": "This chapter covers Court Testimony with 2 review items essential for the board examination.",
-      "content": "## Court Testimony\n\nStudy the following concepts and review items related to Court Testimony. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- The best evidence rule requires that the original document be presented when its contents are the subject of inquiry\n- A hostile witness shows antagonism and may be cross-examined by the party who called them\n\n### Review Items (2 total):\n"
-    },
-    {
-      "number": 10,
-      "title": "Aggravating Circumstances",
-      "itemCount": 5,
-      "introduction": "This chapter covers Aggravating Circumstances with 5 review items essential for the board examination.",
-      "content": "## Aggravating Circumstances\n\nStudy the following concepts and review items related to Aggravating Circumstances. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Treachery means employing means that ensure the commission of the crime without risk from the victim's defense.\n- Evident premeditation requires (1) determination to commit crime, (2) act showing determination, (3) sufficient time between determination and execution\n- A recidivist is one who, at the time of trial, has been previously convicted of a crime under the same title of the RPC\n- Treachery is employing means, methods, or forms that ensure execution without risk to the offender\n- Evident premeditation requires proof of planning, preparation, and sufficient time to reflect\n\n### Review Items (5 total):\n"
+     "code": "CLJ-1.4",
+     "title": "The correction and community pillars",
+     "note": "The BJMP runs city, municipal and district jails; BuCor keeps national prisoners sentenced to more than three years; the community supports prevention and reintegration."
     }
-  ]
+   ],
+   "keyTerms": [
+    "Five pillars",
+    "PNP",
+    "NBI",
+    "PDEA",
+    "National Prosecution Service",
+    "Inquest",
+    "Preliminary investigation",
+    "First-level courts",
+    "Regional Trial Court",
+    "Sandiganbayan",
+    "BJMP",
+    "BuCor",
+    "Parole and Probation Administration"
+   ]
+  },
+  {
+   "number": 2,
+   "code": "CLJ-2",
+   "title": "Human Rights Education",
+   "itemCount": 5,
+   "introduction": "Human rights limit what the State may do to a person suspected or accused of a crime. This chapter covers the Bill of Rights (Article III of the 1987 Constitution) and the laws and writs that carry out its protections, which every investigator and prosecutor must observe.",
+   "content": "## Human Rights Education\n\n### 2.1 Due process and equal protection\n\nTOS competency 2.1 (1 item): Illustrate the concept of due process of law and equal protection of laws in the administration of justice.\n\n- Procedural due process: notice and a real opportunity to be heard before an impartial body.\n- Substantive due process: the law itself must have a lawful purpose and use reasonable means.\n- Equal protection allows classification if it rests on substantial distinctions, is germane to the purpose of the law, is not limited to existing conditions, and applies equally to all members of the class.\n\n### 2.2 Rights under custodial investigation\n\nTOS competency 2.2 (1 item): Demonstrate the rights of the person under custodial investigation and anti-torture act in conducting criminal investigation.\n\n- Art. III, Sec. 12 and R.A. 7438 protect persons arrested, detained or under custodial investigation.\n- Inviting a suspect to the station for questioning is custodial investigation (R.A. 7438, Sec. 2).\n- An extrajudicial confession must be in writing and signed with counsel, or with a valid waiver before the persons the law names.\n- Torture, force, violence, threats and secret detention places are prohibited (R.A. 9745); a confession obtained this way is inadmissible.\n- Family members, a doctor, a priest or a minister may visit the person at any time.\n\n### 2.3 Searches and seizures\n\nTOS competency 2.3 (1 item): Use the right against unreasonable search and seizure.\n\n- The judge must personally examine the complainant and witnesses under oath, and the warrant must particularly describe the place and the things to be seized.\n- Recognized exceptions: search incident to a lawful arrest, plain view, moving vehicles, consented search, customs searches, stop-and-frisk and exigent circumstances.\n- A neighbor's tip is not enough to search a house without a warrant.\n- The exclusionary rule makes the fruits of the illegal search inadmissible.\n\n### 2.4 Self-incrimination and the rights of the accused\n\nTOS competency 2.4 (1 item): Determine the limitations of the following rights: privacy, freedom of speech and right against self- incrimination.\n\n- No person shall be compelled to be a witness against himself (Art. III, Sec. 17).\n- The accused is presumed innocent and has the right to counsel, to be informed of the accusation, to a speedy, impartial and public trial, and to confront the witnesses (Art. III, Sec. 14).\n- Bail is a right except for offenses punishable by reclusion perpetua when evidence of guilt is strong; excessive bail is not allowed (Art. III, Sec. 13).\n- Cruel, degrading or inhuman punishment is prohibited (Art. III, Sec. 19).\n\n### 2.5 Writs that protect liberty and privacy\n\nTOS competency 2.5 (1 item): Determine judicial remedies of persons whose right to life and liberty are violated (Writ of Habeas Corpus, Writ of Amparo and Habeas data).\n\n- Habeas corpus orders whoever holds a person to bring him to court and justify the detention.\n- The writ of amparo (A.M. No. 07-9-12-SC) covers extralegal killings and enforced disappearances, and threats of them.\n- The writ of habeas data protects a person's privacy in data about his life, liberty or security.\n- The writ of kalikasan protects the right to a balanced and healthful ecology.\n",
+   "keyPoints": [
+    {
+     "code": "CLJ-2.1",
+     "title": "Due process and equal protection",
+     "note": "No person may be deprived of life, liberty or property without due process, nor denied the equal protection of the laws (Art. III, Sec. 1)."
+    },
+    {
+     "code": "CLJ-2.2",
+     "title": "Rights under custodial investigation",
+     "note": "Before custodial questioning, the person must be told of the right to remain silent and to competent and independent counsel; a waiver is valid only in writing and with counsel."
+    },
+    {
+     "code": "CLJ-2.3",
+     "title": "Searches and seizures",
+     "note": "A search needs a warrant from a judge on probable cause, unless a recognized exception applies; evidence from an unlawful search is inadmissible (Art. III, Secs. 2 and 3)."
+    },
+    {
+     "code": "CLJ-2.4",
+     "title": "Self-incrimination and the rights of the accused",
+     "note": "The right against self-incrimination covers only testimonial compulsion; taking fingerprints, photographs or body samples does not violate it."
+    },
+    {
+     "code": "CLJ-2.5",
+     "title": "Writs that protect liberty and privacy",
+     "note": "Habeas corpus targets illegal detention, amparo targets violations or threats to life, liberty and security, and habeas data targets unlawful gathering of personal data."
+    }
+   ],
+   "keyTerms": [
+    "Due process",
+    "Equal protection",
+    "Custodial investigation",
+    "R.A. 7438",
+    "R.A. 9745",
+    "Exclusionary rule",
+    "Search warrant",
+    "Self-incrimination",
+    "Writ of amparo",
+    "Writ of habeas data",
+    "Habeas corpus"
+   ]
+  },
+  {
+   "number": 3,
+   "code": "CLJ-3",
+   "title": "Criminal Law (Book 1)",
+   "itemCount": 20,
+   "introduction": "Book 1 of the Revised Penal Code (Arts. 1-113) sets out the general principles of criminal law: what a felony is, who is liable and how, the circumstances that change liability, the penalties, and how criminal liability ends.",
+   "content": "## Criminal Law (Book 1)\n\n### 3.1 Characteristics of criminal law and kinds of felonies\n\nTOS competency 3.1 (3 items): Recall the different characteristics of criminal law and the nature and elements of felony including the concept of dolo and culpa, and the plurality of crimes.\n\n- Generality: penal laws bind all who live or sojourn in the Philippines, subject to treaties and international law.\n- Territoriality: penal laws apply to acts within Philippine territory, with the exceptions in Article 2.\n- Prospectivity: penal laws act on the future, but apply retroactively when favorable to an accused who is not a habitual criminal (Art. 22).\n- Intentional felonies need freedom, intelligence and intent; culpable felonies come from imprudence, negligence, lack of foresight or lack of skill (Art. 3).\n- A compound crime is one act producing two or more grave or less grave felonies; a complex crime proper is an offense that is a necessary means to commit another (Art. 48).\n\n### 3.2 Persons criminally liable\n\nTOS competency 3.2 (4 items): Classify the participation of persons criminally liable for felonies including conspiracy and proposal.\n\n- Principals (Art. 17): by direct participation, by induction, and by indispensable cooperation.\n- Accomplices (Art. 18) cooperate in the execution by acts that are not indispensable.\n- Accessories (Art. 19) profit from the crime, conceal or destroy its body, or help the principal escape.\n- Spouses, ascendants, descendants, siblings and relatives by affinity in the same degrees are exempt as accessories, unless they profit (Art. 20).\n- Conspiracy and proposal are crimes only where the law punishes them, as in treason, rebellion and sedition (Art. 8). Once the crime is done, conspiracy makes the act of one the act of all.\n\n### 3.3 Stages of execution and classes of felonies\n\nTOS competency 3.3 (3 items): Determine the stages of the commission of felony and its classification based on gravity, and the graduated scale of penalties.\n\n- Attempted: overt acts begin the commission, but the offender does not perform all the acts of execution, for a cause other than his own spontaneous desistance (Art. 6).\n- Frustrated: all acts of execution are performed, but the felony is not produced for causes independent of his will, such as timely medical care of a mortal wound.\n- Preparatory acts, such as planning or buying a weapon, are generally not punished.\n- Grave felonies carry capital or afflictive penalties; less grave, correctional penalties; light, arresto menor or a fine not exceeding P40,000 (Art. 9, as amended by R.A. 10951).\n\n### 3.4 Circumstances affecting criminal liability\n\nTOS competency 3.4 (6 items): Apply the different circumstances affecting criminal liability.\n\n- Justifying (Art. 11): self-defense, defense of relatives, defense of strangers, state of necessity, fulfillment of duty, and obedience to a lawful order. Self-defense needs unlawful aggression, reasonable necessity of the means, and lack of sufficient provocation.\n- In a state of necessity, the persons who benefited bear civil liability (Art. 101).\n- Exempting (Art. 12): insanity, minority under R.A. 9344 (15 and under, or over 15 and under 18 acting without discernment), accident, irresistible force, uncontrollable fear, and insuperable cause. Civil liability may remain.\n- Mitigating (Art. 13): for example, no intention to commit so grave a wrong, sufficient provocation, passion or obfuscation, voluntary surrender and a voluntary plea of guilty.\n- Aggravating (Art. 14): for example, treachery, evident premeditation, abuse of superior strength, nighttime purposely sought, and recidivism.\n- Alternative (Art. 15): relationship, intoxication and degree of education; intoxication aggravates when habitual or intentional.\n\n### 3.5 Extinction of criminal liability\n\nTOS competency 3.5 (4 items): Identify the various mode of extinction of criminal liability in a given scenario.\n\n- Total extinction (Art. 89): death of the convict (with civil liability based solely on the crime, if before final judgment), service of sentence, amnesty, absolute pardon, prescription of the crime or the penalty, and marriage of the offended woman in the cases of Art. 344.\n- Partial extinction (Art. 94): conditional pardon, commutation, and good conduct allowances.\n- Amnesty needs the concurrence of Congress and wipes out the offense; pardon is granted by the President after conviction by final judgment.\n- Prescription of crimes (Art. 90): 20 years for crimes punished by death, reclusion perpetua or reclusion temporal; 15 years for other afflictive penalties; 10 years for correctional penalties (5 for arresto mayor); 1 year for libel; 6 months for oral defamation and slander by deed; 2 months for light offenses.\n",
+   "keyPoints": [
+    {
+     "code": "CLJ-3.1",
+     "title": "Characteristics of criminal law and kinds of felonies",
+     "note": "Criminal law is general, territorial and prospective; felonies are committed by deceit (dolo) or by fault (culpa)."
+    },
+    {
+     "code": "CLJ-3.2",
+     "title": "Persons criminally liable",
+     "note": "Principals take part directly, induce, or cooperate indispensably; accomplices cooperate by previous or simultaneous acts; accessories act after the crime."
+    },
+    {
+     "code": "CLJ-3.3",
+     "title": "Stages of execution and classes of felonies",
+     "note": "A felony is attempted when not all acts of execution are done, frustrated when all are done but the result does not follow, and consummated when all its elements are present."
+    },
+    {
+     "code": "CLJ-3.4",
+     "title": "Circumstances affecting criminal liability",
+     "note": "Justifying circumstances make the act lawful; exempting ones remove criminal liability; mitigating ones lower the penalty; aggravating ones raise it."
+    },
+    {
+     "code": "CLJ-3.5",
+     "title": "Extinction of criminal liability",
+     "note": "Death, service of sentence, amnesty, absolute pardon and prescription totally extinguish criminal liability; conditional pardon, commutation and good conduct allowances do so partially."
+    }
+   ],
+   "keyTerms": [
+    "Generality",
+    "Territoriality",
+    "Prospectivity",
+    "Dolo",
+    "Culpa",
+    "Principal",
+    "Accomplice",
+    "Accessory",
+    "Conspiracy",
+    "Attempted stage",
+    "Frustrated stage",
+    "Justifying circumstance",
+    "Exempting circumstance",
+    "Prescription"
+   ]
+  },
+  {
+   "number": 4,
+   "code": "CLJ-4",
+   "title": "Criminal Law (Book 2)",
+   "itemCount": 30,
+   "introduction": "Book 2 of the Revised Penal Code defines the specific crimes and their penalties. The TOS gives it the largest share of the subject (30 items), together with special penal laws on trafficking, hazing, terrorism and sexual harassment.",
+   "content": "## Criminal Law (Book 2)\n\n### 4.1 Crimes against persons\n\nTOS competency 4.1 (8 items): Analyze the elements of crimes against person specifically murder, homicide, parricide, infanticide, rape, physical injuries and illegal discharge of firearms.\n\n- Parricide (Art. 246): killing one's father, mother, child, legitimate ascendant or descendant, or spouse.\n- Murder (Art. 248): killing with treachery, price or reward, poison, fire, evident premeditation, cruelty or another qualifying circumstance. Homicide (Art. 249) has none.\n- Infanticide (Art. 255): killing a child less than three days old.\n- Physical injuries are graded by incapacity or medical attendance: serious, more than 30 days (Art. 263); less serious, 10 to 30 days (Art. 265); slight, 1 to 9 days (Art. 266).\n- Rape (Art. 266-A, from R.A. 8353) may be by sexual intercourse or by sexual assault; statutory rape covers victims under 16 (R.A. 11648).\n- An offender is liable for the direct consequences of his felony even if different from what he intended (Art. 4).\n\n### 4.2 Crimes against property and personal liberty\n\nTOS competency 4.2 (6 items): Differentiate the crimes against property specifically theft, robbery, brigandage, estafa and malicious mischief and crimes against personal liberty specifically kidnapping and serious illegal detention, unlawful arrest, threats and coercion.\n\n- Robbery (Art. 293) and theft (Art. 308) both need the taking of personal property of another with intent to gain.\n- Estafa (Art. 315) needs deceit or abuse of confidence, and damage.\n- Brigandage (Art. 306): more than three armed persons forming a band to rob in the highway; forming the band is itself the crime.\n- Malicious mischief (Art. 327): deliberately damaging another's property.\n- Serious illegal detention (Art. 267): detention by a private person lasting more than three days, simulating public authority, with serious injuries or threats to kill, or of a minor, a female or a public officer.\n- Grave threats (Art. 282): threatening another with a wrong amounting to a crime.\n\n### 4.3 Crimes against the State, public order and public interest\n\nTOS competency 4.3 (5 items): Apply the elements of other felonies specifically piracy (PD 532 and RPC), arbitrary detention, violation of domicile, assault, alarm and scandal, infidelity in the custody of prisoners, grave scandal, bribery.\n\n- Arbitrary detention (Art. 124): a public officer detains a person without legal ground. Delay in delivery (Art. 125): 12, 18 or 36 hours, for light, correctional or afflictive penalties.\n- Piracy (Art. 122): attack on or seizure of a vessel by persons who are not passengers or crew; mutiny is committed by those on board.\n- Direct assault (Art. 148): an attack on a person in authority or his agent engaged in the performance of duty; barangay tanods are agents of persons in authority.\n- Infidelity in the custody of prisoners: by connivance (Art. 223) or by negligence (Art. 224).\n- Direct bribery (Art. 210): agreeing to do or not do an official act for a gift or promise; indirect bribery (Art. 211): accepting gifts by reason of office; the giver commits corruption of public officials (Art. 212).\n\n### 4.4 Crimes against honor and chastity, and against civil status\n\nTOS competency 4.4 (6 items): Compare the crimes against honor specifically slander by deed and intriguing against honor and crimes against chastity specifically concubinage, adultery, seduction and abduction, including bigamy.\n\n- Libel (Art. 353) is a public and malicious imputation in writing or similar means; slander by deed (Art. 359) is an act that dishonors, such as a slap meant to humiliate.\n- Intriguing against honor (Art. 364): a scheme to blemish reputation, usually rumors whose source is hard to trace.\n- Adultery (Art. 333): a married woman and the man who knows she is married. Concubinage (Art. 334): a husband keeping a mistress in the conjugal dwelling, having intercourse under scandalous circumstances, or cohabiting with her elsewhere.\n- Forcible abduction (Art. 342): taking a woman against her will with lewd designs.\n- Bigamy (Art. 349): a second marriage before the first is legally dissolved or the absent spouse is declared presumptively dead.\n\n### 4.5 Special penal laws\n\nTOS competency 4.5 (5 items): Recall the punishable acts under the following Special Penal Laws: Human Trafficking, Terrorism, Hazing, Safe Space Act.\n\n- Anti-Trafficking in Persons Act (R.A. 9208, as amended by R.A. 10364 and R.A. 11862): recruitment, transport, harboring or receipt of persons by threat, force, fraud or abuse of power, for exploitation.\n- Anti-Hazing Act (R.A. 11053, amending R.A. 8049): hazing is any physical or psychological suffering imposed as a condition for admission or membership.\n- Safe Spaces Act (R.A. 11313) and Anti-Sexual Harassment Act (R.A. 7877, harassment by one with authority, influence or moral ascendancy).\n- Anti-Terrorism Act of 2020 (R.A. 11479), which repealed the Human Security Act (R.A. 9372).\n",
+   "keyPoints": [
+    {
+     "code": "CLJ-4.1",
+     "title": "Crimes against persons",
+     "note": "Relationship makes a killing parricide, a qualifying circumstance makes it murder, and a victim under three days old makes it infanticide; otherwise it is homicide."
+    },
+    {
+     "code": "CLJ-4.2",
+     "title": "Crimes against property and personal liberty",
+     "note": "Robbery is taking with violence, intimidation or force upon things; theft is taking without them; estafa is obtaining property by deceit or abuse of confidence."
+    },
+    {
+     "code": "CLJ-4.3",
+     "title": "Crimes against the State, public order and public interest",
+     "note": "Arbitrary detention is committed by a public officer; direct assault is an attack on a person in authority or an agent performing duty; bribery is an officer's corruption for a gift or promise."
+    },
+    {
+     "code": "CLJ-4.4",
+     "title": "Crimes against honor and chastity, and against civil status",
+     "note": "Libel is written, oral defamation is spoken and slander by deed is an act; adultery and concubinage are prosecuted only on complaint of the offended spouse."
+    },
+    {
+     "code": "CLJ-4.5",
+     "title": "Special penal laws",
+     "note": "Trafficking needs no proof of force or fraud when the victim is a child; presence during hazing is prima facie evidence of participation; the Safe Spaces Act covers harassment in streets, online, at work and in school."
+    }
+   ],
+   "keyTerms": [
+    "Parricide",
+    "Murder",
+    "Homicide",
+    "Infanticide",
+    "Physical injuries",
+    "Rape",
+    "Robbery",
+    "Theft",
+    "Estafa",
+    "Brigandage",
+    "Arbitrary detention",
+    "Direct assault",
+    "Bribery",
+    "Libel",
+    "Concubinage",
+    "Adultery",
+    "Bigamy"
+   ]
+  },
+  {
+   "number": 5,
+   "code": "CLJ-5",
+   "title": "Criminal Evidence",
+   "itemCount": 18,
+   "introduction": "The Rules on Evidence (Rules 128 to 134, revised in 2019) decide what may be used to prove a crime and how much proof is needed. Evidence must be admissible to be considered, and then it is weighed.",
+   "content": "## Criminal Evidence\n\n### 5.1 Burden and quantum of proof\n\nTOS competency 5.1 (2 items): Recall important terminologies like evidence, proof beyond reasonable doubt, substantial evidence, preponderance of evidence, equipoise of evidence, equiponderance of evidence\n\n- Criminal cases: proof beyond reasonable doubt (Rule 133, Sec. 2). Civil cases: preponderance of evidence. Administrative cases: substantial evidence.\n- The burden of proof rests on the prosecution because the accused is presumed innocent.\n- Equipoise rule: when the evidence of both sides is evenly balanced, the party with the burden loses.\n\n### 5.2 Forms of evidence\n\nTOS competency 5.2 (2 items): Identify evidence according to forms.\n\n- A knife shown to the court is object evidence.\n- A letter offered to prove what it says is documentary evidence; offered only to prove that it exists or its condition, it is object evidence.\n- Testimonial evidence is given in court by a competent witness.\n\n### 5.3 Kinds of evidence\n\nTOS competency 5.3 (2 items): Categorize the kinds/classes of evidence.\n\n- An eyewitness to a stabbing gives direct evidence; a witness who saw the accused run off with a bloody knife gives circumstantial evidence.\n- Cumulative evidence is more evidence of the same kind on the same point.\n- Positive testimony that something happened is generally stronger than negative testimony that the witness did not see it.\n\n### 5.4 Admissibility and the hearsay rule\n\nTOS competency 5.4 (6 items): Illustrate the rules of admissibility of evidence in general.\n\n- Admissibility (Rule 128, Sec. 3) is different from weight: admitted evidence may still prove little.\n- Original document rule: when the contents of a document are in issue, the original must be produced, unless an exception applies (Rule 130, Sec. 3).\n- Hearsay is an out-of-court statement offered to prove its truth; a witness testifies only to what he personally knows.\n- A dying declaration is admissible if it concerns the cause and circumstances of the declarant's death, was made under consciousness of impending death, and is offered in a case about his death.\n- Confessions obtained in violation of constitutional rights are excluded even if true.\n\n### 5.5 Offer of and objection to evidence\n\nTOS competency 5.5 (2 items): Explain the manner of offering of evidence and their objections.\n\n- Testimony is offered when the witness is called; documents and objects after the testimonial evidence (Rule 132, Secs. 34-35).\n- Objections to questions are made as soon as the ground is reasonably apparent; late objections are generally waived (Sec. 36).\n- The court rules on the objection, sustaining or overruling it.\n\n### 5.6 Authentication of documents\n\nTOS competency 5.6 (2 items): Discuss the rules for presenting documentary evidence.\n\n- Public documents include official records and notarized documents.\n- A private document is authenticated by anyone who saw it executed, by evidence of the genuineness of the signature or handwriting, or by other evidence (Rule 132, Sec. 20).\n- If the original was lost or destroyed without bad faith, its contents may be proved by a copy, a recital in an authentic document, or testimony.\n\n### 5.7 Sufficiency of evidence\n\nTOS competency 5.7 (2 items): Explain the sufficiency of evidence.\n\n- The circumstances must form an unbroken chain pointing to the accused and excluding other reasonable explanations (Rule 133, Sec. 4).\n- An extrajudicial confession is not enough without evidence of the corpus delicti, the fact that the crime happened (Rule 133, Sec. 3).\n- The testimony of a single credible witness can support a conviction.\n",
+   "keyPoints": [
+    {
+     "code": "CLJ-5.1",
+     "title": "Burden and quantum of proof",
+     "note": "Conviction requires proof beyond reasonable doubt, meaning moral certainty; if the evidence is evenly balanced, the accused is acquitted."
+    },
+    {
+     "code": "CLJ-5.2",
+     "title": "Forms of evidence",
+     "note": "Evidence is object (addressed to the senses), documentary (a writing offered for its contents) or testimonial (from a witness under oath)."
+    },
+    {
+     "code": "CLJ-5.3",
+     "title": "Kinds of evidence",
+     "note": "Direct evidence proves the fact without inference; circumstantial evidence proves facts from which it is inferred; corroborative evidence is of a different kind on the same point."
+    },
+    {
+     "code": "CLJ-5.4",
+     "title": "Admissibility and the hearsay rule",
+     "note": "Evidence is admissible when relevant and not excluded by law; hearsay is generally excluded, but a dying declaration and other exceptions are admitted."
+    },
+    {
+     "code": "CLJ-5.5",
+     "title": "Offer of and objection to evidence",
+     "note": "The court considers only evidence formally offered, with its purpose stated; objections must be made as soon as their ground becomes apparent."
+    },
+    {
+     "code": "CLJ-5.6",
+     "title": "Authentication of documents",
+     "note": "Public documents need no further proof of execution; a private document must be authenticated before it is received as genuine."
+    },
+    {
+     "code": "CLJ-5.7",
+     "title": "Sufficiency of evidence",
+     "note": "Circumstantial evidence convicts when there is more than one circumstance, the facts are proven, and together they show guilt beyond reasonable doubt; a confession needs corroboration of the corpus delicti."
+    }
+   ],
+   "keyTerms": [
+    "Proof beyond reasonable doubt",
+    "Equipoise rule",
+    "Object evidence",
+    "Documentary evidence",
+    "Testimonial evidence",
+    "Circumstantial evidence",
+    "Corroborative evidence",
+    "Hearsay",
+    "Dying declaration",
+    "Original document rule",
+    "Offer of evidence",
+    "Authentication"
+   ]
+  },
+  {
+   "number": 6,
+   "code": "CLJ-6",
+   "title": "Criminal Procedure and Court Testimony",
+   "itemCount": 22,
+   "introduction": "The Rules of Criminal Procedure (Rules 110 to 127) govern a case from the complaint to the judgment: jurisdiction and venue, arrest and search, preliminary investigation, bail, arraignment, trial, and the examination of witnesses in court.",
+   "content": "## Criminal Procedure and Court Testimony\n\n### 6.1 Jurisdiction and venue\n\nTOS competency 6.1 (3 items): Compare the jurisdiction of courts.\n\n- First-level courts: imprisonment not exceeding six years. RTC: more than six years.\n- Sandiganbayan: graft and office-related offenses of officials with salary grade 27 or higher, such as city mayors.\n- A criminal court can try only offenses committed within its territory, and the parties cannot waive this (Rule 110, Sec. 15).\n\n### 6.2 Complaint, information and jurisdiction over the accused\n\nTOS competency 6.2 (2 items): Discuss the fundamental concepts of criminal procedure.\n\n- Both must be in writing and state the offense, its qualifying and aggravating circumstances, and the acts or omissions (Rule 110, Secs. 6-9).\n- A circumstance that is not alleged cannot raise the crime or the penalty.\n- Voluntary appearance or surrender gives the court jurisdiction over the person of the accused.\n\n### 6.3 Rights of the accused at trial\n\nTOS competency 6.3 (3 items): Determine the rights of the accused during trial.\n\n- Rights under Rule 115: presumption of innocence; to be informed of the accusation; to be present and defend in person and by counsel; to testify or not; to confront witnesses; compulsory process; speedy, impartial and public trial; appeal.\n- Affidavits of witnesses who do not appear are generally inadmissible against the accused.\n- He cannot be convicted of murder when the information alleges no qualifying circumstance.\n\n### 6.4 Arrest, search and seizure\n\nTOS competency 6.4 (4 items): Evaluate the procedure in the conduct of arrest (with or without a warrant) and of a search and seizure.\n\n- Rule 113, Sec. 5 lists the three valid warrantless arrests; an arrest days later on a description alone is not hot pursuit.\n- A search warrant is valid for ten days, is served in the day unless it allows otherwise, and the search is made before the occupant or two witnesses of the locality, with a detailed receipt (Rule 126).\n- Plain view: an officer lawfully in place may seize an item whose illegality is immediately apparent.\n- Routine checkpoints are valid if the inspection is visual.\n\n### 6.5 Preliminary investigation, inquest and barangay conciliation\n\nTOS competency 6.5 (4 items): Illustrate the procedure in the filing of cases, conducting preliminary investigation and inquest proceedings, including Barangay Justice System.\n\n- Inquest is for persons lawfully arrested without a warrant; preliminary investigation is a fuller inquiry for those not under arrest (Rule 112).\n- Disputes between residents of the same city or municipality, for offenses punishable by up to one year or a fine up to P5,000, must first go to barangay conciliation (R.A. 7160, Secs. 408-412).\n- Filing without the required conciliation may lead to dismissal.\n\n### 6.6 Bail, arraignment and trial\n\nTOS competency 6.6 (4 items): Utilize the process in the application for bail, arraignment, pre-trial and trial.\n\n- Bail may be by corporate surety, property bond, cash deposit or recognizance (Rule 114).\n- If the accused refuses to plead or pleads conditionally, a plea of not guilty is entered (Rule 116).\n- After the prosecution rests, the accused may file a demurrer to evidence; if filed without leave and denied, he waives the right to present evidence (Rule 119, Sec. 23).\n\n### 6.7 Examination of witnesses and court testimony\n\nTOS competency 6.7 (2 items): Illustrate the procedure in the presentation of witnesses, including child witnesses, particularly, in the conduct of direct examination and cross-examination.\n\n- Leading questions are generally not allowed on direct examination, except for preliminary matters, hostile witnesses, children and similar cases (Rule 132).\n- Cross-examination tests accuracy, truthfulness and bias.\n- The Rule on Examination of a Child Witness allows live-link television, a support person and screens.\n- An ordinary witness states facts he personally knows; an expert may give an opinion on matters of special knowledge.\n",
+   "keyPoints": [
+    {
+     "code": "CLJ-6.1",
+     "title": "Jurisdiction and venue",
+     "note": "Jurisdiction over the offense depends on the penalty; in criminal cases venue is jurisdictional, so the case must be filed where the crime or one of its elements happened."
+    },
+    {
+     "code": "CLJ-6.2",
+     "title": "Complaint, information and jurisdiction over the accused",
+     "note": "A complaint is signed by the offended party or a peace officer, an information by the prosecutor; the court acquires jurisdiction over the accused by arrest or voluntary surrender."
+    },
+    {
+     "code": "CLJ-6.3",
+     "title": "Rights of the accused at trial",
+     "note": "The accused may choose not to testify without any inference of guilt, and has the right to confront and cross-examine the witnesses against him."
+    },
+    {
+     "code": "CLJ-6.4",
+     "title": "Arrest, search and seizure",
+     "note": "A warrantless arrest is valid in flagrante delicto, in hot pursuit of an offense just committed based on personal knowledge, and for escaped prisoners."
+    },
+    {
+     "code": "CLJ-6.5",
+     "title": "Preliminary investigation, inquest and barangay conciliation",
+     "note": "Preliminary investigation is required for offenses punishable by at least 4 years, 2 months and 1 day; a person arrested without a warrant can ask for one only by waiving Art. 125 with counsel."
+    },
+    {
+     "code": "CLJ-6.6",
+     "title": "Bail, arraignment and trial",
+     "note": "Bail is a right before conviction for offenses not punishable by reclusion perpetua or life imprisonment; for those, a hearing decides whether evidence of guilt is strong."
+    },
+    {
+     "code": "CLJ-6.7",
+     "title": "Examination of witnesses and court testimony",
+     "note": "Witnesses are examined in the order direct, cross, re-direct and re-cross; leading questions are allowed on cross-examination; child witnesses may testify with protective measures."
+    }
+   ],
+   "keyTerms": [
+    "Complaint",
+    "Information",
+    "Venue",
+    "In flagrante delicto",
+    "Hot pursuit",
+    "Search warrant",
+    "Plain view",
+    "Preliminary investigation",
+    "Inquest",
+    "Barangay conciliation",
+    "Bail",
+    "Arraignment",
+    "Demurrer to evidence",
+    "Cross-examination"
+   ]
+  }
+ ]
 }

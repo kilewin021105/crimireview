@@ -124,7 +124,8 @@ class Question {
   /// `subject_id`; the mapping happens in [fromJson] / [toSupabaseRow].
   final String subject;
 
-  /// Topic within the subject, e.g. `Justifying Circumstances`.
+  /// Topic within the subject: the PRC TOS topic title, e.g.
+  /// `Criminal Law (Book 1)`.
   ///
   /// Panel note 3: mastery, remediation and "repeat the topic" all key off
   /// this, so it is the unit of the Bayesian Knowledge Tracing model.
@@ -166,6 +167,15 @@ class Question {
   /// (panel note 1); null for hand-authored items.
   final String? templateId;
 
+  /// The TOS topic or competency this item tests, e.g. `CLJ-3.4` (a
+  /// competency) or `CLJ-3` (a whole topic). Null when not linked yet.
+  /// See `lib/models/tos.dart`.
+  final String? tosCode;
+
+  /// Bloom's taxonomy level from the TOS column the item was written for,
+  /// e.g. `Applying`. Null when not set.
+  final String? bloomLevel;
+
   /// Correct index captured at construction, used ONLY as a fallback when no
   /// [AnswerOption.isCorrect] flag is set (e.g. legacy rows keyed purely by
   /// index). -1 means "no fallback recorded".
@@ -186,6 +196,8 @@ class Question {
     required this.source,
     required this.version,
     required this.templateId,
+    this.tosCode,
+    this.bloomLevel,
     required int correctAnswerIndex,
   }) : _correctAnswerIndex = correctAnswerIndex;
 
@@ -218,6 +230,8 @@ class Question {
     QuestionSource source = QuestionSource.admin,
     int version = 1,
     String? templateId,
+    String? tosCode,
+    String? bloomLevel,
   }) {
     final built = answerOptions ??
         (options ?? const <String>[])
@@ -237,6 +251,8 @@ class Question {
       source: source,
       version: version,
       templateId: templateId,
+      tosCode: tosCode,
+      bloomLevel: bloomLevel,
       correctAnswerIndex: correctAnswerIndex ?? -1,
     );
   }
@@ -353,6 +369,8 @@ class Question {
         'source': source.name,
         'version': version,
         'templateId': templateId,
+        'tosCode': tosCode,
+        'bloomLevel': bloomLevel,
       };
 
   /// snake_case row for `public.questions`.
@@ -370,6 +388,10 @@ class Question {
         'source': source.name,
         'version': version,
         'template_id': templateId,
+        // Sent only when set, so saving still works on a database where
+        // supabase_tos_alignment.sql has not been run yet.
+        if (tosCode != null) 'tos_code': tosCode,
+        if (bloomLevel != null) 'bloom_level': bloomLevel,
       };
 
   /// Bullet-proof parser. Accepts, in any mix:
@@ -452,6 +474,8 @@ class Question {
         json,
         const ['templateId', 'template_id'],
       ),
+      tosCode: _readNullableString(json, const ['tosCode', 'tos_code']),
+      bloomLevel: _readNullableString(json, const ['bloomLevel', 'bloom_level']),
       correctAnswerIndex: resolvedIdx,
     );
   }
@@ -469,6 +493,8 @@ class Question {
     QuestionSource? source,
     int? version,
     String? templateId,
+    String? tosCode,
+    String? bloomLevel,
   }) {
     return Question._(
       id: id ?? this.id,
@@ -483,6 +509,8 @@ class Question {
       source: source ?? this.source,
       version: version ?? this.version,
       templateId: templateId ?? this.templateId,
+      tosCode: tosCode ?? this.tosCode,
+      bloomLevel: bloomLevel ?? this.bloomLevel,
       correctAnswerIndex:
           answerOptions != null ? -1 : _correctAnswerIndex,
     );

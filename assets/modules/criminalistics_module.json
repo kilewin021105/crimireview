@@ -1,99 +1,292 @@
 {
-  "id": "criminalistics",
-  "title": "Forensic Science",
-  "description": "Forensic science including identification, ballistics, documents, and DNA analysis.",
-  "totalItems": 140,
-  "chapters": [
+ "id": "criminalistics",
+ "title": "Forensic Science",
+ "description": "Study module for Forensic Science (15% of the Criminologist Licensure Examination), organized by the topics and competencies of the PRC Table of Specifications.",
+ "source": "PRB of Criminology Res. No. 02 s. 2024, as amended by Res. No. 06 s. 2025",
+ "totalItems": 100,
+ "status": "Written with AI assistance from the TOS competencies and the laws they name; for faculty review (content/tos/SOURCES.md).",
+ "chapters": [
+  {
+   "number": 1,
+   "code": "FS-1",
+   "title": "Personal Identification Techniques",
+   "itemCount": 20,
+   "introduction": "Personal identification establishes who a person is from fingerprints, DNA, teeth and other traits. Fingerprints remain the most widely used method because ridge details are unique, permanent and can be classified.",
+   "content": "## Personal Identification Techniques\n\n### 1.1 Other methods of identification and the Henry system\n\nTOS competency 1.1 (6 items): Discuss the other methods of personal identification (DBA, forensic odontology), Henry FBI classification formula and filing system of classified fingerprint cards.\n\n- Finger numbers: right thumb 1 to right little 5; left thumb 6 to left little 10.\n- The primary can range from 1/1 to 32/32, giving 1,024 combinations; cards are filed by the formula so a search can be narrowed.\n- DNA profiling identifies a person except an identical twin, who shares the same nuclear DNA.\n- Forensic odontology identifies persons by their teeth, which survive fire and decay and can be matched with dental records.\n\n### 1.2 Principles, characteristics and patterns of fingerprints\n\nTOS competency 1.2 (6 items): Analyze the principles of fingerprint identification, fingerprint characteristics and patterns\n\n- Loops have one delta, a sufficient recurve and a ridge count of at least one; ulnar loops flow toward the little finger, radial loops toward the thumb.\n- Whorls have two deltas; in a plain whorl the line between the deltas touches or crosses a recurving ridge of the inner area, in a central pocket loop whorl it does not.\n- Plain arches have no delta; tented arches have an upthrust or angle, or lack one of the essentials of a loop.\n- Ridge characteristics include ridge endings, bifurcations, dots, short ridges and enclosures.\n\n### 1.3 Taking prints and developing latent prints\n\nTOS competency 1.3 (6 items): Explain the taking and recording of friction skin (live and post mortem), latent print detection methods and latent print preservation techniques\n\n- Plain (simultaneous) impressions check the order of the rolled ones.\n- Wrinkled fingers of a body from water are restored by injecting a tissue builder under the skin.\n- Porous surfaces: ninhydrin, iodine, silver nitrate. Non-porous: powder, cyanoacrylate fuming. Wet surfaces: small particle reagent.\n- Preserve a print by photographing it with a scale, then lifting or keeping the object.\n\n### 1.4 The ACE-V method\n\nTOS competency 1.4 (2 items): Apply the ACE-V methodology in processing latent prints\n\n- Analysis looks at the latent alone: its quality and features.\n- Comparison places the latent and the known print side by side.\n- Evaluation is the conclusion: identification, exclusion or inconclusive.\n",
+   "keyPoints": [
     {
-      "number": 1,
-      "title": "Personal Identification",
-      "itemCount": 16,
-      "introduction": "This chapter covers Personal Identification with 16 review items essential for the board examination.",
-      "content": "## Personal Identification\n\nStudy the following concepts and review items related to Personal Identification. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Fingerprints are unique to each individual and remain unchanged throughout life\n- The Bertillon System used body measurements (anthropometry) for identification\n- Alphonse Bertillon, a French police officer, developed the anthropometric identification system\n- Fingerprint identification replaced the Bertillon System due to its greater reliability\n- Fingerprints are the most reliable means of identification because they are unique to each person\n- The three general fingerprint patterns are Loop (60-65%), Whorl (30-35%), and Arch (5%)\n- Dactyloscopy is the scientific study and classification of fingerprints\n- AFIS is the Automated Fingerprint Identification System for computerized fingerprint matching\n\n### Review Items (16 total):\n"
+     "code": "FS-1.1",
+     "title": "Other methods of identification and the Henry system",
+     "note": "In the Henry primary classification, whorls score 16 on fingers 1-2, 8 on 3-4, 4 on 5-6, 2 on 7-8 and 1 on 9-10; even fingers form the numerator and odd fingers the denominator, each plus 1."
     },
     {
-      "number": 2,
-      "title": "Dactyloscopy",
-      "itemCount": 13,
-      "introduction": "This chapter covers Dactyloscopy with 13 review items essential for the board examination.",
-      "content": "## Dactyloscopy\n\nStudy the following concepts and review items related to Dactyloscopy. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Dactyloscopy is the scientific study of fingerprints for identification purposes\n- The three main fingerprint patterns are Loop (60-65%), Whorl (30-35%), and Arch (5%)\n- Loop is the most common fingerprint pattern, occurring in 60-65% of all fingerprints\n- Poroscopy is the study of sweat pores on fingerprint ridges for identification\n- Latent prints are invisible fingerprints left by natural skin oils that require development to be seen\n- Patent prints are visible fingerprints made when fingers contaminated with ink, blood, or other substances touch a surface\n- Plastic prints are three-dimensional impressions left on soft surfaces like wax, soap, or putty\n- Light-colored powders like white or gray are used on dark surfaces for contrast\n\n### Review Items (13 total):\n"
+     "code": "FS-1.2",
+     "title": "Principles, characteristics and patterns of fingerprints",
+     "note": "Fingerprints are individual and permanent and fall into patterns; identification rests on ridge characteristics in the same relative positions, not on the pattern alone."
     },
     {
-      "number": 3,
-      "title": "Forensic Ballistics",
-      "itemCount": 27,
-      "introduction": "This chapter covers Forensic Ballistics with 27 review items essential for the board examination.",
-      "content": "## Forensic Ballistics\n\nStudy the following concepts and review items related to Forensic Ballistics. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Forensic Ballistics is the science dealing with firearms, bullets, and related evidence\n- Interior ballistics studies the projectile behavior inside the firearm barrel\n- Exterior ballistics studies the projectile behavior during flight through the air\n- Terminal ballistics studies the projectile behavior upon impact with the target\n- Rifling consists of spiral grooves cut inside the barrel to spin the bullet for accuracy\n- Lands are the raised portions between grooves in a rifled barrel\n- A cartridge is the complete unit containing bullet, case, propellant, and primer\n- The primer is the component that ignites when struck, igniting the propellant\n\n### Review Items (27 total):\n"
+     "code": "FS-1.3",
+     "title": "Taking prints and developing latent prints",
+     "note": "Roll thumbs toward the body and fingers away from it; use ninhydrin on paper and powder on smooth non-porous surfaces; photograph a latent before lifting it."
     },
     {
-      "number": 4,
-      "title": "Questioned Documents Examination",
-      "itemCount": 14,
-      "introduction": "This chapter covers Questioned Documents Examination with 14 review items essential for the board examination.",
-      "content": "## Questioned Documents Examination\n\nStudy the following concepts and review items related to Questioned Documents Examination. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- A questioned document is any document whose authenticity, origin, or authorship is disputed\n- Handwriting analysis examines the unique characteristics of a person's writing.\n- A forged signature is a fraudulent imitation of another person's genuine signature.\n- An exemplar is a known sample of handwriting used for comparison with questioned documents\n- An alteration is any change made to a document after its original creation\n- Obliteration involves covering or removing original writing, often to conceal information\n- A questioned document is one whose authenticity or origin is in dispute\n- Handwriting analysis examines writing characteristics to identify the writer\n\n### Review Items (14 total):\n"
-    },
-    {
-      "number": 5,
-      "title": "Polygraph and Lie Detection",
-      "itemCount": 6,
-      "introduction": "This chapter covers Polygraph and Lie Detection with 6 review items essential for the board examination.",
-      "content": "## Polygraph and Lie Detection\n\nStudy the following concepts and review items related to Polygraph and Lie Detection. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- A polygraph measures physiological responses including blood pressure, pulse, respiration, and skin conductivity\n- The polygraph is the scientific instrument commonly called the lie detector\n- Polygraph measures blood pressure, pulse, respiration, and galvanic skin response\n- The relevant-irrelevant test compares physiological responses between crime-related and neutral questions\n- A polygraph measures physiological responses like heart rate, breathing, and perspiration\n- Polygraph results are generally not admissible as evidence in Philippine courts\n\n### Review Items (6 total):\n"
-    },
-    {
-      "number": 6,
-      "title": "Legal Medicine",
-      "itemCount": 26,
-      "introduction": "This chapter covers Legal Medicine with 26 review items essential for the board examination.",
-      "content": "## Legal Medicine\n\nStudy the following concepts and review items related to Legal Medicine. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Rigor mortis is the stiffening of muscles that occurs after death due to chemical changes\n- Livor mortis is the purplish discoloration of skin due to blood settling after death\n- Algor mortis is the gradual cooling of the body after death\n- An autopsy is the medical examination of a corpse to determine the cause of death\n- A medico-legal officer is a physician who investigates deaths for legal purposes\n- Manner of death refers to how death was brought about: natural, accident, suicide, or homicide\n- Cause of death is the specific disease, injury, or condition that resulted in death\n- Cadaveric spasm is instant rigidity occurring at the moment of death, usually due to violent death\n\n### Review Items (26 total):\n"
-    },
-    {
-      "number": 7,
-      "title": "Police Photography",
-      "itemCount": 7,
-      "introduction": "This chapter covers Police Photography with 7 review items essential for the board examination.",
-      "content": "## Police Photography\n\nStudy the following concepts and review items related to Police Photography. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Crime scene photography documents and preserves the scene as evidence for investigation and court\n- The first photograph should be an overview showing the entire crime scene\n- Medium shots show evidence items in relation to their immediate surroundings\n- A scale or ruler shows the actual size of evidence in photographs\n- Crime scene photography documents the crime scene and evidence through photographs\n- Crime scene photos are taken as overview (general), medium range, and close-up shots\n- Evidence photography documents physical evidence for presentation in court\n\n### Review Items (7 total):\n"
-    },
-    {
-      "number": 8,
-      "title": "DNA Analysis",
-      "itemCount": 12,
-      "introduction": "This chapter covers DNA Analysis with 12 review items essential for the board examination.",
-      "content": "## DNA Analysis\n\nStudy the following concepts and review items related to DNA Analysis. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- DNA can be extracted from various biological samples including blood, saliva, hair, skin cells, and more\n- DNA stands for Deoxyribonucleic Acid, the genetic material in cells\n- CODIS is the Combined DNA Index System, a database of DNA profiles\n- PCR (Polymerase Chain Reaction) amplifies small amounts of DNA for analysis\n- DNA (Deoxyribonucleic acid) is the genetic material found in cells that makes each person unique\n- PCR (Polymerase Chain Reaction) is a technique to amplify small DNA samples\n- DNA can be extracted from blood, saliva, hair roots, skin cells, and other tissues\n- Mitochondrial DNA is inherited maternally and useful when nuclear DNA is degraded\n\n### Review Items (12 total):\n"
-    },
-    {
-      "number": 9,
-      "title": "Forensic Chemistry",
-      "itemCount": 12,
-      "introduction": "This chapter covers Forensic Chemistry with 12 review items essential for the board examination.",
-      "content": "## Forensic Chemistry\n\nStudy the following concepts and review items related to Forensic Chemistry. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- The Luminol test is commonly used to detect trace amounts of blood at crime scenes\n- The Benzidine test is a presumptive test that indicates the possible presence of blood\n- Chromatography is a laboratory technique for separating mixtures into components\n- The Duquenois-Levine test is a color test used to presumptively identify marijuana\n- The Scott test (cobalt thiocyanate) is used to presumptively identify cocaine\n- The Marquis test is used to presumptively identify opiates, amphetamines, and similar drugs\n- Chromatography separates mixtures into components for analysis of drugs, poisons, etc\n- Mass spectrometry identifies substances by measuring the mass of their molecules\n\n### Review Items (12 total):\n"
-    },
-    {
-      "number": 10,
-      "title": "Forensic Photography",
-      "itemCount": 1,
-      "introduction": "This chapter covers Forensic Photography with 1 review items essential for the board examination.",
-      "content": "## Forensic Photography\n\nStudy the following concepts and review items related to Forensic Photography. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Forensic photography documents crime scenes and evidence for investigation\n\n### Review Items (1 total):\n"
-    },
-    {
-      "number": 11,
-      "title": "Toxicology",
-      "itemCount": 1,
-      "introduction": "This chapter covers Toxicology with 1 review items essential for the board examination.",
-      "content": "## Toxicology\n\nStudy the following concepts and review items related to Toxicology. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Postmortem redistribution is drug concentration changes in tissues after death\n\n### Review Items (1 total):\n"
-    },
-    {
-      "number": 12,
-      "title": "Questioned Documents",
-      "itemCount": 3,
-      "introduction": "This chapter covers Questioned Documents with 3 review items essential for the board examination.",
-      "content": "## Questioned Documents\n\nStudy the following concepts and review items related to Questioned Documents. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- A questioned document is any document whose source or authenticity is in dispute\n- A standard document is a known authentic document used for comparison analysis\n- Graphology is the study of handwriting to interpret personality traits (not forensic science)\n\n### Review Items (3 total):\n"
-    },
-    {
-      "number": 13,
-      "title": "Polygraph",
-      "itemCount": 2,
-      "introduction": "This chapter covers Polygraph with 2 review items essential for the board examination.",
-      "content": "## Polygraph\n\nStudy the following concepts and review items related to Polygraph. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- A polygraph measures multiple physiological responses: breathing, blood pressure, pulse, and skin conductivity\n- Control questions establish baseline physiological responses for comparison with relevant questions\n\n### Review Items (2 total):\n"
+     "code": "FS-1.4",
+     "title": "The ACE-V method",
+     "note": "ACE-V is Analysis, Comparison, Evaluation and Verification, the last done independently by a second examiner."
     }
-  ]
+   ],
+   "keyTerms": [
+    "Dactyloscopy",
+    "Henry system",
+    "Primary classification",
+    "Loop",
+    "Whorl",
+    "Arch",
+    "Delta",
+    "Core",
+    "Ridge characteristics",
+    "Latent print",
+    "Ninhydrin",
+    "Cyanoacrylate",
+    "ACE-V",
+    "Forensic odontology",
+    "DNA profiling"
+   ]
+  },
+  {
+   "number": 2,
+   "code": "FS-2",
+   "title": "Forensic Photography",
+   "itemCount": 20,
+   "introduction": "Photographs are the permanent record of a crime scene and of evidence as found. This chapter covers light, cameras, lenses and exposure, and the procedure for photographing scenes and evidence for court.",
+   "content": "## Forensic Photography\n\n### 2.1 Light and the principles of photography\n\nTOS competency 2.1 (6 items): Describe the general principles of photography; types of flash photography and properties, nature and characteristics of light.\n\n- Refraction (bending of light) is how lenses form images; reflection and absorption also shape a photograph.\n- Bounce flash softens light and reduces harsh shadows.\n- Oblique lighting from a low angle shows the relief of impressions such as footprints in dust.\n- Ultraviolet and infrared light reveal things the eye cannot see, such as some inks and stains.\n\n### 2.2 Exposure and crime scene photography\n\nTOS competency 2.2 (8 items): Apply the principles of exposure triangle and the procedures of crime scene and evidence photography.\n\n- Each full stop doubles or halves the light: f/8 at 1/125 equals f/11 at 1/60.\n- On a tripod in dim light, a longer shutter speed keeps ISO low and depth of field great.\n- Close-ups of evidence are taken first without and then with a scale, the camera square to the surface.\n\n### 2.3 Cameras and lenses\n\nTOS competency 2.3 (6 items): Analyze the functions of the basic parts of Digital and manual/analogue cameras and types of lenses.\n\n- Digital cameras use an image sensor in place of film; the body is a light-tight box holding the lens, shutter and sensor.\n- A normal lens has a focal length near the diagonal of the format (about 50 mm on full frame) and a natural perspective.\n- Wide-angle lenses distort shapes near the edges, so they are not used for measurement photos.\n",
+   "keyPoints": [
+    {
+     "code": "FS-2.1",
+     "title": "Light and the principles of photography",
+     "note": "Light travels about 300,000 km per second; visible light is about 400 to 700 nm; doubling the flash distance leaves one-fourth of the light (inverse square law)."
+    },
+    {
+     "code": "FS-2.2",
+     "title": "Exposure and crime scene photography",
+     "note": "A small aperture (f/16) gives great depth of field, a fast shutter freezes motion, and a high ISO adds noise; photograph the scene overall, then mid-range, then close-up, before anything is moved."
+    },
+    {
+     "code": "FS-2.3",
+     "title": "Cameras and lenses",
+     "note": "The shutter controls how long light reaches the sensor and the aperture how much; macro lenses are for small items, wide-angle for whole rooms, telephoto for distant subjects."
+    }
+   ],
+   "keyTerms": [
+    "Exposure triangle",
+    "Aperture",
+    "Shutter speed",
+    "ISO",
+    "Depth of field",
+    "Inverse square law",
+    "Bounce flash",
+    "Oblique lighting",
+    "Refraction",
+    "Macro lens",
+    "Wide-angle lens",
+    "Telephoto lens",
+    "Overall, mid-range and close-up views"
+   ]
+  },
+  {
+   "number": 3,
+   "code": "FS-3",
+   "title": "Forensic Chemistry and Toxicology",
+   "itemCount": 8,
+   "introduction": "Forensic chemistry identifies drugs, poisons and trace materials, and forensic toxicology measures drugs and poisons in the body. Their findings are evidence only if the samples were collected, preserved and kept under an unbroken chain of custody.",
+   "content": "## Forensic Chemistry and Toxicology\n\n### 3.1 Principles and legal aspects\n\nTOS competency 3.1 (2 items): Explain the principles and significance of forensic chemistry & toxicology including the legal aspects of forensic chemistry\n\n- Seized drugs go to the forensic laboratory within 24 hours, and the result is certified by the examiner (R.A. 9165, Sec. 21, as amended).\n- Gaps in the chain of custody have led to acquittals in drug cases.\n- Results are read together with the autopsy and the circumstances.\n\n### 3.2 Preliminary and confirmatory tests\n\nTOS competency 3.2 (2 items): Identify reliable preliminary and confirmatory tests in the examination of biological, physical and trace evidence.\n\n- Kastle-Meyer (phenolphthalein) turning pink is presumptive for blood.\n- Takayama (hemochromogen) and Teichmann (hematin) crystal tests confirm blood; the precipitin test shows whether it is human.\n- Field drug tests are presumptive; the laboratory confirms with instruments such as GC-MS.\n\n### 3.3 Collecting and preserving evidence\n\nTOS competency 3.3 (2 items): Apply the procedure in the collection and preservation of biological evidence (blood, hair, semen), and physical evidence (drugs, fibers, glass, toolmarks)\n\n- Package each item separately and label it to avoid cross-contamination and keep the chain of custody.\n- Heat, sunlight and moisture degrade biological evidence and DNA.\n- Glass, fibers, drugs and toolmarks are packed so they do not rub or mix.\n\n### 3.4 Biological and chemical poisons and antidotes\n\nTOS competency 3.4 (2 items): Compare biological and chemical poisons and its types including its antidotes.\n\n- Biological poisons come from living things, such as venoms and bacterial toxins.\n- Chemical poisons include pesticides, cyanide, heavy metals and corrosives.\n- Naloxone reverses opioid overdose; activated charcoal binds poisons taken by mouth.\n",
+   "keyPoints": [
+    {
+     "code": "FS-3.1",
+     "title": "Principles and legal aspects",
+     "note": "Toxicology identifies and measures drugs and poisons in body samples to show whether they caused or contributed to death; the chain of custody proves the item tested is the item seized."
+    },
+    {
+     "code": "FS-3.2",
+     "title": "Preliminary and confirmatory tests",
+     "note": "A presumptive test only suggests a substance and may give false positives; a confirmatory test identifies it."
+    },
+    {
+     "code": "FS-3.3",
+     "title": "Collecting and preserving evidence",
+     "note": "Air-dry bloodstained items and pack them in paper, never sealed wet in plastic; take known hairs by pulling or combing from several areas, roots included."
+    },
+    {
+     "code": "FS-3.4",
+     "title": "Biological and chemical poisons and antidotes",
+     "note": "Organophosphate poisoning (pinpoint pupils, sweating, salivation) is treated with atropine; snakebite with antivenin; cyanide with nitrites and sodium thiosulfate."
+    }
+   ],
+   "keyTerms": [
+    "Forensic chemistry",
+    "Toxicology",
+    "Chain of custody",
+    "Presumptive test",
+    "Confirmatory test",
+    "Kastle-Meyer",
+    "Takayama test",
+    "Teichmann test",
+    "Precipitin test",
+    "Organophosphate",
+    "Atropine",
+    "Antivenin",
+    "Cyanide"
+   ]
+  },
+  {
+   "number": 4,
+   "code": "FS-4",
+   "title": "Questioned Documents Examination",
+   "itemCount": 16,
+   "introduction": "Questioned document examination decides whether a document or signature is genuine, who wrote it, and whether it was altered. The examiner compares the questioned writing with known standards using magnification and special light.",
+   "content": "## Questioned Documents Examination\n\n### 4.1 Documents, standards and equipment\n\nTOS competency 4.1 (5 items): Describe the kinds of documents and questioned documents, equipment and apparatus used in questioned document examination.\n\n- Requested standards are written on request for comparison, usually by dictation.\n- Public documents are official records and notarized documents; others are private (Rule 132, Sec. 19).\n- Equipment: stereoscopic microscope, magnifiers, UV and infrared light, transmitted light, and the video spectral comparator.\n\n### 4.2 Forgery and handwriting examination\n\nTOS competency 4.2 (9 items): Analyze the process of forgery detection, handwriting examination and signature identification.\n\n- Simple forgery: the name in the forger's own writing. Simulated: a freehand copy. Traced: following a model, sometimes leaving carbon or indented outlines.\n- Disguised writing is the writer changing his own writing to avoid identification.\n- Requested standards: dictate the text, use similar materials, and remove each sample from view.\n- Alterations are examined with UV and infrared light; habitual details weigh more than general appearance.\n\n### 4.3 Counterfeit identification\n\nTOS competency 4.3 (2 items): Explain the procedures in counterfeit identification.\n\n- Feel, look and tilt are the usual checks.\n- Suspected counterfeit notes go to the Bangko Sentral ng Pilipinas for examination.\n- Counterfeiting coins and notes is punished by the Revised Penal Code.\n",
+   "keyPoints": [
+    {
+     "code": "FS-4.1",
+     "title": "Documents, standards and equipment",
+     "note": "A questioned document is one whose authorship or genuineness is disputed; standards are known writings of the person, and collected standards are preferred because they were written naturally."
+    },
+    {
+     "code": "FS-4.2",
+     "title": "Forgery and handwriting examination",
+     "note": "Genuine signatures vary naturally, so two that superimpose exactly suggest tracing; tremor, blunt starts and odd pen lifts suggest a simulated forgery."
+    },
+    {
+     "code": "FS-4.3",
+     "title": "Counterfeit identification",
+     "note": "A genuine banknote has raised intaglio print, a watermark seen against the light, a security thread and color-shifting features; check several features, since a fake may copy one."
+    }
+   ],
+   "keyTerms": [
+    "Questioned document",
+    "Standards",
+    "Collected standards",
+    "Requested standards",
+    "Natural variation",
+    "Simple forgery",
+    "Simulated forgery",
+    "Traced forgery",
+    "Disguised writing",
+    "Line quality",
+    "Stereoscopic microscope",
+    "Ultraviolet light",
+    "Counterfeit"
+   ]
+  },
+  {
+   "number": 5,
+   "code": "FS-5",
+   "title": "Lie Detection Techniques",
+   "itemCount": 14,
+   "introduction": "Lie detection uses the polygraph to record physiological responses while a subject answers questions. Results depend on the examiner's skill, the subject's condition and the test design, and courts treat them only as investigative aids.",
+   "content": "## Lie Detection Techniques\n\n### 5.1 Methods of detecting deception and factors affecting accuracy\n\nTOS competency 5.1 (4 items): Discuss the methods of detecting deception, and factors affecting accuracy of polygraph examination.\n\n- Leonarde Keeler improved it and added the galvanograph; Lombroso and Marston studied blood pressure and deception earlier.\n- The galvanograph records skin conductance; the pneumograph breathing; the cardiosphygmograph blood pressure and pulse.\n- The pre-test interview helps reduce the fear of innocent subjects.\n\n### 5.2 Phases, components and chart interpretation\n\nTOS competency 5.2 (8 items): Distinguish the phases of polygraph examination, components of polygraph, chart markings, and rules in chart interpretation.\n\n- Pneumograph tubes go around the chest and abdomen, the cuff on the upper arm, electrodes on two fingers.\n- A cough or movement is marked on the chart, the reaction is not scored and the question is repeated.\n- Polygraph results are investigative aids, not conclusive evidence of guilt (People v. Adoviso).\n\n### 5.3 Test questions\n\nTOS competency 5.3 (2 items): Explain test questions in polygraph examination (relevant, irrelevant and control).\n\n- Consistently stronger reactions to relevant than to comparison questions indicate deception.\n- Irrelevant questions also let the subject recover between relevant questions.\n- All questions are reviewed with the subject before the test.\n",
+   "keyPoints": [
+    {
+     "code": "FS-5.1",
+     "title": "Methods of detecting deception and factors affecting accuracy",
+     "note": "John Larson built the first modern polygraph in 1921; extreme nervousness, fatigue, illness and drugs can distort results."
+    },
+    {
+     "code": "FS-5.2",
+     "title": "Phases, components and chart interpretation",
+     "note": "The examination has a pre-test interview, the in-test recording and a post-test interview; reactions count only when consistent across charts."
+    },
+    {
+     "code": "FS-5.3",
+     "title": "Test questions",
+     "note": "Relevant questions concern the case, irrelevant ones set a baseline, and comparison questions are built to concern the truthful subject more than the relevant ones."
+    }
+   ],
+   "keyTerms": [
+    "Polygraph",
+    "Pneumograph",
+    "Cardiosphygmograph",
+    "Galvanograph",
+    "Pre-test interview",
+    "In-test",
+    "Post-test interview",
+    "Relevant question",
+    "Irrelevant question",
+    "Comparison question",
+    "John Larson",
+    "Leonarde Keeler"
+   ]
+  },
+  {
+   "number": 6,
+   "code": "FS-6",
+   "title": "Forensic Ballistics",
+   "itemCount": 20,
+   "introduction": "Forensic ballistics examines firearms, ammunition and fired bullets and cartridge cases to tell whether a particular firearm was used. Class characteristics can exclude a firearm; individual characteristics identify it.",
+   "content": "## Forensic Ballistics\n\n### 6.1 Instruments, scene processing and court presentation\n\nTOS competency 6.1 (6 items): Describe the instruments used to examine ballistic evidence, crime scene processing of ballistic evidence, and presentation of ballistic evidence in court.\n\n- The helixometer measures the pitch of the rifling.\n- Never pry a bullet out of a wall with a knife; cut around it to save the striations.\n- In court, the examiner explains the basis of the opinion and shows photomicrographs (Rule 130, Sec. 52).\n\n### 6.2 Branches of ballistics, firearms and ammunition\n\nTOS competency 6.2 (10 items): Evaluate the branches of ballistics, classification of firearms, parts of the ammunition, class and individual characteristics of firearms.\n\n- Shotguns are smoothbore; rifles, pistols and revolvers are rifled.\n- A 12-gauge bore fits a lead ball weighing 1/12 of a pound.\n- A cartridge is the bullet, cartridge case, propellant and primer; the firing pin strikes the primer.\n- Different number of lands or direction of twist excludes a firearm; damaged striations make the result inconclusive.\n- Fired cartridge cases carry firing pin, breech face, extractor and ejector marks.\n\n### 6.3 Collecting, marking and preserving ballistic evidence\n\nTOS competency 6.3 (4 items): Explain the proper collection, marking and preservation of firearms, fired bullets, and fired cartridge cases.\n\n- Pick up a firearm by its edges after making it safe; never put a pencil in the barrel.\n- Each bullet goes in soft paper or cotton inside its own small container, sealed and labeled.\n- The chain of custody starts at the scene.\n",
+   "keyPoints": [
+    {
+     "code": "FS-6.1",
+     "title": "Instruments, scene processing and court presentation",
+     "note": "The comparison microscope shows two bullets in one field of view; test bullets are recovered from water tanks or cotton boxes; IBIS suggests possible matches that an examiner confirms."
+    },
+    {
+     "code": "FS-6.2",
+     "title": "Branches of ballistics, firearms and ammunition",
+     "note": "Interior ballistics runs from the firing pin to the muzzle, exterior from the muzzle to the target, terminal is the effect on the target; agreeing striations identify the firearm."
+    },
+    {
+     "code": "FS-6.3",
+     "title": "Collecting, marking and preserving ballistic evidence",
+     "note": "Mark a bullet on its base or nose and a cartridge case inside its mouth, never where the identifying marks are; wrap each separately."
+    }
+   ],
+   "keyTerms": [
+    "Interior ballistics",
+    "Exterior ballistics",
+    "Terminal ballistics",
+    "Rifling",
+    "Lands and grooves",
+    "Twist",
+    "Caliber",
+    "Gauge",
+    "Primer",
+    "Class characteristics",
+    "Individual characteristics",
+    "Comparison microscope",
+    "IBIS",
+    "Helixometer"
+   ]
+  },
+  {
+   "number": 7,
+   "code": "FS-7",
+   "title": "Forensic Report Writing and Laboratory Safety",
+   "itemCount": 2,
+   "introduction": "A forensic examination is useful in court only if it is reported clearly and done safely. This short chapter covers the forensic report and laboratory safety.",
+   "content": "## Forensic Report Writing and Laboratory Safety\n\n### 7.1 Writing a forensic report\n\nTOS competency 7.1 (1 item): Write a forensic report for court presentation\n\n- A report states the request, the items received, the examinations done, the findings and the conclusion.\n- It uses plain, objective language and the item markings used in the chain of custody.\n- Guilt is for the court; the examiner reports what the evidence shows.\n\n### 7.2 Laboratory safety\n\nTOS competency 7.2 (1 item): Apply safety procedures in the laboratory\n\n- Do not neutralize an acid with a strong base on the skin; it causes more injury.\n- Wear personal protective equipment and keep safety data sheets for every chemical.\n- Laboratories need safety showers, eyewash stations, fire extinguishers and proper waste disposal.\n",
+   "keyPoints": [
+    {
+     "code": "FS-7.1",
+     "title": "Writing a forensic report",
+     "note": "A good conclusion names the items, states the result and gives its basis, without overstating certainty or deciding guilt."
+    },
+    {
+     "code": "FS-7.2",
+     "title": "Laboratory safety",
+     "note": "For a chemical splash on the skin or eyes, flush with plenty of running water for at least 15 minutes."
+    }
+   ],
+   "keyTerms": [
+    "Forensic report",
+    "Findings",
+    "Conclusion",
+    "Chain of custody",
+    "Safety data sheet",
+    "Eyewash station",
+    "Safety shower",
+    "Personal protective equipment"
+   ]
+  }
+ ]
 }

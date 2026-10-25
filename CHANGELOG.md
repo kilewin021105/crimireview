@@ -1592,6 +1592,75 @@ The feature existed before (Sessions 12–19, using the Claude API). It was neve
   - `supabase/functions/editor-types.d.ts`, which describes `Deno.env`, `Deno.serve` and the Supabase client import.
 - Checked with TypeScript 5.6: 0 errors. VS Code now shows no problems in the file. The function code is unchanged, so nothing needs redeploying.
 
+## 2026-10-25 — Session 68: everything aligned with the PRC Tables of Specifications (branch `tos-aligned-bank`, from `pdf-uploader-gemini`)
+
+You said your adviser requires every question to follow the Criminologist Licensure Examination TOS, shared a Scribd document titled "Criminology Board Exam TOS 2026", and asked for all content and every related feature to be updated on a separate branch.
+
+**Which TOS, and why not the Scribd file**
+- The Scribd document could not be checked: it is behind a paywall, uploaded by a private user, uses "easy / moderate / difficult" levels, and cites no resolution number. The official TOS uses Bloom's taxonomy levels.
+- So the work follows the **official PRC documents** instead, listed with links and dates in `content/tos/SOURCES.md`:
+  - PRB of Criminology **Resolution No. 02, s. 2024** (Enhanced Tables of Specifications), annexes "as of January 22, 2024", effective May 5, 2024, used from the July 2024 exam;
+  - **Resolution No. 06, s. 2025**, which replaced Criminology Topic 4 with the Code of Ethical and Professional Conduct (Res. No. 07, s. 2024), used from the August 2025 exam.
+- If your adviser has a newer official resolution, the same tools can rebuild everything from it.
+
+**The TOS as data**
+- `assets/tos/tos_2024.json`: 6 subjects, 37 topics and 146 competencies, each with its items per Bloom level. Read from the six annex PDFs by position on the page (`tools/tos/parse_annex.py`, `tools/tos/build_tos.py`).
+- Every count checks out: each competency's Bloom split equals its items, each topic equals its competencies, each subject equals 100. The PDFs' own inconsistencies (two header rows, LEA's "20%" total) are noted in SOURCES.md; the competency rows were followed.
+- Two parse leftovers fixed in this session: a stray "Total" at the end of LEA 6.4, and the titles "Character Formation 1-Nationalism" and "2- Leadership".
+
+**600 new questions, exactly to the TOS**
+- `content/tos/bank/{clj,lea,fs,cdi,crim,ca}.jsonl`: 100 per subject. Every competency has exactly its TOS number of items at each Bloom level (for example CLJ 3.4: 6 Applying; CLJ 4.1: 4 Applying and 4 Analyzing).
+- Each question has four options, a reason for every option, an explanation and, where there is one, its legal basis.
+- `tools/tos/build_bank.py` checks all of that and refuses a correct answer that stands out by length; the options of 101 questions were rewritten until every question passed. It also checks that no stem repeats an old question's (one did, and was reworded).
+- It writes `supabase_tos_bank.sql`: the 600 questions **inactive** (`source = 'generated'`, `template_id = 'tos_2024'`), with `tos_code` and `bloom_level`. Difficulty follows the Bloom level (Remembering and Understanding are easy, Applying is medium, Analyzing to Creating are hard).
+- **These were written with AI assistance (Claude) from the TOS competencies and the laws they name. They are drafts.** Students see one only after a faculty member approves it.
+
+**The existing 759 questions**
+- `assets/tos/topic_map.json` sends every old topic name to a TOS topic, with 17 single-question overrides for mixed topics such as "Special Crime Investigation".
+- Where the TOS puts a topic in another subject, the questions move there: Legal Medicine and Police Intelligence go to Crime Detection and Investigation, Philippine Criminal Justice System goes to Criminal Law.
+- Dry run on the live snapshot: 693 keep their subject, 49 move, 6 stay put and are deactivated (the target subject already has the same question), 11 deactivated (police radio codes and police psychology are not in the TOS), and the 16 flagged as wrong on 2026-10-22 deactivated. Nothing is deleted.
+- Old questions are linked to a TOS topic (e.g. `CLJ-3`), not a competency; faculty can refine that in the editor.
+
+**`supabase_tos_alignment.sql`** (from `tools/tos/build_alignment.py`, one transaction)
+- `tos_topics` and `tos_competencies`, readable by everyone, with no write rules.
+- `questions.tos_code` (checked by a trigger: it must be a real TOS code of the question's own subject) and `questions.bloom_level`.
+- The move described above, with the old values kept in `tos_alignment_backup`.
+- Students' topic mastery merged into the TOS topic names (attempts added up, p(known) averaged by attempts), old rows kept in `tos_alignment_mastery_backup`.
+- `admin_tos_coverage()` for the Admin Panel; refuses non-faculty.
+- `document_uploads.tos_code`, and an audit-log row with the counts.
+- `supabase_tos_alignment_rollback.sql` undoes it.
+- **Tested on a local copy** (bootstrap + schema + the 759-question snapshot + sample mastery): 742 linked, 49 moved, 33 deactivated, 600 TOS questions in; mastery 0.95 × 6 and 0.40 × 2 merged to 0.813 over 8 attempts. A second run changes nothing, and a question faculty re-activated stays active. Students are refused coverage data but can read the TOS. The trigger rejects unknown and wrong-subject codes. The rollback restores questions and mastery exactly; fingerprints match an untouched copy.
+
+**App**
+- `lib/models/tos.dart`: the TOS catalog, Bloom levels with their difficulty, each subject's difficulty mix, and the old-topic map.
+- `Question` has `tosCode` and `bloomLevel`. They are sent to the database only when set, so saving still works before the SQL is run.
+- Subject topics and descriptions are now the TOS topics.
+- **Readiness:** each subject weights easy, medium and hard by its own TOS split (CLJ 30/50/20, LEA 31/49/20, FS 30/51/19, CDI 30/50/20, CRIM 31/51/18, CA 30/50/20), and the overall score weights subjects by their exam share (20/15/15/20/20/10) instead of a plain average.
+  - **Correction:** earlier in this conversation I said the 30/50/20 split had no traceable source. It does: grouping the TOS Bloom levels this way gives it in every subject.
+- **Topic mastery on the phone:** at start-up `MasteryService` renames saved topics the same way the SQL does, before any cloud sync, so old names are not pushed back up. Topics the TOS dropped leave the live model; their database rows are kept.
+- The question cache now notices subject and topic changes (the SQL moves questions without bumping their version).
+- **Study modules:** all six rebuilt from `content/tos/modules/*.md` by `tools/tos/build_modules.py`: one chapter per TOS topic and one section per competency, each with the TOS wording, notes, a key point and key terms (146 sections). They replace the old modules, which were lists of old question explanations.
+- **Study notes before a quiz:** taken from the module, starting with the competencies the quiz's questions test. The old hardcoded notes had errors ("Minority (below 15)" where the law says 15 and under; social learning credited to Sutherland).
+
+**Admin Panel**
+- **TOS coverage** (Dashboard shortcut, or the check-list icon on Questions): per subject, each topic and competency with its TOS items, active questions and drafts, and the Bloom split.
+- **Review** of one competency: the drafts with their answers and legal basis; tick the checked ones and **Approve** them together.
+- **Question editor:** pick the TOS topic, competency and Bloom level (the Bloom level sets the difficulty). "Other topic" keeps free text. A link to another subject's TOS is ignored instead of crashing the form; the screenshot sweep found that.
+- **Question list:** a TOS pill on every question, and a filter for linked or not linked.
+- **Generate from PDF:** "Target in the TOS" lets Faculty ask Gemini for questions on one topic or competency. The Edge Function then names the competency and its Bloom mix in the prompt, asks for a Bloom level per question, and saves the TOS code, the TOS topic title and the Bloom level. **The function must be redeployed** for this.
+
+**Checks**
+- `flutter analyze`: no errors or warnings.
+- `flutter test`: all tests pass, including 17 new ones in `test/tos_test.dart` (TOS counts, topics, weights, readiness, the map, the mastery merge, the question fields, the 600-question bank and its SQL, the modules, the study notes).
+- Edge Function under Node with fake Supabase and Gemini: 31 of 31 pass, 9 of them new for TOS uploads.
+- Screenshots of the new and changed screens checked by eye; the 12-device sweep renders 552 screens with no layout problems.
+
+**What you need to do**
+1. Run `supabase_tos_alignment.sql`, then `supabase_tos_bank.sql`, in the Supabase SQL Editor.
+2. Redeploy `generate-questions-from-document` with the new `index.ts`.
+3. Have the criminology faculty review and approve the drafts in Admin Panel → TOS coverage, checking each against the current law.
+4. The manuscript (Chapters 1-4) does not mention the TOS alignment yet.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
@@ -1606,6 +1675,8 @@ The feature existed before (Sessions 12–19, using the Claude API). It was neve
 ## Files this project gained that didn't exist before Session 1
 
 `lib/services/admin_service.dart`, `lib/screens/admin/` (now 9 files as of Session 18), `lib/screens/flashcards_home_screen.dart`, `supabase_security_fixes.sql`, `supabase_admin_management.sql`, `supabase_remove_document_generation.sql` (Session 28), `supabase_template_generation.sql` (Session 18), `lib/services/question_generation_service.dart` (Session 18), this file. (`supabase_schema_v2.sql`, `question_repository.dart`, `mastery_service.dart`, `question_selection_service.dart`, `explanation_service.dart`, and the `Question`/`AnswerFeedback`/`TopicMastery` models already existed, unused, before Session 1 — see that section for what "unused" meant in practice.)
+
+Session 68 (`tos-aligned-bank`): `assets/tos/tos_2024.json`, `assets/tos/topic_map.json`, `content/tos/` (SOURCES.md, `bank/`, `modules/`), `tools/tos/` (parse_annex, build_tos, build_bank, build_alignment, build_modules), `supabase_tos_alignment.sql`, `supabase_tos_alignment_rollback.sql`, `supabase_tos_bank.sql`, `lib/models/tos.dart`, `lib/services/study_notes_service.dart`, `lib/screens/admin/admin_tos_coverage_screen.dart`, `test/tos_test.dart`. Rebuilt: the six `assets/modules/*_module.json`.
 
 Session 59: `lib/utils/concept_csv.dart`, `lib/screens/admin/admin_concept_csv_import_screen.dart`, `test/concept_csv_test.dart`.
 

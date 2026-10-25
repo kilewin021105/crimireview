@@ -1,127 +1,337 @@
 {
-  "id": "criminology",
-  "title": "Criminology",
-  "description": "Theories of crime causation, human behavior, ethics, and juvenile justice.",
-  "totalItems": 134,
-  "chapters": [
+ "id": "criminology",
+ "title": "Criminology",
+ "description": "Study module for Criminology (20% of the Criminologist Licensure Examination), organized by the topics and competencies of the PRC Table of Specifications.",
+ "source": "PRB of Criminology Res. No. 02 s. 2024, as amended by Res. No. 06 s. 2025",
+ "totalItems": 100,
+ "status": "Written with AI assistance from the TOS competencies and the laws they name; for faculty review (content/tos/SOURCES.md).",
+ "chapters": [
+  {
+   "number": 1,
+   "code": "CRIM-1",
+   "title": "Introduction to Criminology",
+   "itemCount": 10,
+   "introduction": "Criminology is the scientific study of crime, criminals, victims and society's response to crime. This chapter covers the main schools of thought, the basic concepts, the types of crimes and offenders, and the criminology profession under R.A. 11131.",
+   "content": "## Introduction to Criminology\n\n### 1.1 The Classical, Neo-Classical and Positivist schools\n\nTOS competency 1.1 (2 items): Discuss the following basic theories: 1.1.1 Classical School of Criminology 1.1.2 Neo-Classical School 1.1.3 Positivist School of Criminology\n\n- Classical thought rests on rational choice, the hedonistic calculus and deterrence.\n- Neo-Classical thought led to mitigating and exempting circumstances.\n- The Positivist school used scientific methods and shifted attention from the crime to the criminal.\n- The Revised Penal Code is basically Classical, with Neo-Classical features.\n\n### 1.2 Fundamental concepts\n\nTOS competency 1.2 (2 items): Understand the fundamental concepts of criminology such as crime, deviance, norms, laws, mala in se, mala prohibita consensus, conflict and interactionist model.\n\n- Crime is an act or omission punished by law; deviance is behavior that departs from social norms, criminal or not.\n- Norms include folkways, mores and laws.\n- Consensus model: laws reflect shared values. Conflict model: laws reflect the interests of the powerful. Interactionist model: those with power define what is deviant.\n\n### 1.3 Typologies of crimes and offenders\n\nTOS competency 1.3 (3 items): Identify the typologies of crimes and criminal offenders such as types of murder, sexual assaults, and Conklin's typology of robbers\n\n- Groth's rapist types: power (control), anger (excessive force and rage) and sadistic (gratification from suffering).\n- Conklin's robbers: professional (planned, a career), opportunist (easy targets, little planning), addict and alcoholic robbers.\n- Typologies help investigators understand motives and patterns.\n\n### 1.4 The criminology profession\n\nTOS competency 1.4 (3 items): Articulate the scope of practice and privileges of the Philippine Criminology (RA 11131) Profession and career paths\n\n- The practice includes law enforcement administration, forensic science, crime detection and investigation, correctional administration, industrial security and the teaching of professional criminology subjects.\n- Career paths include the PNP, BFP, BJMP, BuCor, PDEA, NBI, the PPA, private security, forensic work, research and teaching.\n- Practicing without registration is a prohibited act under R.A. 11131.\n",
+   "keyPoints": [
     {
-      "number": 1,
-      "title": "Introduction to Criminology",
-      "itemCount": 15,
-      "introduction": "This chapter covers Introduction to Criminology with 15 review items essential for the board examination.",
-      "content": "## Introduction to Criminology\n\nStudy the following concepts and review items related to Introduction to Criminology. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Cesare Lombroso is known as the Father of Modern Criminology for his scientific approach to studying criminals\n- Cesare Beccaria is the Father of Classical Criminology for his work \"On Crimes and Punishments\n- The Positivist School believes crime is caused by biological, psychological, or social factors beyond free will\n- Penology is the study of punishment, prison management, and rehabilitation of offenders\n- Etiology of crime refers to the study of the causes and origins of criminal behavior\n- Criminology is the scientific study of crime, criminals, and criminal behavior\n- Cesare Lombroso is considered the father of modern criminology\n- Cesare Lombroso is considered the father of criminology for his scientific approach\n\n### Review Items (15 total):\n"
+     "code": "CRIM-1.1",
+     "title": "The Classical, Neo-Classical and Positivist schools",
+     "note": "The Classical school (Beccaria, Bentham) stresses free will and penalties fitted to crimes; the Neo-Classical school allows for age and insanity; the Positivist school (Lombroso, Ferri, Garofalo) looks for causes and treats offenders."
     },
     {
-      "number": 2,
-      "title": "Psychology of Crimes",
-      "itemCount": 8,
-      "introduction": "This chapter covers Psychology of Crimes with 8 review items essential for the board examination.",
-      "content": "## Psychology of Crimes\n\nStudy the following concepts and review items related to Psychology of Crimes. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Sutherland's Differential Association Theory states criminal behavior is learned through interaction with others.\n- Labeling Theory suggests that being labeled as a criminal can lead to further criminal behavior\n- Social Learning Theory states criminal behavior is learned through observation and imitation\n- Routine Activities Theory requires convergence of motivated offender, suitable target, and absence of guardian\n- Psychopathy is a personality disorder characterized by lack of empathy, manipulative behavior, and antisocial conduct\n- Sociopathy is an antisocial personality believed to develop through environmental factors\n\n### Review Items (8 total):\n"
+     "code": "CRIM-1.2",
+     "title": "Fundamental concepts",
+     "note": "Mala in se are wrong in themselves and intent matters; mala prohibita are wrong because the law forbids them, and intent generally does not matter."
     },
     {
-      "number": 3,
-      "title": "Philippine Criminal Justice System",
-      "itemCount": 5,
-      "introduction": "This chapter covers Philippine Criminal Justice System with 5 review items essential for the board examination.",
-      "content": "## Philippine Criminal Justice System\n\nStudy the following concepts and review items related to Philippine Criminal Justice System. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- The 5 pillars are: Law Enforcement, Prosecution, Courts, Corrections, and Community\n- Law Enforcement pillar includes the PNP and other agencies responsible for apprehending offenders\n- The Judiciary pillar includes courts that try cases and render judgment\n- The Department of Justice and its prosecutors represent the Prosecution pillar\n- The Community pillar involves citizen participation in crime prevention and rehabilitation\n\n### Review Items (5 total):\n"
+     "code": "CRIM-1.3",
+     "title": "Typologies of crimes and offenders",
+     "note": "Serial killers kill over time with cooling-off periods, mass murderers kill several at one place and time, and spree killers kill at several places without a cooling-off period."
     },
     {
-      "number": 4,
-      "title": "Ethics and Values",
-      "itemCount": 4,
-      "introduction": "This chapter covers Ethics and Values with 4 review items essential for the board examination.",
-      "content": "## Ethics and Values\n\nStudy the following concepts and review items related to Ethics and Values. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Police ethics refers to the moral principles and values that guide the conduct of law enforcement officers\n- Professional ethics are the standards of conduct and moral principles in a specific profession\n- Integrity means being honest and adhering to moral and ethical principles\n- Police corruption is the misuse of police authority for personal or organizational gain\n\n### Review Items (4 total):\n"
-    },
-    {
-      "number": 5,
-      "title": "Juvenile Delinquency",
-      "itemCount": 6,
-      "introduction": "This chapter covers Juvenile Delinquency with 6 review items essential for the board examination.",
-      "content": "## Juvenile Delinquency\n\nStudy the following concepts and review items related to Juvenile Delinquency. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- A juvenile delinquent is a minor (person below 18) who commits an act that would be a crime if committed by an adult\n- RA 9344 is the Juvenile Justice and Welfare Act of 2006\n- Under RA 9344, the minimum age of criminal responsibility is 15 years old\n- Diversion refers to alternatives to formal prosecution for juvenile offenders\n- Status offenses like truancy or curfew violations are only illegal for juveniles\n\n### Review Items (6 total):\n"
-    },
-    {
-      "number": 6,
-      "title": "Human Behavior",
-      "itemCount": 7,
-      "introduction": "This chapter covers Human Behavior with 7 review items essential for the board examination.",
-      "content": "## Human Behavior\n\nStudy the following concepts and review items related to Human Behavior. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Deviant behavior is any behavior that violates social norms and expectations\n- Recidivism is the tendency of a convicted criminal to reoffend\n- Victimology is the scientific study of victims and their relationship to crime\n- White-collar crime is non-violent crime committed by business or government professionals for financial gain\n- Organized crime involves criminal activities carried out by structured criminal organizations\n- Victimology is the scientific study of crime victims and their experiences\n- Victim precipitation refers to situations where victims contribute to their own victimization\n\n### Review Items (7 total):\n"
-    },
-    {
-      "number": 7,
-      "title": "Crisis Management",
-      "itemCount": 3,
-      "introduction": "This chapter covers Crisis Management with 3 review items essential for the board examination.",
-      "content": "## Crisis Management\n\nStudy the following concepts and review items related to Crisis Management. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- The first step in crisis management is to identify and assess the nature and scope of the crisis\n- Hostage negotiation involves communication with hostage-takers to secure peaceful release\n- Stockholm Syndrome occurs when hostages develop emotional bonds with their captors\n\n### Review Items (3 total):\n"
-    },
-    {
-      "number": 8,
-      "title": "Criminological Research",
-      "itemCount": 8,
-      "introduction": "This chapter covers Criminological Research with 8 review items essential for the board examination.",
-      "content": "## Criminological Research\n\nStudy the following concepts and review items related to Criminological Research. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Criminological research aims to understand the causes, nature, and prevention of criminal behavior\n- Criminological research aims to understand crime causes and develop prevention strategies\n- A case study is an in-depth examination of a single case or a small number of cases\n- Recidivism rate measures how many released offenders commit new crimes\n- Longitudinal studies follow the same subjects over an extended period of time\n- The dark figure of crime refers to crimes that go unreported or unrecorded\n- Quantitative research uses numerical data and statistical analysis\n- Qualitative research explores experiences, perspectives, and meanings through interviews and observations\n\n### Review Items (8 total):\n"
-    },
-    {
-      "number": 9,
-      "title": "Statistics",
-      "itemCount": 3,
-      "introduction": "This chapter covers Statistics with 3 review items essential for the board examination.",
-      "content": "## Statistics\n\nStudy the following concepts and review items related to Statistics. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Crime rate is the number of crimes per unit of population, usually expressed per 100,000 people\n- Crime index measures the incidence of serious crimes like murder, rape, robbery, and theft\n- Crime volume is the total number of crimes committed in a given area and time\n\n### Review Items (3 total):\n"
-    },
-    {
-      "number": 10,
-      "title": "Theories of Crime Causation",
-      "itemCount": 41,
-      "introduction": "This chapter covers Theories of Crime Causation with 41 review items essential for the board examination.",
-      "content": "## Theories of Crime Causation\n\nStudy the following concepts and review items related to Theories of Crime Causation. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Classical School believes crime results from free will and rational choice\n- Positivist School believes crime is caused by biological, psychological, or social factors\n- Labeling Theory suggests that being labeled as criminal can lead to more criminal behavior\n- Routine Activities Theory states crime occurs with a motivated offender, suitable target, and lack of guardian\n- Anomie Theory suggests crime results from a breakdown of social norms\n- Social disorganization theory links crime to weak community social controls\n- Rational Choice Theory suggests criminals rationally weigh the costs and benefits before offending\n- Gottfredson and Hirschi's General Theory states that low self-control is the main cause of crime.\n\n### Review Items (41 total):\n"
-    },
-    {
-      "number": 11,
-      "title": "Human Behavior and Victimology",
-      "itemCount": 5,
-      "introduction": "This chapter covers Human Behavior and Victimology with 5 review items essential for the board examination.",
-      "content": "## Human Behavior and Victimology\n\nStudy the following concepts and review items related to Human Behavior and Victimology. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Victimology is the scientific study of crime victims\n- Victim precipitation suggests the victim may have contributed to the criminal event\n- A repeat victim is someone who has been victimized more than once\n- Victim compensation provides financial assistance to crime victims\n- Secondary victimization is additional harm caused by the criminal justice system's response.\n\n### Review Items (5 total):\n"
-    },
-    {
-      "number": 12,
-      "title": "Juvenile Delinquency and Juvenile Justice",
-      "itemCount": 5,
-      "introduction": "This chapter covers Juvenile Delinquency and Juvenile Justice with 5 review items essential for the board examination.",
-      "content": "## Juvenile Delinquency and Juvenile Justice\n\nStudy the following concepts and review items related to Juvenile Delinquency and Juvenile Justice. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Juvenile delinquency refers to criminal or antisocial behavior by minors\n- RA 9344 is the Juvenile Justice and Welfare Act of 2006\n- Diversion provides juvenile offenders an alternative to the formal justice system\n- Status offenses are acts that are offenses only because the person is a minor\n- Under RA 9344 as amended, children below 15 are exempt from criminal responsibility\n\n### Review Items (5 total):\n"
-    },
-    {
-      "number": 13,
-      "title": "Professional Conduct and Ethical Standards",
-      "itemCount": 7,
-      "introduction": "This chapter covers Professional Conduct and Ethical Standards with 7 review items essential for the board examination.",
-      "content": "## Professional Conduct and Ethical Standards\n\nStudy the following concepts and review items related to Professional Conduct and Ethical Standards. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Ethics refers to moral principles that guide professional conduct\n- Professional integrity means consistently adhering to ethical standards\n- RA 11131 is the Philippine Criminology Profession Act of 2018\n- Ethical dilemmas involve difficult choices between competing moral principles\n- Noble cause corruption involves unethical means to achieve just ends\n- Procedural justice focuses on fair treatment regardless of outcome\n- Legitimacy is public perception that authorities operate fairly and justly\n\n### Review Items (7 total):\n"
-    },
-    {
-      "number": 14,
-      "title": "Dispute Resolution and Crisis Management",
-      "itemCount": 5,
-      "introduction": "This chapter covers Dispute Resolution and Crisis Management with 5 review items essential for the board examination.",
-      "content": "## Dispute Resolution and Crisis Management\n\nStudy the following concepts and review items related to Dispute Resolution and Crisis Management. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Mediation involves a neutral third party helping disputants reach agreement\n- Crisis negotiation aims to peacefully resolve hostage and barricade situations\n- Conflict resolution involves peaceful methods to settle disputes\n- Crisis intervention provides immediate support during psychological crisis\n- Therapeutic jurisprudence examines how law affects psychological well-being\n\n### Review Items (5 total):\n"
-    },
-    {
-      "number": 15,
-      "title": "Human Behavior and Crisis Management",
-      "itemCount": 8,
-      "introduction": "This chapter covers Human Behavior and Crisis Management with 8 review items essential for the board examination.",
-      "content": "## Human Behavior and Crisis Management\n\nStudy the following concepts and review items related to Human Behavior and Crisis Management. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Deviance refers to behavior that violates accepted social norms\n- Crime prevention includes strategies to reduce crime and fear of crime\n- Situational prevention focuses on reducing opportunities for crime\n- CPTED uses design principles to reduce crime opportunities\n- Restorative justice focuses on healing harm caused by crime\n- Tertiary prevention focuses on preventing repeat offending\n- Evidence-based prevention uses scientific research to guide strategies\n- Hot spots policing focuses resources on small areas with high crime\n\n### Review Items (8 total):\n"
-    },
-    {
-      "number": 16,
-      "title": "Professional Ethics",
-      "itemCount": 2,
-      "introduction": "This chapter covers Professional Ethics with 2 review items essential for the board examination.",
-      "content": "## Professional Ethics\n\nStudy the following concepts and review items related to Professional Ethics. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Professional ethics are moral principles that guide the conduct of criminal justice professionals\n- Integrity means consistently adhering to moral and ethical principles in all actions\n\n### Review Items (2 total):\n"
-    },
-    {
-      "number": 17,
-      "title": "Dispute Resolution",
-      "itemCount": 2,
-      "introduction": "This chapter covers Dispute Resolution with 2 review items essential for the board examination.",
-      "content": "## Dispute Resolution\n\nStudy the following concepts and review items related to Dispute Resolution. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Mediation involves a neutral third party helping disputing parties reach an agreement\n- Restorative justice focuses on repairing harm and reconciling offenders with victims and community\n\n### Review Items (2 total):\n"
+     "code": "CRIM-1.4",
+     "title": "The criminology profession",
+     "note": "R.A. 11131 (2018) lets only registered criminologists with a valid Certificate of Registration and Professional Identification Card practice, under the Professional Regulatory Board of Criminology and the PRC."
     }
-  ]
+   ],
+   "keyTerms": [
+    "Classical school",
+    "Neo-Classical school",
+    "Positivist school",
+    "Mala in se",
+    "Mala prohibita",
+    "Deviance",
+    "Consensus model",
+    "Conflict model",
+    "Interactionist model",
+    "Serial murder",
+    "Mass murder",
+    "Spree killing",
+    "R.A. 11131"
+   ]
+  },
+  {
+   "number": 2,
+   "code": "CRIM-2",
+   "title": "Theories of Crime Causation",
+   "itemCount": 10,
+   "introduction": "Theories of crime causation try to explain why people commit crime. This chapter covers trait theories, theories about choice and opportunity used in policing, risk factors, and social theories that explain crime patterns.",
+   "content": "## Theories of Crime Causation\n\n### 2.1 Trait theories\n\nTOS competency 2.1 (3 items): Explain the trait theories of crime such as: 2.1.1 criminal anthropology 2.1.2 somatotyping 2.1.3 IQ and crime 2.1.4 family studies 2.1.5 neurotransmitters and hormones\n\n- Charles Goring found no physical criminal type when comparing convicts with non-convicts.\n- Sheldon linked the muscular mesomorph to delinquency; social factors may explain the link.\n- Family studies (the Jukes, the Kallikaks) mix shared environment with heredity.\n- Low serotonin and high testosterone have been linked to aggression, with other factors.\n\n### 2.2 Choice and opportunity theories in policing\n\nTOS competency 2.2 (3 items): Relate the following theories of crime causations to law enforcement activities, 2.2.1 Rational Choice 2.2.2 Broken Windows 2.2.3 Crime Prevention Through Environmental Design (CPTED) 2.2.4 Routine Activities Theory 2.2.5 Crime Pattern Theory\n\n- Rational choice: offenders weigh risks and rewards, so certainty of arrest deters.\n- Crime pattern theory: offenders commit crimes along their daily routes and places (the Brantinghams).\n- CPTED changes the setting to reduce opportunities.\n\n### 2.3 Risk factors\n\nTOS competency 2.3 (2 items): Determine the various risk factors associated with crime, including but not limited to poverty, unemployment, peer pressure, religious influences, social responsibility, drug involvement, and family dynamics\n\n- Peer pressure is one of the strongest predictors of delinquency.\n- Children exposed to violence may learn it as a way of solving conflict.\n- Prevention targets several risk factors together.\n\n### 2.4 Social theories and crime patterns\n\nTOS competency 2.4 (2 items): Illustrate the importance of discerning crime patterns within the frameworks of Social learning theories, social disorganization, strain theories, and labeling theory in the context of law enforcement and crime prevention.\n\n- Shaw and McKay found high delinquency in certain zones regardless of who lived there.\n- Strain theory (Merton) sees crime as a response to blocked goals; Agnew's general strain theory adds negative emotions.\n- Social learning: Sutherland's differential association says crime is learned from intimate groups; Akers added reinforcement.\n- Lemert: primary deviance comes first, secondary deviance follows the label, which supports diversion.\n",
+   "keyPoints": [
+    {
+     "code": "CRIM-2.1",
+     "title": "Trait theories",
+     "note": "Lombroso's born criminal was rejected because his studies lacked comparison groups; body type, IQ and family studies show correlations that do not prove biological causes."
+    },
+    {
+     "code": "CRIM-2.2",
+     "title": "Choice and opportunity theories in policing",
+     "note": "Routine activities theory says crime happens when a motivated offender meets a suitable target without a capable guardian; broken windows says unchecked disorder invites serious crime."
+    },
+    {
+     "code": "CRIM-2.3",
+     "title": "Risk factors",
+     "note": "Delinquent peers, family neglect and violence, poverty, unemployment, drug involvement and weak school ties raise the risk of crime; religion and social responsibility usually protect."
+    },
+    {
+     "code": "CRIM-2.4",
+     "title": "Social theories and crime patterns",
+     "note": "Social disorganization (Shaw and McKay) links crime to weak community ties; labeling theory says a deviant label can lead to secondary deviance."
+    }
+   ],
+   "keyTerms": [
+    "Atavism",
+    "Somatotype",
+    "Mesomorph",
+    "Family studies",
+    "Rational choice",
+    "Broken windows",
+    "CPTED",
+    "Routine activities theory",
+    "Crime pattern theory",
+    "Social disorganization",
+    "Strain theory",
+    "Differential association",
+    "Labeling theory",
+    "Secondary deviance"
+   ]
+  },
+  {
+   "number": 3,
+   "code": "CRIM-3",
+   "title": "Human Behavior and Victimology",
+   "itemCount": 15,
+   "introduction": "Understanding human development and behavior helps in dealing with offenders, victims and persons in crisis. This chapter covers the main theories of development, the handling of persons with mental disorders, victimology, and the laws that protect victims and witnesses.",
+   "content": "## Human Behavior and Victimology\n\n### 3.1 Theories of human development and behavior\n\nTOS competency 3.1 (2 items): Explain the dynamics of human behavior and stages of the human development based on: 3.1.1 Erikson's Psychosocial Development Theory (Erik Erikson) 3.1.2 Cognitive Developmental Theory (Jean Piaget) 3.1.3 Behaviorism (B.F. Skinner) 3.1.4 Social Learning Theory (Albert Bandura) 3.1.5 Cognitive-Behavioral Theory (Aaron Beck) 3.1.6 Humanistic Theory (Abraham Maslow, Carl Rogers)\n\n- Piaget: sensorimotor, preoperational, concrete operational and formal operational stages.\n- Skinner: behavior is shaped by reinforcement and punishment.\n- Beck: distorted thinking drives emotions and behavior. Maslow and Rogers: growth toward self-actualization.\n\n### 3.2 Persons with mental and personality disorders\n\nTOS competency 3.2 (3 items): Illustrate proficiency in managing individuals with mental and personality disorders such as: 3.2.1 Substance Use Disorders 3.2.2 Schizophrenia 3.2.3 Depression 3.2.4 Post Traumatic Stress Disorder (PTSD) 3.2.5 Personality Disorders\n\n- Schizophrenia involves hallucinations, delusions and disorganized thinking; it is not \"split personality\".\n- Signs of suicide risk include talk of death and giving away belongings: watch the person, remove means and refer.\n- R.A. 11036, the Mental Health Act, protects the rights of persons with mental health conditions.\n- Other conditions met in the field include substance use disorders, depression, PTSD and personality disorders.\n\n### 3.3 Victimology\n\nTOS competency 3.3 (5 items): Analyze the concept and theories of victimization, delving into the multifaceted aspects of victim roles, victim profiling, and cybercrime victimization.\n\n- Mendelsohn's most guilty victim is an attacker killed in lawful self-defense.\n- Online scam victims are often targeted again (repeat victimization).\n- Victim profiling studies the victim's routines and contacts to find links to the offender.\n\n### 3.4 Protection of victims and witnesses\n\nTOS competency 3.4 (5 items): Evaluate the strategies and provisions for victim's protection outlined in RA 9262 and RA 6981 (Witness Protection Program)\n\n- R.A. 9262 covers physical, sexual, psychological and economic abuse of women and their children.\n- R.A. 6981 protects witnesses to grave felonies whose testimony is essential and who face danger; law enforcement officers are not covered, though their immediate family may be.\n- Protection may include secure housing, livelihood help and security.\n",
+   "keyPoints": [
+    {
+     "code": "CRIM-3.1",
+     "title": "Theories of human development and behavior",
+     "note": "Erikson's adolescents face identity versus role confusion; Bandura showed that aggression is learned by observing and imitating models."
+    },
+    {
+     "code": "CRIM-3.2",
+     "title": "Persons with mental and personality disorders",
+     "note": "Stay calm, speak simply, do not argue with delusions and call for mental health help; treat every talk of suicide seriously."
+    },
+    {
+     "code": "CRIM-3.3",
+     "title": "Victimology",
+     "note": "Victim precipitation means the victim started the incident; lifestyle theory links risky routines to victimization; Mendelsohn ranked victims from completely innocent to most guilty."
+    },
+    {
+     "code": "CRIM-3.4",
+     "title": "Protection of victims and witnesses",
+     "note": "Under R.A. 9262, the Punong Barangay (or a kagawad) issues a Barangay Protection Order valid for 15 days; courts issue temporary (30 days) and permanent protection orders."
+    }
+   ],
+   "keyTerms": [
+    "Erikson",
+    "Piaget",
+    "Skinner",
+    "Bandura",
+    "Beck",
+    "Maslow",
+    "Schizophrenia",
+    "Depression",
+    "PTSD",
+    "Victim precipitation",
+    "Lifestyle theory",
+    "Mendelsohn",
+    "Repeat victimization",
+    "R.A. 9262",
+    "Barangay Protection Order",
+    "R.A. 6981"
+   ]
+  },
+  {
+   "number": 4,
+   "code": "CRIM-4",
+   "title": "Professional Conduct and Ethical Standards for Criminologists",
+   "itemCount": 15,
+   "introduction": "This topic was replaced by Resolution No. 06 s. 2025 and is now based on the Code of Ethical and Professional Conduct of Philippine Registered Criminologists (PRB Crim. Res. No. 07 s. 2024, effective January 31, 2025). The Code sets duties to society, to the profession and to clients.",
+   "content": "## Professional Conduct and Ethical Standards for Criminologists\n\n### 4.1 Chapters I and II of the Code\n\nTOS competency 4.1 (2 items): Apply Chapter 1 and 2 of the Code of Ethics and Professional Conduct of Criminologists.\n\n- Chapter I defines terms such as the AIPO, the COR, the PIC, the Certificate of Good Standing and malpractice of profession.\n- Respect for law: uphold the Constitution and laws, the rule of law and human rights.\n- Public service: public interest over personal interest; prompt, courteous and efficient service.\n- Integrity: avoid conflicts of interest and the appearance of impropriety.\n\n### 4.2 Chapter III, duties to the profession\n\nTOS competency 4.2 (3 items): Exhibit adherence to Chapter 3 of the Code of Ethics and Professional Conduct of Criminologists.\n\n- Report illegal practice to the proper authorities, such as the Board and the PRC.\n- Never use abusive language or malign fellow criminologists.\n- Life-long learning covers CPD, re-skilling, up-skilling and specialized certification (R.A. 10912).\n- Researchers do not plagiarize; forensic practitioners stay committed to science and truth.\n\n### 4.3 The Oath of Professionals and Chapter IV, duties to clients\n\nTOS competency 4.3 (7 items): Apply the Oath of Professionals and Chapter 4 of the Code of Ethics and Professional Conduct for Criminologists.\n\n- Chapter V: grave offenses are punished by suspension for two years or revocation.\n- Prohibited acts include false claims about qualifications, conflicts of interest, using another's seal or COR, abetting illegal practice and impersonating another criminologist.\n- In private practice, fees must be reasonable.\n- The Oath of Professionals commits the professional to uphold the Constitution, obey the laws and practice ethically.\n\n### 4.4 Ethics and human rights\n\nTOS competency 4.4 (3 items): Comprehend the concept of ethics and its practical application concerning the foundational principles of human rights.\n\n- R.A. 9745 makes the prohibition of torture absolute, even in emergencies.\n- The UN Code of Conduct for Law Enforcement Officials (1979) allows force only when strictly necessary.\n- Firearms are for threats to life, not for stopping an unarmed fleeing suspect.\n",
+   "keyPoints": [
+    {
+     "code": "CRIM-4.1",
+     "title": "Chapters I and II of the Code",
+     "note": "Chapter II requires respect for law, public service without discrimination, and personal integrity, including never misrepresenting one's qualifications."
+    },
+    {
+     "code": "CRIM-4.2",
+     "title": "Chapter III, duties to the profession",
+     "note": "Criminologists protect the profession from unqualified persons, treat colleagues with courtesy and fairness, and keep learning through CPD."
+    },
+    {
+     "code": "CRIM-4.3",
+     "title": "The Oath of Professionals and Chapter IV, duties to clients",
+     "note": "Keep client information in utmost confidence, treat persons deprived of liberty humanely, and never plagiarize, practice with an expired PIC, or delegate criminological tasks to non-criminologists; violations of Chapter IV are grave offenses."
+    },
+    {
+     "code": "CRIM-4.4",
+     "title": "Ethics and human rights",
+     "note": "Human rights are inherent, universal and inalienable; freedom from torture can never be suspended; force must be necessary and proportionate."
+    }
+   ],
+   "keyTerms": [
+    "Code of Ethical and Professional Conduct",
+    "AIPO",
+    "COR",
+    "PIC",
+    "Certificate of Good Standing",
+    "Respect for law",
+    "Public service",
+    "Personal integrity",
+    "Advocacy",
+    "Life-long learning",
+    "Confidentiality",
+    "Malpractice",
+    "Grave offense",
+    "Human rights"
+   ]
+  },
+  {
+   "number": 5,
+   "code": "CRIM-5",
+   "title": "Juvenile Delinquency and Juvenile Justice",
+   "itemCount": 15,
+   "introduction": "Juvenile delinquency has its own causes and its own justice system. This chapter covers the influences behind delinquency, the laws that protect children, and the handling, diversion and rehabilitation of children in conflict with the law under R.A. 9344.",
+   "content": "## Juvenile Delinquency and Juvenile Justice\n\n### 5.1 Influences on juvenile delinquency\n\nTOS competency 5.1 (4 items): Recognize the social, community and environmental influences associated with juvenile delinquency such as: 5.1.1. Gender 5.1.2. Family 5.1.3. Peers 5.1.4. Schools 5.1.5. Drug Use 5.1.6. Adolescence\n\n- Boys offend more than girls mainly because of differences in socialization and supervision (Hagan's power-control theory).\n- Weak bonds to school, suspension and unsupervised time raise risk (Hirschi's social bond theory).\n- Drug use and delinquent peers often go together.\n\n### 5.2 Laws protecting children\n\nTOS competency 5.2 (3 items): Elucidate the pivotal provisions of Presidential Decree No. 603 (Child and Youth Welfare Code), Republic Act No. 7610 (Special Protection of Children Against Abuse, Exploitation, and Discrimination Act), and Republic Act No. 7658 (Prohibition of Employment of Children Below 15 Years of Age), understanding their collective contribution to the protection and promotion of children's rights.\n\n- The exceptions to the child labor ban include work under the sole responsibility of parents with only family members, and permitted public entertainment, without harming schooling.\n- Abuse includes physical and psychological maltreatment that debases a child's dignity.\n- The State steps in when parents fail.\n\n### 5.3 Handling children in conflict with the law\n\nTOS competency 5.3 (2 items): Determine the appropriate procedures in handling CICL by law enforcers from initial contact to investigation based on Republic Act Number 9344 as amended.\n\n- A child over 15 and under 18 is exempt unless he acted with discernment.\n- Civil liability remains.\n- Children are never detained with adults (R.A. 9344, Sec. 21, as amended).\n\n### 5.4 Intervention and diversion\n\nTOS competency 5.4 (3 items): Implement the protocols for intervening with children at risk and diverting Children in Conflict with the Law (CICL).\n\n- In victimless crimes punishable by up to six years, the social welfare officer develops the diversion program.\n- Status offenses such as curfew violations are not punished when committed by children (R.A. 9344, Secs. 57 and 57-A).\n- Children at risk receive community-based intervention.\n\n### 5.5 Rehabilitation of children in conflict with the law\n\nTOS competency 5.5 (3 items): Implement the process of rehabilitation of CICL.\n\n- When a child is found guilty, the sentence is automatically suspended and the child undergoes rehabilitation, even if 18 or older at pronouncement (Secs. 38 and 40).\n- Suspension may continue until the child reaches 21.\n- Serious crimes covered include parricide, murder, infanticide, rape, destructive arson and serious drug offenses (Sec. 20-A).\n",
+   "keyPoints": [
+    {
+     "code": "CRIM-5.1",
+     "title": "Influences on juvenile delinquency",
+     "note": "Adolescence is the peak period of offending because of identity formation, peer influence and risk-taking; parental supervision and school ties protect."
+    },
+    {
+     "code": "CRIM-5.2",
+     "title": "Laws protecting children",
+     "note": "Parents have the primary right and duty to rear their children (P.D. 603); children below 15 may not be employed except in narrow cases (R.A. 7610 as amended by R.A. 7658 and R.A. 9231); R.A. 7610 punishes child abuse and cruelty."
+    },
+    {
+     "code": "CRIM-5.3",
+     "title": "Handling children in conflict with the law",
+     "note": "A child 15 or under is exempt from criminal liability; at apprehension, officers explain the reason simply, avoid handcuffs unless necessary, and turn the child over to social welfare within 8 hours."
+    },
+    {
+     "code": "CRIM-5.4",
+     "title": "Intervention and diversion",
+     "note": "For offenses punishable by up to six years, the Punong Barangay or police with the social worker may divert the case through mediation and conferencing; above six years, only the court may."
+    },
+    {
+     "code": "CRIM-5.5",
+     "title": "Rehabilitation of children in conflict with the law",
+     "note": "A Bahay Pag-asa is a 24-hour child-caring facility run by the LGU; a child above 12 up to 15 who commits a serious crime is placed in its Intensive Juvenile Intervention and Support Center."
+    }
+   ],
+   "keyTerms": [
+    "Adolescence",
+    "Power-control theory",
+    "Social bond",
+    "P.D. 603",
+    "R.A. 7610",
+    "R.A. 7658",
+    "R.A. 9344",
+    "R.A. 10630",
+    "Discernment",
+    "Diversion",
+    "Status offense",
+    "Bahay Pag-asa",
+    "IJISC",
+    "Suspended sentence"
+   ]
+  },
+  {
+   "number": 6,
+   "code": "CRIM-6",
+   "title": "Dispute Resolution and Crisis/Incident Management",
+   "itemCount": 15,
+   "introduction": "Many conflicts are better settled outside court, and some incidents need a planned crisis response. This chapter covers alternative dispute resolution, barangay justice, and the handling of hostage incidents, bomb threats, domestic disturbances and critical incidents.",
+   "content": "## Dispute Resolution and Crisis/Incident Management\n\n### 6.1 Alternative dispute resolution and barangay justice\n\nTOS competency 6.1 (5 items): Utilize the principles and procedures of mediation, negotiation, conciliation, arbitration, early neutral evaluation, mini trial, court-annexed mediation, and judicial and indigenous mode of dispute resolution as outlined in RA 9285 and RA 7160.\n\n- Early neutral evaluation: a neutral gives a non-binding view of each side's case. A mini-trial presents the case to party representatives for settlement.\n- If conciliation fails, a certification to file action is issued (R.A. 7160, Secs. 410-412).\n- Disputes within indigenous communities may be settled by their customary laws (R.A. 7160, Sec. 399(f); R.A. 8371).\n\n### 6.2 Hostage, bomb threat and domestic disturbance procedures\n\nTOS competency 6.2 (5 items): Illustrate the operational procedures during incident situations, such as hostage scenarios, bomb threats, and domestic disturbances.\n\n- Negotiable items include food, water and communication; weapons, release of prisoners and exchange of hostages are not.\n- Do not use radios or cellphones near a suspected bomb: radio signals may set it off.\n- At domestic disturbances, separate the parties and talk to each out of the other's sight and hearing.\n\n### 6.3 Critical incident management in the PNP\n\nTOS competency 6.3 (5 items): Execute the various types, stages (proactive and reactive) and distinctive characteristics of critical incident management within the context of the Philippine National Police (PNP).\n\n- Prediction uses intelligence and risk assessment; preparation organizes the crisis management committee, training and simulations.\n- Initial action is the first responders' containment and report; action is the coordinated response.\n- Post-action covers debriefing, documentation and lessons learned.\n",
+   "keyPoints": [
+    {
+     "code": "CRIM-6.1",
+     "title": "Alternative dispute resolution and barangay justice",
+     "note": "A mediator helps the parties agree, while an arbitrator makes a binding award; if the Lupon chairman's mediation fails within 15 days, a Pangkat ng Tagapagkasundo conciliates."
+    },
+    {
+     "code": "CRIM-6.2",
+     "title": "Hostage, bomb threat and domestic disturbance procedures",
+     "note": "First responders contain and isolate a hostage scene for trained negotiators; weapons are never negotiable; keep a bomb threat caller talking and note every detail."
+    },
+    {
+     "code": "CRIM-6.3",
+     "title": "Critical incident management in the PNP",
+     "note": "The proactive stage covers prediction, prevention and preparation; the reactive stage covers initial action, action and post-action."
+    }
+   ],
+   "keyTerms": [
+    "Mediation",
+    "Arbitration",
+    "Conciliation",
+    "Early neutral evaluation",
+    "Mini-trial",
+    "R.A. 9285",
+    "Lupon",
+    "Pangkat ng Tagapagkasundo",
+    "Negotiable items",
+    "Bomb threat checklist",
+    "Proactive stage",
+    "Reactive stage",
+    "Post-action"
+   ]
+  },
+  {
+   "number": 7,
+   "code": "CRIM-7",
+   "title": "Criminological Research 1 and 2",
+   "itemCount": 20,
+   "introduction": "Criminological research builds knowledge about crime and tests what works. This chapter covers research designs, sampling and instruments, the research problem and hypothesis, research ethics, and reading the results.",
+   "content": "## Criminological Research 1 and 2\n\n### 7.1 Types of research\n\nTOS competency 7.1 (5 items): Discuss the different types of research methodologies applicable in criminological studies: 7.1.1. Descriptive Studies; 7.1.1. Correlation studies 7.1.2. Phenomenological studies 7.1.3. Case Studies\n\n- A third variable can create a spurious correlation, such as hot weather raising both ice cream sales and street crime.\n- Experiments manipulate a variable and use random assignment to test causes.\n- Surveys are common in descriptive research; in-depth interviews in phenomenology.\n\n### 7.2 Design, instruments, sampling and statistics\n\nTOS competency 7.2 (3 items): Utilize the suitable research design, instruments, sampling techniques, validity and reliability and relevant descriptive statistical tools in a criminology research paper.\n\n- Simple random, systematic, stratified and cluster sampling are probability methods; purposive and snowball are not.\n- Mean, median and mode describe the center; range and standard deviation describe spread.\n\n### 7.3 Problem, hypothesis, framework and literature\n\nTOS competency 7.3 (5 items): Implement the process of research problem identification and definition, hypothesis formulation, research framework, and literature review within the context of criminological studies.\n\n- The alternative hypothesis states the expected relationship.\n- An Input-Process-Output framework links the data and resources, the methods, and the expected result.\n- The literature review uses recent, credible sources, cites them, and shows the gap the study fills.\n\n### 7.4 Research ethics\n\nTOS competency 7.4 (5 items): Apply the guidelines in preparing an ethical consideration for a research paper.\n\n- Anonymity: no one can link data to a person. Confidentiality: the researcher knows but does not disclose.\n- Research with persons deprived of liberty needs approvals and must be free from pressure by officials.\n- Plagiarism and fabricated data are serious misconduct.\n\n### 7.5 Analysis and interpretation\n\nTOS competency 7.5 (2 items): Utilize the analysis and interpretation of data derived from the study's results.\n\n- Report the size of a difference, not only whether it is significant.\n- Results should be discussed against the literature and the study's limits.\n- Conclusions must follow from the data.\n",
+   "keyPoints": [
+    {
+     "code": "CRIM-7.1",
+     "title": "Types of research",
+     "note": "Descriptive studies describe what is, correlational studies measure relationships without proving cause, phenomenological studies explore lived experience, and case studies examine one unit in depth."
+    },
+    {
+     "code": "CRIM-7.2",
+     "title": "Design, instruments, sampling and statistics",
+     "note": "A valid instrument measures what it intends and a reliable one gives consistent results; stratified random sampling samples randomly within groups; the median resists outliers."
+    },
+    {
+     "code": "CRIM-7.3",
+     "title": "Problem, hypothesis, framework and literature",
+     "note": "A good research question is specific, measurable and limited in place and time; the null hypothesis states no significant relationship or difference."
+    },
+    {
+     "code": "CRIM-7.4",
+     "title": "Research ethics",
+     "note": "Participants give informed, voluntary consent and may withdraw; minors need parental consent and their own assent; data are protected under R.A. 10173."
+    },
+    {
+     "code": "CRIM-7.5",
+     "title": "Analysis and interpretation",
+     "note": "Interpret a weighted mean by the scale the study states; when p is below the significance level (usually 0.05), reject the null hypothesis."
+    }
+   ],
+   "keyTerms": [
+    "Descriptive study",
+    "Correlational study",
+    "Phenomenology",
+    "Case study",
+    "Validity",
+    "Reliability",
+    "Stratified random sampling",
+    "Median",
+    "Null hypothesis",
+    "Conceptual framework",
+    "Informed consent",
+    "Anonymity",
+    "Confidentiality",
+    "p-value"
+   ]
+  }
+ ]
 }

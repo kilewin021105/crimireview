@@ -1,0 +1,2047 @@
+{
+ "source": {
+  "title": "Enhanced Tables of Specifications for the Subjects in the Licensure Examination for Criminologists",
+  "resolution": "PRB of Criminology Resolution No. 02, Series of 2024",
+  "as_of": "2024-01-22",
+  "done": "2024-04-16",
+  "effective": "2024-05-05",
+  "first_exam": "July 2024 Licensure Examination for Criminologists",
+  "url": "https://www.prc.gov.ph/sites/default/files/2024-02%20Published%20%281%29%20%281%29.pdf",
+  "amendment": {
+   "resolution": "PRB of Criminology Resolution No. 06, Series of 2025",
+   "done": "2025-06-26",
+   "effective": "2025-07-16",
+   "first_exam": "August 2025 Licensure Examination for Criminologists",
+   "changes": "Criminology Topic 4 replaced: Professional Conduct and Ethical Standards for Criminologists, based on the Code of Ethical and Professional Conduct of Philippine Registered Criminologists (Board Resolution No. 07, Series of 2024, effective January 31, 2025).",
+   "url": "https://www.prc.gov.ph/sites/default/files/2025-06%20published%20Amendments%20To%20Board%20Resolution%20No.%2002%20%28S.%202024%29%20in%20the%20Subject%20Area%20of%20Criminology.pdf"
+  },
+  "bloom_levels": [
+   "Remembering",
+   "Understanding",
+   "Applying",
+   "Analyzing",
+   "Evaluating",
+   "Creating"
+  ]
+ },
+ "subjects": [
+  {
+   "subject_id": "criminal_jurisprudence",
+   "code": "CLJ",
+   "name": "Criminal Law and Jurisprudence",
+   "weight": 20,
+   "items": 100,
+   "annex_url": "https://www.prc.gov.ph/sites/default/files/ANNEX%20A_CLJ.pdf",
+   "topics": [
+    {
+     "code": "CLJ-1",
+     "no": 1,
+     "title": "Introduction to the Criminal Justice System",
+     "items": 5,
+     "bloom": {
+      "Remembering": 1,
+      "Understanding": 4
+     },
+     "competencies": [
+      {
+       "code": "CLJ-1.1",
+       "no": "1.1",
+       "text": "Explain the role and functions of the following law enforcement agencies: PNP, NBI, BFP and PDEA in the Criminal Justice System.",
+       "items": 2,
+       "bloom": {
+        "Remembering": 1,
+        "Understanding": 1
+       }
+      },
+      {
+       "code": "CLJ-1.2",
+       "no": "1.2",
+       "text": "Discuss the role of the prosecutor in the administration of justice specifically in conducting preliminary investigation and inquest proceedings.",
+       "items": 1,
+       "bloom": {
+        "Understanding": 1
+       }
+      },
+      {
+       "code": "CLJ-1.3",
+       "no": "1.3",
+       "text": "Describe the hierarchy of courts and the jurisdiction of trial courts.",
+       "items": 1,
+       "bloom": {
+        "Understanding": 1
+       }
+      },
+      {
+       "code": "CLJ-1.4",
+       "no": "1.4",
+       "text": "Understand the role and function of BJMP and BUCOR in the criminal Justice System",
+       "items": 1,
+       "bloom": {
+        "Understanding": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "CLJ-2",
+     "no": 2,
+     "title": "Human Rights Education",
+     "items": 5,
+     "bloom": {
+      "Applying": 3,
+      "Analyzing": 2
+     },
+     "competencies": [
+      {
+       "code": "CLJ-2.1",
+       "no": "2.1",
+       "text": "Illustrate the concept of due process of law and equal protection of laws in the administration of justice.",
+       "items": 1,
+       "bloom": {
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CLJ-2.2",
+       "no": "2.2",
+       "text": "Demonstrate the rights of the person under custodial investigation and anti-torture act in conducting criminal investigation.",
+       "items": 1,
+       "bloom": {
+        "Applying": 1
+       }
+      },
+      {
+       "code": "CLJ-2.3",
+       "no": "2.3",
+       "text": "Use the right against unreasonable search and seizure.",
+       "items": 1,
+       "bloom": {
+        "Applying": 1
+       }
+      },
+      {
+       "code": "CLJ-2.4",
+       "no": "2.4",
+       "text": "Determine the limitations of the following rights: privacy, freedom of speech and right against self- incrimination.",
+       "items": 1,
+       "bloom": {
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CLJ-2.5",
+       "no": "2.5",
+       "text": "Determine judicial remedies of persons whose right to life and liberty are violated (Writ of Habeas Corpus, Writ of Amparo and Habeas data).",
+       "items": 1,
+       "bloom": {
+        "Applying": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "CLJ-3",
+     "no": 3,
+     "title": "Criminal Law (Book 1)",
+     "items": 20,
+     "bloom": {
+      "Remembering": 3,
+      "Understanding": 2,
+      "Applying": 12,
+      "Analyzing": 3
+     },
+     "competencies": [
+      {
+       "code": "CLJ-3.1",
+       "no": "3.1",
+       "text": "Recall the different characteristics of criminal law and the nature and elements of felony including the concept of dolo and culpa, and the plurality of crimes.",
+       "items": 3,
+       "bloom": {
+        "Remembering": 3
+       }
+      },
+      {
+       "code": "CLJ-3.2",
+       "no": "3.2",
+       "text": "Classify the participation of persons criminally liable for felonies including conspiracy and proposal.",
+       "items": 4,
+       "bloom": {
+        "Applying": 3,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CLJ-3.3",
+       "no": "3.3",
+       "text": "Determine the stages of the commission of felony and its classification based on gravity, and the graduated scale of penalties.",
+       "items": 3,
+       "bloom": {
+        "Applying": 1,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CLJ-3.4",
+       "no": "3.4",
+       "text": "Apply the different circumstances affecting criminal liability.",
+       "items": 6,
+       "bloom": {
+        "Applying": 6
+       }
+      },
+      {
+       "code": "CLJ-3.5",
+       "no": "3.5",
+       "text": "Identify the various mode of extinction of criminal liability in a given scenario.",
+       "items": 4,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "CLJ-4",
+     "no": 4,
+     "title": "Criminal Law (Book 2)",
+     "items": 30,
+     "bloom": {
+      "Remembering": 5,
+      "Understanding": 2,
+      "Applying": 19,
+      "Analyzing": 4
+     },
+     "competencies": [
+      {
+       "code": "CLJ-4.1",
+       "no": "4.1",
+       "text": "Analyze the elements of crimes against person specifically murder, homicide, parricide, infanticide, rape, physical injuries and illegal discharge of firearms.",
+       "items": 8,
+       "bloom": {
+        "Applying": 4,
+        "Analyzing": 4
+       }
+      },
+      {
+       "code": "CLJ-4.2",
+       "no": "4.2",
+       "text": "Differentiate the crimes against property specifically theft, robbery, brigandage, estafa and malicious mischief and crimes against personal liberty specifically kidnapping and serious illegal detention, unlawful arrest, threats and coercion.",
+       "items": 6,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 4
+       }
+      },
+      {
+       "code": "CLJ-4.3",
+       "no": "4.3",
+       "text": "Apply the elements of other felonies specifically piracy (PD 532 and RPC), arbitrary detention, violation of domicile, assault, alarm and scandal, infidelity in the custody of prisoners, grave scandal, bribery.",
+       "items": 5,
+       "bloom": {
+        "Applying": 5
+       }
+      },
+      {
+       "code": "CLJ-4.4",
+       "no": "4.4",
+       "text": "Compare the crimes against honor specifically slander by deed and intriguing against honor and crimes against chastity specifically concubinage, adultery, seduction and abduction, including bigamy.",
+       "items": 6,
+       "bloom": {
+        "Applying": 6
+       }
+      },
+      {
+       "code": "CLJ-4.5",
+       "no": "4.5",
+       "text": "Recall the punishable acts under the following Special Penal Laws: Human Trafficking, Terrorism, Hazing, Safe Space Act.",
+       "items": 5,
+       "bloom": {
+        "Remembering": 5
+       }
+      }
+     ]
+    },
+    {
+     "code": "CLJ-5",
+     "no": 5,
+     "title": "Criminal Evidence",
+     "items": 18,
+     "bloom": {
+      "Remembering": 2,
+      "Understanding": 8,
+      "Applying": 6,
+      "Analyzing": 2
+     },
+     "competencies": [
+      {
+       "code": "CLJ-5.1",
+       "no": "5.1",
+       "text": "Recall important terminologies like evidence, proof beyond reasonable doubt, substantial evidence, preponderance of evidence, equipoise of evidence, equiponderance of evidence",
+       "items": 2,
+       "bloom": {
+        "Remembering": 2
+       }
+      },
+      {
+       "code": "CLJ-5.2",
+       "no": "5.2",
+       "text": "Identify evidence according to forms.",
+       "items": 2,
+       "bloom": {
+        "Understanding": 2
+       }
+      },
+      {
+       "code": "CLJ-5.3",
+       "no": "5.3",
+       "text": "Categorize the kinds/classes of evidence.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CLJ-5.4",
+       "no": "5.4",
+       "text": "Illustrate the rules of admissibility of evidence in general.",
+       "items": 6,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 2,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CLJ-5.5",
+       "no": "5.5",
+       "text": "Explain the manner of offering of evidence and their objections.",
+       "items": 2,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 1
+       }
+      },
+      {
+       "code": "CLJ-5.6",
+       "no": "5.6",
+       "text": "Discuss the rules for presenting documentary evidence.",
+       "items": 2,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 1
+       }
+      },
+      {
+       "code": "CLJ-5.7",
+       "no": "5.7",
+       "text": "Explain the sufficiency of evidence.",
+       "items": 2,
+       "bloom": {
+        "Understanding": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "CLJ-6",
+     "no": 6,
+     "title": "Criminal Procedure and Court Testimony",
+     "items": 22,
+     "bloom": {
+      "Understanding": 3,
+      "Applying": 10,
+      "Analyzing": 7,
+      "Evaluating": 2
+     },
+     "competencies": [
+      {
+       "code": "CLJ-6.1",
+       "no": "6.1",
+       "text": "Compare the jurisdiction of courts.",
+       "items": 3,
+       "bloom": {
+        "Applying": 2,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CLJ-6.2",
+       "no": "6.2",
+       "text": "Discuss the fundamental concepts of criminal procedure.",
+       "items": 2,
+       "bloom": {
+        "Understanding": 2
+       }
+      },
+      {
+       "code": "CLJ-6.3",
+       "no": "6.3",
+       "text": "Determine the rights of the accused during trial.",
+       "items": 3,
+       "bloom": {
+        "Applying": 2,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CLJ-6.4",
+       "no": "6.4",
+       "text": "Evaluate the procedure in the conduct of arrest (with or without a warrant) and of a search and seizure.",
+       "items": 4,
+       "bloom": {
+        "Analyzing": 2,
+        "Evaluating": 2
+       }
+      },
+      {
+       "code": "CLJ-6.5",
+       "no": "6.5",
+       "text": "Illustrate the procedure in the filing of cases, conducting preliminary investigation and inquest proceedings, including Barangay Justice System.",
+       "items": 4,
+       "bloom": {
+        "Applying": 1,
+        "Analyzing": 3
+       }
+      },
+      {
+       "code": "CLJ-6.6",
+       "no": "6.6",
+       "text": "Utilize the process in the application for bail, arraignment, pre-trial and trial.",
+       "items": 4,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 3
+       }
+      },
+      {
+       "code": "CLJ-6.7",
+       "no": "6.7",
+       "text": "Illustrate the procedure in the presentation of witnesses, including child witnesses, particularly, in the conduct of direct examination and cross-examination.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      }
+     ]
+    }
+   ],
+   "bloom": {
+    "Remembering": 11,
+    "Understanding": 19,
+    "Applying": 50,
+    "Analyzing": 18,
+    "Evaluating": 2
+   }
+  },
+  {
+   "subject_id": "law_enforcement",
+   "code": "LEA",
+   "name": "Law Enforcement Administration",
+   "weight": 15,
+   "items": 100,
+   "annex_url": "https://www.prc.gov.ph/sites/default/files/ANNEX%20A_LEA.pdf",
+   "topics": [
+    {
+     "code": "LEA-1",
+     "no": 1,
+     "title": "Law Enforcement Organization and Administration (Inter-Agency Approach)",
+     "items": 8,
+     "bloom": {
+      "Remembering": 1,
+      "Understanding": 2,
+      "Applying": 5
+     },
+     "competencies": [
+      {
+       "code": "LEA-1.1",
+       "no": "1.1",
+       "text": "Describe the principles of organization, management, and administration of various law enforcement and public safety.",
+       "items": 3,
+       "bloom": {
+        "Remembering": 1,
+        "Understanding": 2
+       }
+      },
+      {
+       "code": "LEA-1.2",
+       "no": "1.2",
+       "text": "Carry out the powers and functions of the following major law enforcement and public safety agencies: PNP, NBI, PDEA, PCG, BFP, and BID.",
+       "items": 4,
+       "bloom": {
+        "Applying": 4
+       }
+      },
+      {
+       "code": "LEA-1.3",
+       "no": "1.3",
+       "text": "Assess the efficiency of the policing system in the law enforcement (POP).",
+       "items": 1,
+       "bloom": {
+        "Applying": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "LEA-2",
+     "no": 2,
+     "title": "Comparative Models in Policing",
+     "items": 5,
+     "bloom": {
+      "Understanding": 1,
+      "Applying": 3,
+      "Evaluating": 1
+     },
+     "competencies": [
+      {
+       "code": "LEA-2.1",
+       "no": "2.1",
+       "text": "Discuss the theories of policing; the Philippine policing and transnational crime.",
+       "items": 1,
+       "bloom": {
+        "Understanding": 1
+       }
+      },
+      {
+       "code": "LEA-2.2",
+       "no": "2.2",
+       "text": "Implement the process of ASEAN cooperation, INTERPOL, Extradition Treaty, and international agreements on Law Enforcement cooperation.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      },
+      {
+       "code": "LEA-2.3",
+       "no": "2.3",
+       "text": "Apply the 4 policing models in the law enforcement",
+       "items": 1,
+       "bloom": {
+        "Applying": 1
+       }
+      },
+      {
+       "code": "LEA-2.4",
+       "no": "2.4",
+       "text": "Evaluate the importance of policing in social life, its goals, and roles of the police in the affairs of the state/government. (Multi-cultural policing)",
+       "items": 1,
+       "bloom": {
+        "Evaluating": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "LEA-3",
+     "no": 3,
+     "title": "Introduction to Industrial Security Concepts",
+     "items": 7,
+     "bloom": {
+      "Remembering": 1,
+      "Understanding": 1,
+      "Applying": 4,
+      "Analyzing": 1
+     },
+     "competencies": [
+      {
+       "code": "LEA-3.1",
+       "no": "3.1",
+       "text": "Explain the RA No.11917 related to operation and management and Practice of Profession.",
+       "items": 2,
+       "bloom": {
+        "Remembering": 1,
+        "Understanding": 1
+       }
+      },
+      {
+       "code": "LEA-3.2",
+       "no": "3.2",
+       "text": "Demonstrate security training and skills on customer relations, basic security and safety protocols, including corporate intelligence and investigation.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      },
+      {
+       "code": "LEA-3.3",
+       "no": "3.3",
+       "text": "Apply skills on security survey, plan, the types of security (Physical, Personnel, Document & Information) and application of Risk management and Business Continuity Management Plan.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      },
+      {
+       "code": "LEA-3.4",
+       "no": "3.4",
+       "text": "Relate theories, concepts, and philosophy of security & safety. (Architectural security/urban planning and physical security)",
+       "items": 1,
+       "bloom": {
+        "Analyzing": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "LEA-4",
+     "no": 4,
+     "title": "Law Enforcement Operations and Planning with Crime Mapping",
+     "items": 30,
+     "bloom": {
+      "Remembering": 3,
+      "Understanding": 9,
+      "Applying": 15,
+      "Analyzing": 2,
+      "Evaluating": 1
+     },
+     "competencies": [
+      {
+       "code": "LEA-4.1",
+       "no": "4.1",
+       "text": "Articulate the principles and elements of planning, types of plans, classification of plan, and the law enforcement plans. Patrol Plan 2030, PGS",
+       "items": 6,
+       "bloom": {
+        "Remembering": 3,
+        "Understanding": 3
+       }
+      },
+      {
+       "code": "LEA-4.2",
+       "no": "4.2",
+       "text": "Discuss the key application in crime mapping and crime analysis (thematic mapping, non-graphical indicators, hotspots, spatial regression, and geographic profiling), and the geographic information of crimes",
+       "items": 3,
+       "bloom": {
+        "Understanding": 3
+       }
+      },
+      {
+       "code": "LEA-4.3",
+       "no": "4.3",
+       "text": "Apply the steps in law enforcement planning and operations of PNP, BFP, PCG, NBI, PDEA and BID",
+       "items": 8,
+       "bloom": {
+        "Understanding": 3,
+        "Applying": 5
+       }
+      },
+      {
+       "code": "LEA-4.4",
+       "no": "4.4",
+       "text": "Assess the skills on place and environmental design, and crime incidence situation as applied to GIS",
+       "items": 7,
+       "bloom": {
+        "Applying": 7
+       }
+      },
+      {
+       "code": "LEA-4.5",
+       "no": "4.5",
+       "text": "Evaluate the constitutional and statutory rights of persons affected by law enforcement operations.",
+       "items": 6,
+       "bloom": {
+        "Applying": 3,
+        "Analyzing": 2,
+        "Evaluating": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "LEA-5",
+     "no": 5,
+     "title": "Character Formation 1 - Nationalism and Patriotism",
+     "items": 20,
+     "bloom": {
+      "Understanding": 6,
+      "Applying": 7,
+      "Analyzing": 5,
+      "Evaluating": 2
+     },
+     "competencies": [
+      {
+       "code": "LEA-5.1",
+       "no": "5.1",
+       "text": "Explain the development of Philippine nationalism, and patriotism; the Philippine symbolism and meaning; and the Filipino character, values, and culture.",
+       "items": 6,
+       "bloom": {
+        "Understanding": 3,
+        "Analyzing": 3
+       }
+      },
+      {
+       "code": "LEA-5.2",
+       "no": "5.2",
+       "text": "Carry out the provisions of R.A. 8491 “Flag and Heraldic Code of the Philippines” and the IRR of R.A. 8491.",
+       "items": 10,
+       "bloom": {
+        "Understanding": 3,
+        "Applying": 7
+       }
+      },
+      {
+       "code": "LEA-5.3",
+       "no": "5.3",
+       "text": "Evaluate the significance of the 1987 Philippine Constitution: Preamble, Article I, Article II, Article XIV, Article XV, and Article XVI.",
+       "items": 4,
+       "bloom": {
+        "Analyzing": 2,
+        "Evaluating": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "LEA-6",
+     "no": 6,
+     "title": "Character Formation 2 - Leadership, Decision Making, Management and Administration",
+     "items": 30,
+     "bloom": {
+      "Understanding": 7,
+      "Applying": 15,
+      "Analyzing": 5,
+      "Evaluating": 3
+     },
+     "competencies": [
+      {
+       "code": "LEA-6.1",
+       "no": "6.1",
+       "text": "Use the concepts and theories of leadership and management",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 4
+       }
+      },
+      {
+       "code": "LEA-6.2",
+       "no": "6.2",
+       "text": "Differentiate types of managers, management styles; characteristics and qualities of leaders and managers",
+       "items": 7,
+       "bloom": {
+        "Understanding": 2,
+        "Analyzing": 2,
+        "Evaluating": 3
+       }
+      },
+      {
+       "code": "LEA-6.3",
+       "no": "6.3",
+       "text": "Apply fundamental functions of Management: Planning, Organizing, Leading, Staffing and Controlling; Roles of Managers within the Organization; Decisional, interpersonal, and informational; Effective Management of Organizational Resources",
+       "items": 10,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 8
+       }
+      },
+      {
+       "code": "LEA-6.4",
+       "no": "6.4",
+       "text": "Explain the basics of Decision-making; Problem-solving versus decision-making: Its Characteristics and difference; Decision-making Techniques (Individual vs Group); Decision-making for Public Managers; Factors affecting decision-making; Information or Data or Research Lead Decision; Police Decision Making. Guides for Quick or Fast Decision Making.",
+       "items": 8,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 3,
+        "Analyzing": 3
+       }
+      }
+     ]
+    }
+   ],
+   "bloom": {
+    "Remembering": 5,
+    "Understanding": 26,
+    "Applying": 49,
+    "Analyzing": 13,
+    "Evaluating": 7
+   }
+  },
+  {
+   "subject_id": "criminalistics",
+   "code": "FS",
+   "name": "Forensic Science",
+   "weight": 15,
+   "items": 100,
+   "annex_url": "https://www.prc.gov.ph/sites/default/files/ANNEX%20A_Forensic%20Science.pdf",
+   "topics": [
+    {
+     "code": "FS-1",
+     "no": 1,
+     "title": "Personal Identification Techniques",
+     "items": 20,
+     "bloom": {
+      "Remembering": 2,
+      "Understanding": 4,
+      "Applying": 10,
+      "Analyzing": 4
+     },
+     "competencies": [
+      {
+       "code": "FS-1.1",
+       "no": "1.1",
+       "text": "Discuss the other methods of personal identification (DBA, forensic odontology), Henry FBI classification formula and filing system of classified fingerprint cards.",
+       "items": 6,
+       "bloom": {
+        "Remembering": 2,
+        "Understanding": 4
+       }
+      },
+      {
+       "code": "FS-1.2",
+       "no": "1.2",
+       "text": "Analyze the principles of fingerprint identification, fingerprint characteristics and patterns",
+       "items": 6,
+       "bloom": {
+        "Applying": 3,
+        "Analyzing": 3
+       }
+      },
+      {
+       "code": "FS-1.3",
+       "no": "1.3",
+       "text": "Explain the taking and recording of friction skin (live and post mortem), latent print detection methods and latent print preservation techniques",
+       "items": 6,
+       "bloom": {
+        "Applying": 5,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "FS-1.4",
+       "no": "1.4",
+       "text": "Apply the ACE-V methodology in processing latent prints",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "FS-2",
+     "no": 2,
+     "title": "Forensic Photography",
+     "items": 20,
+     "bloom": {
+      "Remembering": 2,
+      "Understanding": 4,
+      "Applying": 10,
+      "Analyzing": 4
+     },
+     "competencies": [
+      {
+       "code": "FS-2.1",
+       "no": "2.1",
+       "text": "Describe the general principles of photography; types of flash photography and properties, nature and characteristics of light.",
+       "items": 6,
+       "bloom": {
+        "Remembering": 2,
+        "Understanding": 4
+       }
+      },
+      {
+       "code": "FS-2.2",
+       "no": "2.2",
+       "text": "Apply the principles of exposure triangle and the procedures of crime scene and evidence photography.",
+       "items": 8,
+       "bloom": {
+        "Applying": 6,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "FS-2.3",
+       "no": "2.3",
+       "text": "Analyze the functions of the basic parts of Digital and manual/analogue cameras and types of lenses.",
+       "items": 6,
+       "bloom": {
+        "Applying": 4,
+        "Analyzing": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "FS-3",
+     "no": 3,
+     "title": "Forensic Chemistry and Toxicology",
+     "items": 8,
+     "bloom": {
+      "Understanding": 3,
+      "Applying": 5
+     },
+     "competencies": [
+      {
+       "code": "FS-3.1",
+       "no": "3.1",
+       "text": "Explain the principles and significance of forensic chemistry & toxicology including the legal aspects of forensic chemistry",
+       "items": 2,
+       "bloom": {
+        "Understanding": 2
+       }
+      },
+      {
+       "code": "FS-3.2",
+       "no": "3.2",
+       "text": "Identify reliable preliminary and confirmatory tests in the examination of biological, physical and trace evidence.",
+       "items": 2,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 1
+       }
+      },
+      {
+       "code": "FS-3.3",
+       "no": "3.3",
+       "text": "Apply the procedure in the collection and preservation of biological evidence (blood, hair, semen), and physical evidence (drugs, fibers, glass, toolmarks)",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      },
+      {
+       "code": "FS-3.4",
+       "no": "3.4",
+       "text": "Compare biological and chemical poisons and its types including its antidotes.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "FS-4",
+     "no": 4,
+     "title": "Questioned Documents Examination",
+     "items": 16,
+     "bloom": {
+      "Remembering": 2,
+      "Understanding": 3,
+      "Applying": 8,
+      "Analyzing": 3
+     },
+     "competencies": [
+      {
+       "code": "FS-4.1",
+       "no": "4.1",
+       "text": "Describe the kinds of documents and questioned documents, equipment and apparatus used in questioned document examination.",
+       "items": 5,
+       "bloom": {
+        "Remembering": 2,
+        "Understanding": 3
+       }
+      },
+      {
+       "code": "FS-4.2",
+       "no": "4.2",
+       "text": "Analyze the process of forgery detection, handwriting examination and signature identification.",
+       "items": 9,
+       "bloom": {
+        "Applying": 8,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "FS-4.3",
+       "no": "4.3",
+       "text": "Explain the procedures in counterfeit identification.",
+       "items": 2,
+       "bloom": {
+        "Analyzing": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "FS-5",
+     "no": 5,
+     "title": "Lie Detection Techniques",
+     "items": 14,
+     "bloom": {
+      "Remembering": 2,
+      "Understanding": 2,
+      "Applying": 7,
+      "Analyzing": 2,
+      "Evaluating": 1
+     },
+     "competencies": [
+      {
+       "code": "FS-5.1",
+       "no": "5.1",
+       "text": "Discuss the methods of detecting deception, and factors affecting accuracy of polygraph examination.",
+       "items": 4,
+       "bloom": {
+        "Remembering": 2,
+        "Understanding": 2
+       }
+      },
+      {
+       "code": "FS-5.2",
+       "no": "5.2",
+       "text": "Distinguish the phases of polygraph examination, components of polygraph, chart markings, and rules in chart interpretation.",
+       "items": 8,
+       "bloom": {
+        "Applying": 7,
+        "Evaluating": 1
+       }
+      },
+      {
+       "code": "FS-5.3",
+       "no": "5.3",
+       "text": "Explain test questions in polygraph examination (relevant, irrelevant and control).",
+       "items": 2,
+       "bloom": {
+        "Analyzing": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "FS-6",
+     "no": 6,
+     "title": "Forensic Ballistics",
+     "items": 20,
+     "bloom": {
+      "Remembering": 1,
+      "Understanding": 5,
+      "Applying": 10,
+      "Analyzing": 3,
+      "Evaluating": 1
+     },
+     "competencies": [
+      {
+       "code": "FS-6.1",
+       "no": "6.1",
+       "text": "Describe the instruments used to examine ballistic evidence, crime scene processing of ballistic evidence, and presentation of ballistic evidence in court.",
+       "items": 6,
+       "bloom": {
+        "Remembering": 1,
+        "Understanding": 5
+       }
+      },
+      {
+       "code": "FS-6.2",
+       "no": "6.2",
+       "text": "Evaluate the branches of ballistics, classification of firearms, parts of the ammunition, class and individual characteristics of firearms.",
+       "items": 10,
+       "bloom": {
+        "Applying": 9,
+        "Evaluating": 1
+       }
+      },
+      {
+       "code": "FS-6.3",
+       "no": "6.3",
+       "text": "Explain the proper collection, marking and preservation of firearms, fired bullets, and fired cartridge cases.",
+       "items": 4,
+       "bloom": {
+        "Applying": 1,
+        "Analyzing": 3
+       }
+      }
+     ]
+    },
+    {
+     "code": "FS-7",
+     "no": 7,
+     "title": "Forensic Report Writing and Laboratory Safety",
+     "items": 2,
+     "bloom": {
+      "Applying": 1,
+      "Creating": 1
+     },
+     "competencies": [
+      {
+       "code": "FS-7.1",
+       "no": "7.1",
+       "text": "Write a forensic report for court presentation",
+       "items": 1,
+       "bloom": {
+        "Creating": 1
+       }
+      },
+      {
+       "code": "FS-7.2",
+       "no": "7.2",
+       "text": "Apply safety procedures in the laboratory",
+       "items": 1,
+       "bloom": {
+        "Applying": 1
+       }
+      }
+     ]
+    }
+   ],
+   "bloom": {
+    "Remembering": 9,
+    "Understanding": 21,
+    "Applying": 51,
+    "Analyzing": 16,
+    "Evaluating": 2,
+    "Creating": 1
+   }
+  },
+  {
+   "subject_id": "crime_detection",
+   "code": "CDI",
+   "name": "Crime Detection and Investigation",
+   "weight": 20,
+   "items": 100,
+   "annex_url": "https://www.prc.gov.ph/sites/default/files/ANNEX%20A_CDI.pdf",
+   "topics": [
+    {
+     "code": "CDI-1",
+     "no": 1,
+     "title": "Fundamentals of Criminal Investigation and Intelligence",
+     "items": 15,
+     "bloom": {
+      "Understanding": 4,
+      "Applying": 6,
+      "Analyzing": 5
+     },
+     "competencies": [
+      {
+       "code": "CDI-1.1",
+       "no": "1.1",
+       "text": "Explain the objectives of criminal investigation and principles of intelligence, tools of investigation, the cardinal points of investigation and phases of criminal investigation.",
+       "items": 5,
+       "bloom": {
+        "Understanding": 4,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CDI-1.2",
+       "no": "1.2",
+       "text": "Distinguish the procedures and principles in the conduct of surveillance, the intelligence cycle, informants and informer, distinction and classification information and documents.",
+       "items": 5,
+       "bloom": {
+        "Applying": 3,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CDI-1.3",
+       "no": "1.3",
+       "text": "Assess the kinds, principles, and procedures involving arrest including essential provisions of R.A. 7438 and R.A. 9745, search and seizure, methods of crime search and sketches.",
+       "items": 5,
+       "bloom": {
+        "Applying": 3,
+        "Analyzing": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "CDI-2",
+     "no": 2,
+     "title": "Specialized Crime Investigation 1 with Legal Medicine",
+     "items": 10,
+     "bloom": {
+      "Understanding": 1,
+      "Applying": 6,
+      "Analyzing": 3
+     },
+     "competencies": [
+      {
+       "code": "CDI-2.1",
+       "no": "2.1",
+       "text": "Distinguish the different approaches in the conduct of criminal investigation for each crime falling under the crimes against person of the Revised Penal Code (murder, homicide, parricide, infanticide, abortion, physical Injuries, and rape), essential provisions of R.A. 8049 ‘Anti Hazing Law’ as amended by R.A. 11053, R.A. 7877 ‘Anti- Sexual Harassment Law’, R.A. 11313 ‘Safe Spaces Act’.",
+       "items": 5,
+       "bloom": {
+        "Applying": 3,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CDI-2.2",
+       "no": "2.2",
+       "text": "Examine the following: kinds of death and pathological classification of death and changes in the body after death, and classification and characteristics of wounds.",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 3,
+        "Analyzing": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "CDI-3",
+     "no": 3,
+     "title": "Specialized Crime Investigation 2 with Interview and Interrogation",
+     "items": 10,
+     "bloom": {
+      "Understanding": 2,
+      "Applying": 6,
+      "Analyzing": 2
+     },
+     "competencies": [
+      {
+       "code": "CDI-3.1",
+       "no": "3.1",
+       "text": "Explain the kinds and methods of interview and interrogation, legal requirements for admission and confession, principles of dying declaration and independent relevant statement.",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 3,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CDI-3.2",
+       "no": "3.2",
+       "text": "Distinguish the different approaches in the conduct of criminal investigation for each crime falling under crimes against property of the Revised Penal Code (theft, robbery, and estafa); essential provisions of R.A. 6539 ‘anti-carnapping law’ as amended by R.A. 10883, P.D. 1612 “Anti-Fencing”, Laws on Human Trafficking (R.A. 9208, R.A. 10364 & R.A.11862), stages of Money Laundering (RA 9160, RA 9194, RA 10167, RA 10365, RA 10927)",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 3,
+        "Analyzing": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "CDI-4",
+     "no": 4,
+     "title": "Traffic Management and Accident Investigation with Driving",
+     "items": 15,
+     "bloom": {
+      "Understanding": 6,
+      "Applying": 7,
+      "Evaluating": 2
+     },
+     "competencies": [
+      {
+       "code": "CDI-4.1",
+       "no": "4.1",
+       "text": "Explain the principles of the 5 components of traffic management and agencies involved.",
+       "items": 3,
+       "bloom": {
+        "Understanding": 2,
+        "Evaluating": 1
+       }
+      },
+      {
+       "code": "CDI-4.2",
+       "no": "4.2",
+       "text": "Discuss the purpose and functions of: registration and renewal (motor vehicles & driver's license), the various traffic signs, traffic light, pavement or road markings.",
+       "items": 3,
+       "bloom": {
+        "Understanding": 2,
+        "Evaluating": 1
+       }
+      },
+      {
+       "code": "CDI-4.3",
+       "no": "4.3",
+       "text": "Use of the principles of driving, principles of right way, and rules governing parking.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CDI-4.4",
+       "no": "4.4",
+       "text": "Compare the various traffic violations under the following laws; Anti-Drunk driving (RA. 10586,) R.A. 10913, and R.A. 10666 in R.A. 11226..",
+       "items": 3,
+       "bloom": {
+        "Applying": 3
+       }
+      },
+      {
+       "code": "CDI-4.5",
+       "no": "4.5",
+       "text": "Evaluate the principles and procedures involving traffic accident investigation, classification of accidents, the principles of key events, different types of tire marks impression and other debris, last clear chance principle, state of necessity principle",
+       "items": 4,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "CDI-5",
+     "no": 5,
+     "title": "Fire Protection and Arson Investigation",
+     "items": 15,
+     "bloom": {
+      "Understanding": 3,
+      "Applying": 9,
+      "Analyzing": 3
+     },
+     "competencies": [
+      {
+       "code": "CDI-5.1",
+       "no": "5.1",
+       "text": "Illustrate the concept of fire triangle and fire tetrahedron, product of combustion, types/sources of heat energy, methods of heat transfer, stages of fire development.",
+       "items": 4,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CDI-5.2",
+       "no": "5.2",
+       "text": "Apply the classification of fire, methods of extinguishing classes of fire, prevention, control and supression of fire, and phases of firefighting.",
+       "items": 3,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CDI-5.3",
+       "no": "5.3",
+       "text": "Identify active and passive fire detection, alarm system, and suppression equipment.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CDI-5.4",
+       "no": "5.4",
+       "text": "Evaluate the acts which constitute the crime of arson under PD 1613.",
+       "items": 3,
+       "bloom": {
+        "Applying": 1,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CDI-5.5",
+       "no": "5.5",
+       "text": "Evaluate the fire scene, fire origin and cause of fire, and burn patterns.",
+       "items": 3,
+       "bloom": {
+        "Applying": 2,
+        "Analyzing": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "CDI-6",
+     "no": 6,
+     "title": "Vice and Drug Education and Control",
+     "items": 15,
+     "bloom": {
+      "Understanding": 3,
+      "Applying": 11,
+      "Analyzing": 1
+     },
+     "competencies": [
+      {
+       "code": "CDI-6.1",
+       "no": "6.1",
+       "text": "Explain the nature and effects of vices (alcoholism, prostitution, gambling)",
+       "items": 3,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CDI-6.2",
+       "no": "6.2",
+       "text": "Differentiate the commonly abused dangerous drugs defined under RA 9165 (opium, morphine, heroin, cocaine, shabu, marijuana, and marijuana resin, ecstacy, inhalants), methods of administration, signs and symptoms of use, and effects.",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 4
+       }
+      },
+      {
+       "code": "CDI-6.3",
+       "no": "6.3",
+       "text": "Examine the chain of custody requirement (confiscation and seizure of illegal drugs until destruction of confiscated item).",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 3,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CDI-6.4",
+       "no": "6.4",
+       "text": "Identify various acts punishable under R.A. 9165 as amended (Illegal trafficking and possession).",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "CDI-7",
+     "no": 7,
+     "title": "Technical Writing 1 and 2 (Legal forms and Police Report writing)",
+     "items": 10,
+     "bloom": {
+      "Understanding": 2,
+      "Applying": 4,
+      "Analyzing": 2,
+      "Evaluating": 1,
+      "Creating": 1
+     },
+     "competencies": [
+      {
+       "code": "CDI-7.1",
+       "no": "7.1",
+       "text": "Classify the parts, types and purpose of an affidavit (Sworn Statement), pleadings (parts of a motion, manifestation, petition), and content of police blotter and complaint sheet.",
+       "items": 4,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CDI-7.2",
+       "no": "7.2",
+       "text": "Examine different police reports (case folder) and basic investigative report (spot, progress and final).",
+       "items": 4,
+       "bloom": {
+        "Applying": 2,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CDI-7.3",
+       "no": "7.3",
+       "text": "Compare the different types of Administrative orders and issuances such as circular, memorandum order, special order.",
+       "items": 2,
+       "bloom": {
+        "Evaluating": 1,
+        "Creating": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "CDI-8",
+     "no": 8,
+     "title": "Introduction to Cybercrime and Environmental Laws",
+     "items": 10,
+     "bloom": {
+      "Understanding": 9,
+      "Applying": 1
+     },
+     "competencies": [
+      {
+       "code": "CDI-8.1",
+       "no": "8.1",
+       "text": "Recognize the acts which constitutes as violation of RA 10173, R.A. 10175, Philippine Fisheries Code of 1998, RA 9147 (Wildlife Act), RA 9003 (Solid Waste Management Act), RA 8749 (Philippine Clean Air Act) and, RA 9275 (Philippine Clean Water Act)",
+       "items": 3,
+       "bloom": {
+        "Understanding": 3
+       }
+      },
+      {
+       "code": "CDI-8.2",
+       "no": "8.2",
+       "text": "Use the Rules on Cybercrime Warrants, Basic Incident Response, and Procedure on seizing and collecting digital evidence and admissibility of digital evidence.",
+       "items": 4,
+       "bloom": {
+        "Understanding": 3,
+        "Applying": 1
+       }
+      },
+      {
+       "code": "CDI-8.3",
+       "no": "8.3",
+       "text": "Understand the Procedure in filing of Environmental Cases: (Philippine Fisheries Code of 1998, RA 9147 (Wildlife Act), RA 9003 (Solid Waste Management Act), RA 8749 (Philippine Clean Air Act) and, RA 9275 (Philippine Clean Water Act)",
+       "items": 3,
+       "bloom": {
+        "Understanding": 3
+       }
+      }
+     ]
+    }
+   ],
+   "bloom": {
+    "Understanding": 30,
+    "Applying": 50,
+    "Analyzing": 16,
+    "Evaluating": 3,
+    "Creating": 1
+   }
+  },
+  {
+   "subject_id": "criminology",
+   "code": "CRIM",
+   "name": "Criminology",
+   "weight": 20,
+   "items": 100,
+   "annex_url": "https://www.prc.gov.ph/sites/default/files/ANNEX%20A_Criminology.pdf",
+   "topics": [
+    {
+     "code": "CRIM-1",
+     "no": 1,
+     "title": "Introduction to Criminology",
+     "items": 10,
+     "bloom": {
+      "Understanding": 10
+     },
+     "competencies": [
+      {
+       "code": "CRIM-1.1",
+       "no": "1.1",
+       "text": "Discuss the following basic theories: 1.1.1 Classical School of Criminology 1.1.2 Neo-Classical School 1.1.3 Positivist School of Criminology",
+       "items": 2,
+       "bloom": {
+        "Understanding": 2
+       }
+      },
+      {
+       "code": "CRIM-1.2",
+       "no": "1.2",
+       "text": "Understand the fundamental concepts of criminology such as crime, deviance, norms, laws, mala in se, mala prohibita consensus, conflict and interactionist model.",
+       "items": 2,
+       "bloom": {
+        "Understanding": 2
+       }
+      },
+      {
+       "code": "CRIM-1.3",
+       "no": "1.3",
+       "text": "Identify the typologies of crimes and criminal offenders such as types of murder, sexual assaults, and Conklin's typology of robbers",
+       "items": 3,
+       "bloom": {
+        "Understanding": 3
+       }
+      },
+      {
+       "code": "CRIM-1.4",
+       "no": "1.4",
+       "text": "Articulate the scope of practice and privileges of the Philippine Criminology (RA 11131) Profession and career paths",
+       "items": 3,
+       "bloom": {
+        "Understanding": 3
+       }
+      }
+     ]
+    },
+    {
+     "code": "CRIM-2",
+     "no": 2,
+     "title": "Theories of Crime Causation",
+     "items": 10,
+     "bloom": {
+      "Applying": 4,
+      "Analyzing": 6
+     },
+     "competencies": [
+      {
+       "code": "CRIM-2.1",
+       "no": "2.1",
+       "text": "Explain the trait theories of crime such as: 2.1.1 criminal anthropology 2.1.2 somatotyping 2.1.3 IQ and crime 2.1.4 family studies 2.1.5 neurotransmitters and hormones",
+       "items": 3,
+       "bloom": {
+        "Analyzing": 3
+       }
+      },
+      {
+       "code": "CRIM-2.2",
+       "no": "2.2",
+       "text": "Relate the following theories of crime causations to law enforcement activities, 2.2.1 Rational Choice 2.2.2 Broken Windows 2.2.3 Crime Prevention Through Environmental Design (CPTED) 2.2.4 Routine Activities Theory 2.2.5 Crime Pattern Theory",
+       "items": 3,
+       "bloom": {
+        "Applying": 1,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CRIM-2.3",
+       "no": "2.3",
+       "text": "Determine the various risk factors associated with crime, including but not limited to poverty, unemployment, peer pressure, religious influences, social responsibility, drug involvement, and family dynamics",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CRIM-2.4",
+       "no": "2.4",
+       "text": "Illustrate the importance of discerning crime patterns within the frameworks of Social learning theories, social disorganization, strain theories, and labeling theory in the context of law enforcement and crime prevention.",
+       "items": 2,
+       "bloom": {
+        "Applying": 1,
+        "Analyzing": 1
+       }
+      }
+     ]
+    },
+    {
+     "code": "CRIM-3",
+     "no": 3,
+     "title": "Human Behavior and Victimology",
+     "items": 15,
+     "bloom": {
+      "Understanding": 4,
+      "Applying": 6,
+      "Analyzing": 3,
+      "Evaluating": 2
+     },
+     "competencies": [
+      {
+       "code": "CRIM-3.1",
+       "no": "3.1",
+       "text": "Explain the dynamics of human behavior and stages of the human development based on: 3.1.1 Erikson's Psychosocial Development Theory (Erik Erikson) 3.1.2 Cognitive Developmental Theory (Jean Piaget) 3.1.3 Behaviorism (B.F. Skinner) 3.1.4 Social Learning Theory (Albert Bandura) 3.1.5 Cognitive-Behavioral Theory (Aaron Beck) 3.1.6 Humanistic Theory (Abraham Maslow, Carl Rogers)",
+       "items": 2,
+       "bloom": {
+        "Understanding": 1,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CRIM-3.2",
+       "no": "3.2",
+       "text": "Illustrate proficiency in managing individuals with mental and personality disorders such as: 3.2.1 Substance Use Disorders 3.2.2 Schizophrenia 3.2.3 Depression 3.2.4 Post Traumatic Stress Disorder (PTSD) 3.2.5 Personality Disorders",
+       "items": 3,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CRIM-3.3",
+       "no": "3.3",
+       "text": "Analyze the concept and theories of victimization, delving into the multifaceted aspects of victim roles, victim profiling, and cybercrime victimization.",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CRIM-3.4",
+       "no": "3.4",
+       "text": "Evaluate the strategies and provisions for victim's protection outlined in RA 9262 and RA 6981 (Witness Protection Program)",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2,
+        "Evaluating": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "CRIM-4",
+     "no": 4,
+     "title": "Professional Conduct and Ethical Standards for Criminologists",
+     "items": 15,
+     "bloom": {
+      "Understanding": 2,
+      "Applying": 11,
+      "Analyzing": 2
+     },
+     "competencies": [
+      {
+       "code": "CRIM-4.1",
+       "no": "4.1",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       },
+       "text": "Apply Chapter 1 and 2 of the Code of Ethics and Professional Conduct of Criminologists."
+      },
+      {
+       "code": "CRIM-4.2",
+       "no": "4.2",
+       "items": 3,
+       "bloom": {
+        "Applying": 2,
+        "Analyzing": 1
+       },
+       "text": "Exhibit adherence to Chapter 3 of the Code of Ethics and Professional Conduct of Criminologists."
+      },
+      {
+       "code": "CRIM-4.3",
+       "no": "4.3",
+       "items": 7,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 5,
+        "Analyzing": 1
+       },
+       "text": "Apply the Oath of Professionals and Chapter 4 of the Code of Ethics and Professional Conduct for Criminologists."
+      },
+      {
+       "code": "CRIM-4.4",
+       "no": "4.4",
+       "items": 3,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2
+       },
+       "text": "Comprehend the concept of ethics and its practical application concerning the foundational principles of human rights."
+      }
+     ],
+     "amended_by": "Resolution No. 06 s. 2025"
+    },
+    {
+     "code": "CRIM-5",
+     "no": 5,
+     "title": "Juvenile Delinquency and Juvenile Justice",
+     "items": 15,
+     "bloom": {
+      "Understanding": 5,
+      "Applying": 8,
+      "Analyzing": 2
+     },
+     "competencies": [
+      {
+       "code": "CRIM-5.1",
+       "no": "5.1",
+       "text": "Recognize the social, community and environmental influences associated with juvenile delinquency such as: 5.1.1. Gender 5.1.2. Family 5.1.3. Peers 5.1.4. Schools 5.1.5. Drug Use 5.1.6. Adolescence",
+       "items": 4,
+       "bloom": {
+        "Understanding": 2,
+        "Analyzing": 2
+       }
+      },
+      {
+       "code": "CRIM-5.2",
+       "no": "5.2",
+       "text": "Elucidate the pivotal provisions of Presidential Decree No. 603 (Child and Youth Welfare Code), Republic Act No. 7610 (Special Protection of Children Against Abuse, Exploitation, and Discrimination Act), and Republic Act No. 7658 (Prohibition of Employment of Children Below 15 Years of Age), understanding their collective contribution to the protection and promotion of children's rights.",
+       "items": 3,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CRIM-5.3",
+       "no": "5.3",
+       "text": "Determine the appropriate procedures in handling CICL by law enforcers from initial contact to investigation based on Republic Act Number 9344 as amended.",
+       "items": 2,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 1
+       }
+      },
+      {
+       "code": "CRIM-5.4",
+       "no": "5.4",
+       "text": "Implement the protocols for intervening with children at risk and diverting Children in Conflict with the Law (CICL).",
+       "items": 3,
+       "bloom": {
+        "Applying": 3
+       }
+      },
+      {
+       "code": "CRIM-5.5",
+       "no": "5.5",
+       "text": "Implement the process of rehabilitation of CICL.",
+       "items": 3,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2
+       }
+      }
+     ]
+    },
+    {
+     "code": "CRIM-6",
+     "no": 6,
+     "title": "Dispute Resolution and Crisis/Incident Management",
+     "items": 15,
+     "bloom": {
+      "Understanding": 3,
+      "Applying": 11,
+      "Analyzing": 1
+     },
+     "competencies": [
+      {
+       "code": "CRIM-6.1",
+       "no": "6.1",
+       "text": "Utilize the principles and procedures of mediation, negotiation, conciliation, arbitration, early neutral evaluation, mini trial, court-annexed mediation, and judicial and indigenous mode of dispute resolution as outlined in RA 9285 and RA 7160.",
+       "items": 5,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 3
+       }
+      },
+      {
+       "code": "CRIM-6.2",
+       "no": "6.2",
+       "text": "Illustrate the operational procedures during incident situations, such as hostage scenarios, bomb threats, and domestic disturbances.",
+       "items": 5,
+       "bloom": {
+        "Applying": 4,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CRIM-6.3",
+       "no": "6.3",
+       "text": "Execute the various types, stages (proactive and reactive) and distinctive characteristics of critical incident management within the context of the Philippine National Police (PNP).",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 4
+       }
+      }
+     ]
+    },
+    {
+     "code": "CRIM-7",
+     "no": 7,
+     "title": "Criminological Research 1 and 2",
+     "items": 20,
+     "bloom": {
+      "Understanding": 7,
+      "Applying": 11,
+      "Analyzing": 1,
+      "Creating": 1
+     },
+     "competencies": [
+      {
+       "code": "CRIM-7.1",
+       "no": "7.1",
+       "text": "Discuss the different types of research methodologies applicable in criminological studies: 7.1.1. Descriptive Studies; 7.1.1. Correlation studies 7.1.2. Phenomenological studies 7.1.3. Case Studies",
+       "items": 5,
+       "bloom": {
+        "Understanding": 3,
+        "Applying": 1,
+        "Analyzing": 1
+       }
+      },
+      {
+       "code": "CRIM-7.2",
+       "no": "7.2",
+       "text": "Utilize the suitable research design, instruments, sampling techniques, validity and reliability and relevant descriptive statistical tools in a criminology research paper.",
+       "items": 3,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 2
+       }
+      },
+      {
+       "code": "CRIM-7.3",
+       "no": "7.3",
+       "text": "Implement the process of research problem identification and definition, hypothesis formulation, research framework, and literature review within the context of criminological studies.",
+       "items": 5,
+       "bloom": {
+        "Understanding": 1,
+        "Applying": 3,
+        "Creating": 1
+       }
+      },
+      {
+       "code": "CRIM-7.4",
+       "no": "7.4",
+       "text": "Apply the guidelines in preparing an ethical consideration for a research paper.",
+       "items": 5,
+       "bloom": {
+        "Understanding": 2,
+        "Applying": 3
+       }
+      },
+      {
+       "code": "CRIM-7.5",
+       "no": "7.5",
+       "text": "Utilize the analysis and interpretation of data derived from the study's results.",
+       "items": 2,
+       "bloom": {
+        "Applying": 2
+       }
+      }
+     ]
+    }
+   ],
+   "bloom": {
+    "Understanding": 31,
+    "Applying": 51,
+    "Analyzing": 15,
+    "Evaluating": 2,
+    "Creating": 1
+   }
+  },
+  {
+   "subject_id": "corrections",
+   "code": "CA",
+   "name": "Correctional Administration",
+   "weight": 10,
+   "items": 100,
+   "annex_url": "https://www.prc.gov.ph/sites/default/files/ANNEX%20A_Corad_0.pdf",
+   "topics": [
+    {
+     "code": "CA-1",
+     "no": 1,
+     "title": "Institutional Correction",
+     "items": 40,
+     "bloom": {
+      "Remembering": 4,
+      "Understanding": 8,
+      "Applying": 20,
+      "Analyzing": 4,
+      "Evaluating": 4
+     },
+     "competencies": [
+      {
+       "code": "CA-1.1",
+       "no": "1.1",
+       "text": "Discuss the theories and principles of Penology, Punishment, Penalty, Sentencing, and Rehabilitation, including the rights, legal limitations, and conditions set forth by the Constitution, Law, and United Nations Declarations.",
+       "items": 12,
+       "bloom": {
+        "Remembering": 4,
+        "Understanding": 8
+       }
+      },
+      {
+       "code": "CA-1.2",
+       "no": "1.2",
+       "text": "Apply the functions, organization, administration, management, operations, planning, decision-making process, training, disciplinary process, and accountability of personnel in the BJMP, Provincial Jail, BUCOR, and other facilities.",
+       "items": 10,
+       "bloom": {
+        "Applying": 10
+       }
+      },
+      {
+       "code": "CA-1.3",
+       "no": "1.3",
+       "text": "Implement the admission process of persons deprived of liberty, release of persons deprived of liberty, security and safety processes and requirements of PDLs inside the institution, visitation, movement, and escorting procedure, the trial of PDLs, custody, control and disciplinary process of PDLs in the BJMP, Provincial Jail, BUCOR, and other facilities.",
+       "items": 10,
+       "bloom": {
+        "Applying": 10
+       }
+      },
+      {
+       "code": "CA-1.4",
+       "no": "1.4",
+       "text": "Evaluate the principles, management, planning, and decision-making of crises and incidents in the BJMP, Provincial Jail, and BUCOR in case of riot, escape, hostage, contrabands, fire, food poisoning, flood, earthquake, typhoon, and other calamities and incidents.",
+       "items": 8,
+       "bloom": {
+        "Analyzing": 4,
+        "Evaluating": 4
+       }
+      }
+     ]
+    },
+    {
+     "code": "CA-2",
+     "no": 2,
+     "title": "Non-Institutional Correction",
+     "items": 40,
+     "bloom": {
+      "Remembering": 4,
+      "Understanding": 8,
+      "Applying": 20,
+      "Analyzing": 4,
+      "Evaluating": 4
+     },
+     "competencies": [
+      {
+       "code": "CA-2.1",
+       "no": "2.1",
+       "text": "Discuss the forms of clemency such as but not limited to: Executive Clemency - Pardon, Absolute and Conditional, Commutation of Sentence, and Reprieve; other relevant remedies granted by the Court; other clemency such as Decriminalizing certain criminal acts, Repealed Penal/ Criminal Laws; and Amnesty. Including the processes and procedures of the grant denial/ disqualifications, process of supervision and monitoring, violation of the condition/s, changes in the condition/s, suspension, revocation, arrest of the grantee, early discharge, and release of grantee.",
+       "items": 6,
+       "bloom": {
+        "Remembering": 2,
+        "Understanding": 4
+       }
+      },
+      {
+       "code": "CA-2.2",
+       "no": "2.2",
+       "text": "Apply the processes of the Probation System from petition, investigation, grant, denial/disqualification, supervision, monitoring, violation of the condition/s, changes in the condition/s, suspension, revocation, trial, early discharge, and release of the probationer, including the role of the probation officer, probation aids, and the victim/complainant in the probation process.",
+       "items": 10,
+       "bloom": {
+        "Applying": 10
+       }
+      },
+      {
+       "code": "CA-2.3",
+       "no": "2.3",
+       "text": "Apply the processes of the Parole System from petition/ review/ evaluation of the institution BJMP and BUCOR, investigation, grant of the Board of Pardons and Parole, denial/ disqualifications, the process of supervision and monitoring, violation of the condition/s, changes in the condition/s, suspension, revocation, arrest of the parolee, early discharge, and release of the parolee, including the role of the parole officer, and the victim/complainant in the parole process.",
+       "items": 10,
+       "bloom": {
+        "Applying": 10
+       }
+      },
+      {
+       "code": "CA-2.4",
+       "no": "2.4",
+       "text": "Discuss the process and grant of time allowance, qualification/ disqualification/cancellation/ revocation of the grant, and the related provisions of the extinction of criminal liability both total and partial.",
+       "items": 6,
+       "bloom": {
+        "Remembering": 2,
+        "Understanding": 4
+       }
+      },
+      {
+       "code": "CA-2.5",
+       "no": "2.5",
+       "text": "Explain the relevant provisions of the law on PDLs preventive imprisonment, allowance for good conduct, and special time for loyalty.",
+       "items": 8,
+       "bloom": {
+        "Analyzing": 4,
+        "Evaluating": 4
+       }
+      }
+     ]
+    },
+    {
+     "code": "CA-3",
+     "no": 3,
+     "title": "Therapeutic Modalities",
+     "items": 20,
+     "bloom": {
+      "Remembering": 2,
+      "Understanding": 4,
+      "Applying": 10,
+      "Analyzing": 2,
+      "Evaluating": 2
+     },
+     "competencies": [
+      {
+       "code": "CA-3.1",
+       "no": "3.1",
+       "text": "Discuss developmental aspects of therapeutic modalities: behavioral management or behavioral therapy; emotional and psychological; intellectual and spiritual or cognitive therapy; vocational and survival skills.",
+       "items": 6,
+       "bloom": {
+        "Remembering": 2,
+        "Understanding": 4
+       }
+      },
+      {
+       "code": "CA-3.2",
+       "no": "3.2",
+       "text": "Implement the rehabilitation, reformation, reintegration programs, and promotion of human rights programs among the PDLs across all institutions.",
+       "items": 10,
+       "bloom": {
+        "Applying": 10
+       }
+      },
+      {
+       "code": "CA-3.3",
+       "no": "3.3",
+       "text": "Evaluate the re-integration programs (TCMP) of the PDL's of BJMP, Provincial Jails, BuCOR, PPA, and the relevant community policies and laws on former PDL's.",
+       "items": 4,
+       "bloom": {
+        "Analyzing": 2,
+        "Evaluating": 2
+       }
+      }
+     ]
+    }
+   ],
+   "bloom": {
+    "Remembering": 10,
+    "Understanding": 20,
+    "Applying": 50,
+    "Analyzing": 10,
+    "Evaluating": 10
+   }
+  }
+ ]
+}

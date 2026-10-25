@@ -176,17 +176,22 @@ class AdminService extends ChangeNotifier {
   /// needs that flag to know whether "toggle" means deactivate or restore.
   ///
   /// [source] / [templateId] narrow the list by how a question was made and
-  /// by the template that made it. This app version's screens do not use
-  /// them (the question generator is on the `concept-bank-and-forms` and
-  /// `student-record` branches); they stay so that branch can be merged
-  /// back without changing this service.
+  /// by the template that made it (the TOS question bank uses template
+  /// `tos_2024`, PDF uploads use the upload id).
+  ///
+  /// [tosCode] keeps questions linked to that TOS topic or competency (a topic
+  /// code such as `CLJ-3` also matches its competencies `CLJ-3.1`, `CLJ-3.2`
+  /// ...). [tosLink] keeps only linked or only unlinked questions.
   Future<List<AdminQuestionEntry>> listQuestions({
     String? subjectId,
     Difficulty? difficulty,
     bool includeInactive = true,
+    bool onlyInactive = false,
     String? search,
     QuestionSource? source,
     String? templateId,
+    String? tosCode,
+    TosLinkFilter tosLink = TosLinkFilter.any,
     int limit = 50,
     int offset = 0,
   }) async {
@@ -198,7 +203,9 @@ class AdminService extends ChangeNotifier {
     if (difficulty != null) {
       query = query.eq('difficulty', difficulty.name);
     }
-    if (!includeInactive) {
+    if (onlyInactive) {
+      query = query.eq('is_active', false);
+    } else if (!includeInactive) {
       query = query.eq('is_active', true);
     }
     if (source != null) {
@@ -206,6 +213,19 @@ class AdminService extends ChangeNotifier {
     }
     if (templateId != null && templateId.isNotEmpty) {
       query = query.eq('template_id', templateId);
+    }
+    if (tosCode != null && tosCode.isNotEmpty) {
+      query = tosCode.contains('.')
+          ? query.eq('tos_code', tosCode)
+          : query.or('tos_code.eq.$tosCode,tos_code.like.$tosCode.*');
+    }
+    switch (tosLink) {
+      case TosLinkFilter.linked:
+        query = query.not('tos_code', 'is', null);
+      case TosLinkFilter.unlinked:
+        query = query.isFilter('tos_code', null);
+      case TosLinkFilter.any:
+        break;
     }
     // Commas, brackets, quotes and wildcards are part of PostgREST's filter
     // syntax; typed into the search box they broke the query ("Could not
@@ -242,8 +262,16 @@ class AdminService extends ChangeNotifier {
 
   /// Updates an existing item and bumps [Question.version] so every cached
   /// copy on a student's device knows to refresh.
-  Future<void> updateQuestion(Question question) async {
+  ///
+  /// A question without a TOS code leaves the stored link alone (so this still
+  /// works before supabase_tos_alignment.sql); pass [clearTosLink] when the
+  /// editor removed the link on purpose.
+  Future<void> updateQuestion(Question question, {bool clearTosLink = false}) async {
     final row = question.toSupabaseRow()..['version'] = question.version + 1;
+    if (clearTosLink && question.tosCode == null) {
+      row['tos_code'] = null;
+      row['bloom_level'] = null;
+    }
     await _client.from(_questionsTable).update(row).eq('id', question.id);
     unawaited(_logAction(
       'update',
@@ -262,6 +290,49 @@ class AdminService extends ChangeNotifier {
         .update({'is_active': active}).eq('id', questionId);
     unawaited(_logAction(active ? 'restore' : 'delete', targetId: questionId));
     QuestionRepository.instance.invalidate();
+  }
+
+  /// Approves (or withdraws) several questions at once, such as all the
+  /// reviewed drafts of one TOS competency. Returns how many were changed.
+  Future<int> setActiveMany(List<String> questionIds, bool active) async {
+    if (questionIds.isEmpty) return 0;
+    final rows = await _client
+        .from(_questionsTable)
+        .update({'is_active': active})
+        .inFilter('id', questionIds)
+        .select('id');
+    final changed = (rows as List).length;
+    unawaited(_logAction(
+      active ? 'approve' : 'delete',
+      targetId: questionIds.length == 1 ? questionIds.first : null,
+      details: {'count': changed, 'ids': questionIds.take(50).toList()},
+    ));
+    QuestionRepository.instance.invalidate();
+    return changed;
+  }
+
+  /// How many questions each TOS topic and competency has, against the
+  /// number of items the TOS gives it. Read through `admin_tos_coverage()`
+  /// (supabase_tos_alignment.sql), which checks `is_admin()` itself.
+  Future<List<TosCoverageRow>> tosCoverage() async {
+    try {
+      final rows = await _client.rpc('admin_tos_coverage');
+      return List<Map<String, dynamic>>.from(rows as List)
+          .map(TosCoverageRow.fromJson)
+          .toList();
+    } on PostgrestException catch (e) {
+      throw Exception(tosCoverageErrorMessage(e.code));
+    }
+  }
+
+  @visibleForTesting
+  static String tosCoverageErrorMessage(String? code) {
+    if (code == 'PGRST202' || code == '42883') {
+      return 'This screen needs supabase_tos_alignment.sql. '
+          'Run it in the Supabase SQL Editor, then try again.';
+    }
+    if (code == '42501') return 'Only faculty accounts can view TOS coverage.';
+    return 'The database could not count the TOS coverage (error ${code ?? 'unknown'}).';
   }
 
   /// Hard delete. Only for genuine mistakes (e.g. a duplicate just created);
@@ -462,6 +533,44 @@ class AdminService extends ChangeNotifier {
 /// One row of [AdminService.listQuestions]: the parsed [Question] plus the
 /// admin-only bookkeeping fields (`is_active`, `updated_at`) that
 /// [Question] itself does not carry, because students never need them.
+/// Which questions to list by their TOS link.
+enum TosLinkFilter { any, linked, unlinked }
+
+/// One row of `admin_tos_coverage()`: a TOS topic or competency with its TOS
+/// items, its active questions and its drafts (inactive questions).
+class TosCoverageRow {
+  final String code;
+  final String subjectId;
+  final String topicCode;
+  final bool isTopic;
+  final int tosItems;
+  final int active;
+  final int drafts;
+
+  const TosCoverageRow({
+    required this.code,
+    required this.subjectId,
+    required this.topicCode,
+    required this.isTopic,
+    required this.tosItems,
+    required this.active,
+    required this.drafts,
+  });
+
+  factory TosCoverageRow.fromJson(Map<String, dynamic> json) => TosCoverageRow(
+        code: (json['code'] ?? '').toString(),
+        subjectId: (json['subject_id'] ?? '').toString(),
+        topicCode: (json['topic_code'] ?? '').toString(),
+        isTopic: json['level'] == 'topic',
+        tosItems: (json['tos_items'] as num?)?.toInt() ?? 0,
+        active: (json['active'] as num?)?.toInt() ?? 0,
+        drafts: (json['drafts'] as num?)?.toInt() ?? 0,
+      );
+
+  /// True when the active questions cover every TOS item.
+  bool get isCovered => active >= tosItems;
+}
+
 class AdminQuestionEntry {
   final Question question;
   final bool isActive;

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/question.dart';
 import '../../models/subject.dart';
+import '../../models/tos.dart';
 import '../../services/document_generation_service.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/page_transitions.dart';
@@ -29,6 +30,10 @@ class _AdminDocumentGenerationScreenState extends State<AdminDocumentGenerationS
 
   final _topicController = TextEditingController();
   String _subjectId = CriminologySubjects.all.first.id;
+
+  /// The TOS topic or competency the questions should test; null lets
+  /// Gemini pick topics from the PDF (the free-text topic is used then).
+  String? _tosCode;
   int _difficultyIndex = 0;
   int _countIndex = 1;
 
@@ -120,11 +125,13 @@ class _AdminDocumentGenerationScreenState extends State<AdminDocumentGenerationS
     if (file == null || file.bytes == null || _sending) return;
     setState(() => _sending = true);
     try {
+      final tosTopic = TosCatalog.loaded?.topicOf(_tosCode);
       await _service.upload(
         filename: file.name,
         bytes: file.bytes!,
         subjectId: _subjectId,
-        topic: _topicController.text,
+        topic: tosTopic?.title ?? _topicController.text,
+        tosCode: tosTopic == null ? null : _tosCode,
         targetDifficulty: _difficultyIndex == 0 ? null : Difficulty.values[_difficultyIndex - 1],
         requestedCount: _counts[_countIndex],
       );
@@ -193,6 +200,53 @@ class _AdminDocumentGenerationScreenState extends State<AdminDocumentGenerationS
     );
   }
 
+  /// "Target in the TOS": any part of the subject, one whole topic, or one
+  /// competency. Gemini then writes at that competency's Bloom levels.
+  List<Widget> _buildTosTarget() {
+    final subject = TosCatalog.loaded?.subject(_subjectId);
+    if (subject == null) return const [];
+    final text = context.textStyles;
+    final p = context.palette;
+    final competency = TosCatalog.loaded?.competency(_tosCode ?? '');
+    return [
+      Text('Target in the TOS', style: text.labelLarge),
+      const SizedBox(height: 6),
+      DropdownButtonFormField<String?>(
+        key: ValueKey('tos-target-$_subjectId'),
+        initialValue: _tosCode,
+        isExpanded: true,
+        decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+        items: [
+          const DropdownMenuItem(value: null, child: Text('Any part of the subject')),
+          for (final topic in subject.topics) ...[
+            DropdownMenuItem(
+              value: topic.code,
+              child: Text('${topic.number}. ${topic.title} (whole topic)', overflow: TextOverflow.ellipsis),
+            ),
+            for (final c in topic.competencies)
+              DropdownMenuItem(
+                value: c.code,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text('${c.number}  ${c.text}', overflow: TextOverflow.ellipsis),
+                ),
+              ),
+          ],
+        ],
+        onChanged: _sending ? null : (v) => setState(() => _tosCode = v),
+      ),
+      if (competency != null) ...[
+        const SizedBox(height: 6),
+        Text(
+          'Gemini will write at the TOS Bloom levels of ${competency.code}: '
+          '${competency.bloom.entries.map((e) => '${e.key.label} ${e.value}').join(', ')}.',
+          style: text.bodySmall?.copyWith(color: p.textSecondary),
+        ),
+      ],
+      const SizedBox(height: 14),
+    ];
+  }
+
   Widget _buildForm() {
     final p = context.palette;
     final text = context.textStyles;
@@ -227,17 +281,26 @@ class _AdminDocumentGenerationScreenState extends State<AdminDocumentGenerationS
                 ),
               ),
           ],
-          onChanged: _sending ? null : (v) => setState(() => _subjectId = v ?? _subjectId),
+          onChanged: _sending
+              ? null
+              : (v) => setState(() {
+                    if (v == null || v == _subjectId) return;
+                    _subjectId = v;
+                    _tosCode = null;
+                  }),
         ),
         const SizedBox(height: 14),
-        AppTextField(
-          controller: _topicController,
-          label: 'Topic (optional)',
-          hint: 'e.g. Justifying Circumstances',
-          icon: Icons.label_outline_rounded,
-          maxLength: 120,
-        ),
-        const SizedBox(height: 6),
+        ..._buildTosTarget(),
+        if (_tosCode == null) ...[
+          AppTextField(
+            controller: _topicController,
+            label: 'Topic (optional)',
+            hint: 'e.g. Justifying Circumstances',
+            icon: Icons.label_outline_rounded,
+            maxLength: 120,
+          ),
+          const SizedBox(height: 6),
+        ],
         Text('Difficulty', style: text.labelLarge),
         const SizedBox(height: 6),
         PillTabs(
@@ -373,7 +436,7 @@ class _AdminDocumentGenerationScreenState extends State<AdminDocumentGenerationS
                   children: [
                     Text(u.filename, style: text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                     Text(
-                      [subject.shortName, if (u.topic != null) u.topic!, '${u.requestedCount} asked'].join(' · '),
+                      [subject.shortName, u.tosCode ?? u.topic, '${u.requestedCount} asked'].whereType<String>().join(' · '),
                       style: text.bodySmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

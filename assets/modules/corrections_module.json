@@ -1,85 +1,146 @@
 {
-  "id": "corrections",
-  "title": "Correctional Administration",
-  "description": "Institutional and non-institutional correctional administration and rehabilitation.",
-  "totalItems": 140,
-  "chapters": [
+ "id": "corrections",
+ "title": "Correctional Administration",
+ "description": "Study module for Correctional Administration (10% of the Criminologist Licensure Examination), organized by the topics and competencies of the PRC Table of Specifications.",
+ "source": "PRB of Criminology Res. No. 02 s. 2024, as amended by Res. No. 06 s. 2025",
+ "totalItems": 100,
+ "status": "Written with AI assistance from the TOS competencies and the laws they name; for faculty review (content/tos/SOURCES.md).",
+ "chapters": [
+  {
+   "number": 1,
+   "code": "CA-1",
+   "title": "Institutional Correction",
+   "itemCount": 40,
+   "introduction": "Institutional correction is the custody, care and rehabilitation of persons deprived of liberty (PDLs) in jails and prisons. This chapter covers the theories of punishment, the agencies that run institutions, the handling of PDLs from admission to release, and crisis management inside institutions.",
+   "content": "## Institutional Correction\n\n### 1.1 Penology, punishment and the rights of PDLs\n\nTOS competency 1.1 (12 items): Discuss the theories and principles of Penology, Punishment, Penalty, Sentencing, and Rehabilitation, including the rights, legal limitations, and conditions set forth by the Constitution, Law, and United Nations Declarations.\n\n- General deterrence warns the public; specific deterrence discourages the offender himself.\n- The Indeterminate Sentence Law (Act 4103) sets a minimum and a maximum, allowing parole after the minimum.\n- R.A. 9346 (2006) prohibits the death penalty.\n- The Constitution bans cruel, degrading or inhuman punishment and subhuman penal facilities (Art. III, Sec. 19).\n- UN standards: the Mandela Rules (2015) for all prisoners, the Bangkok Rules for women, the Tokyo Rules for non-custodial measures, the Beijing Rules for juveniles.\n\n### 1.2 Agencies, administration and personnel\n\nTOS competency 1.2 (10 items): Apply the functions, organization, administration, management, operations, planning, decision-making process, training, disciplinary process, and accountability of personnel in the BJMP, Provincial Jail, BUCOR, and other facilities.\n\n- BuCor is headed by a Director General (R.A. 10575); the BJMP by its Chief (R.A. 6975, R.A. 9263).\n- PDLs never hold keys; guards do a joint headcount and turnover at every change of shift.\n- On reliable escape intelligence, security is tightened and a surprise search (greyhound operation) is held.\n- Personnel who smuggle contraband are relieved and charged administratively and criminally.\n- Overcrowding is eased by coordinating with courts, paralegal help and timely processing of time allowances.\n\n### 1.3 Admission, custody, movement and release of PDLs\n\nTOS competency 1.3 (10 items): Implement the admission process of persons deprived of liberty, release of persons deprived of liberty, security and safety processes and requirements of PDLs inside the institution, visitation, movement, and escorting procedure, the trial of PDLs, custody, control and disciplinary process of PDLs in the BJMP, Provincial Jail, BUCOR, and other facilities.\n\n- Admission: search, booking (records, photographs, fingerprints), medical examination, orientation and classification.\n- Visitors are registered and searched, and the food and items they bring are inspected.\n- Escorts follow the authorized route without unauthorized stops; remote court appearances are set up when the court orders them.\n- Contraband is seized, recorded and dealt with through a disciplinary hearing (Mandela Rules 39-45).\n- A missing PDL at headcount means lockdown, recount and immediate report.\n- Children are never held with adults (R.A. 9344).\n\n### 1.4 Crisis and incident management in institutions\n\nTOS competency 1.4 (8 items): Evaluate the principles, management, planning, and decision-making of crises and incidents in the BJMP, Provincial Jail, and BUCOR in case of riot, escape, hostage, contrabands, fire, food poisoning, flood, earthquake, typhoon, and other calamities and incidents.\n\n- After an escape, notify the police and nearby units at once.\n- Keep food samples in a food poisoning case to find the cause.\n- Recurring contraband is stopped at its entry points: visitors, deliveries and staff.\n- Before typhoons and floods, transfer PDLs early to safer facilities and stock food and water.\n",
+   "keyPoints": [
     {
-      "number": 1,
-      "title": "Institutional Corrections",
-      "itemCount": 33,
-      "introduction": "This chapter covers Institutional Corrections with 33 review items essential for the board examination.",
-      "content": "## Institutional Corrections\n\nStudy the following concepts and review items related to Institutional Corrections. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Imprisonment serves both as punishment for crimes and as an opportunity for rehabilitation\n- The Bureau of Corrections (BUCOR) manages national penitentiaries for those sentenced to more than 3 years\n- BJMP manages city, district, and municipal jails for those awaiting trial or serving sentences of 3 years or less\n- Jails hold those awaiting trial or short sentences; prisons hold those with longer sentences\n- New Bilibid Prison is the national penitentiary located in Muntinlupa City\n- Medium security prisons house inmates with moderate security risks\n- Minimum security prisons house low-risk inmates, often those nearing release\n- A prison is a facility where convicted criminals serve their sentences\n\n### Review Items (33 total):\n"
+     "code": "CA-1.1",
+     "title": "Penology, punishment and the rights of PDLs",
+     "note": "John Howard pioneered prison reform and Maconochie's mark system was a forerunner of parole; retribution punishes what is deserved while deterrence, incapacitation and rehabilitation look to the future."
     },
     {
-      "number": 2,
-      "title": "Non-Institutional Corrections",
-      "itemCount": 21,
-      "introduction": "This chapter covers Non-Institutional Corrections with 21 review items essential for the board examination.",
-      "content": "## Non-Institutional Corrections\n\nStudy the following concepts and review items related to Non-Institutional Corrections. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Probation is a court-ordered period of supervision in the community as an alternative to imprisonment\n- The Parole and Probation Administration supervises probationers and parolees in the community\n- PD 968 is the Probation Law of 1976, establishing the probation system in the Philippines\n- The trial court that convicted the offender has the power to grant probation\n- Offenders sentenced to more than 6 years imprisonment are not eligible for probation\n- Probation allows offenders to serve their sentence in the community under supervision\n- Parole is the conditional release of a prisoner before completing their sentence\n- Parole is release after serving part of prison sentence; probation is instead of imprisonment\n\n### Review Items (21 total):\n"
+     "code": "CA-1.2",
+     "title": "Agencies, administration and personnel",
+     "note": "BuCor (DOJ) keeps national prisoners sentenced to more than three years; the BJMP (DILG) runs district, city and municipal jails; provincial jails belong to the provincial governments."
     },
     {
-      "number": 3,
-      "title": "Parole",
-      "itemCount": 12,
-      "introduction": "This chapter covers Parole with 12 review items essential for the board examination.",
-      "content": "## Parole\n\nStudy the following concepts and review items related to Parole. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Parole is the conditional release of a prisoner before completing their full sentence\n- The Indeterminate Sentence Law requires courts to impose minimum and maximum terms\n- The Board of Pardons and Parole grants parole to qualified prisoners\n- The Board of Pardons and Parole supervises and grants parole\n- Parole supervision monitors released inmates compliance with conditions\n- New crimes or violating conditions results in parole revocation\n- Mandatory release occurs when inmates serve required portion of sentence\n- Indeterminate sentences have a range allowing parole consideration\n\n### Review Items (12 total):\n"
+     "code": "CA-1.3",
+     "title": "Admission, custody, movement and release of PDLs",
+     "note": "No one is admitted without a valid commitment order, and no one is released without a verified release order; discipline follows notice and a hearing."
     },
     {
-      "number": 4,
-      "title": "Rehabilitation Programs",
-      "itemCount": 16,
-      "introduction": "This chapter covers Rehabilitation Programs with 16 review items essential for the board examination.",
-      "content": "## Rehabilitation Programs\n\nStudy the following concepts and review items related to Rehabilitation Programs. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Rehabilitation aims to reform offenders and help them reintegrate into society as law-abiding citizens\n- GCTA is time credited to inmates for good conduct, reducing their prison stay\n- Livelihood programs teach inmates skills for employment after release\n- Restorative justice focuses on repairing harm through cooperation between offenders and victims\n- Rehabilitation aims to reform offenders so they can successfully reintegrate into society\n- Vocational training teaches inmates practical job skills for employment after release\n- Behavior modification uses structured programs to change inmate behavior\n- Work release allows inmates to work outside prison during the day\n\n### Review Items (16 total):\n"
-    },
-    {
-      "number": 5,
-      "title": "Inmate Classification",
-      "itemCount": 14,
-      "introduction": "This chapter covers Inmate Classification with 14 review items essential for the board examination.",
-      "content": "## Inmate Classification\n\nStudy the following concepts and review items related to Inmate Classification. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Inmates are classified based on security risk and needs for appropriate placement and programming\n- Reception and diagnostic centers assess new inmates for proper classification and placement\n- Classification considers crime committed, length of sentence, behavior, and security risk\n- Classification ensures inmates are placed appropriately based on security and treatment needs\n- Maximum security is for the most dangerous inmates requiring highest supervision\n- Minimum security is for low-risk inmates who need minimal supervision\n- Reclassification periodically reviews inmate security level based on behavior and progress\n- Reception centers assess new inmates for proper classification and placement\n\n### Review Items (14 total):\n"
-    },
-    {
-      "number": 6,
-      "title": "Prison Security",
-      "itemCount": 14,
-      "introduction": "This chapter covers Prison Security with 14 review items essential for the board examination.",
-      "content": "## Prison Security\n\nStudy the following concepts and review items related to Prison Security. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Maximum security prisons house the most dangerous criminals who pose the highest escape or violence risk\n- Contraband refers to items prohibited inside prison, such as weapons, drugs, and phones\n- Solitary confinement isolates an inmate from the general prison population\n- Philippine prisons have maximum, medium, and minimum security classifications\n- A lockdown confines all inmates to their cells during emergencies or security threats\n- Supermax prisons have the highest security level for the most dangerous inmates\n- Contraband refers to any item prohibited within prison facilities\n- Shakedowns are unannounced searches for prohibited items\n\n### Review Items (14 total):\n"
-    },
-    {
-      "number": 7,
-      "title": "Therapeutic Communities",
-      "itemCount": 8,
-      "introduction": "This chapter covers Therapeutic Communities with 8 review items essential for the board examination.",
-      "content": "## Therapeutic Communities\n\nStudy the following concepts and review items related to Therapeutic Communities. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- A therapeutic community is a residential treatment program focusing on substance abuse and behavioral change\n- A therapeutic community is a treatment environment focused on behavioral change and rehabilitation\n- Therapeutic Community model creates a structured environment promoting behavioral change\n- Therapeutic communities use peer support for drug rehabilitation\n- The 12-step program is a structured recovery approach for addiction\n- Therapeutic milieu uses the entire environment for rehabilitation\n- Encounter groups use peer confrontation to address negative behaviors\n- Therapeutic communities use group-based treatment and peer support for rehabilitation\n\n### Review Items (8 total):\n"
-    },
-    {
-      "number": 8,
-      "title": "Pardon and Amnesty",
-      "itemCount": 16,
-      "introduction": "This chapter covers Pardon and Amnesty with 16 review items essential for the board examination.",
-      "content": "## Pardon and Amnesty\n\nStudy the following concepts and review items related to Pardon and Amnesty. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- The President of the Philippines has the power to grant pardons, reprieves, and amnesty\n- Pardon is granted to individuals after conviction; amnesty is for groups, often political offenders\n- Commutation is the reduction of a sentence to a lesser penalty\n- Reprieve is a temporary postponement or suspension of the execution of a sentence\n- Pardon is an act of executive clemency that forgives the offense and its consequences\n- Amnesty is a general pardon granted to a group, usually for political offenses\n- Commutation reduces the penalty imposed without forgiving the offense\n- Pardon is granted to individuals; amnesty is a general pardon to groups, usually for political offenses\n\n### Review Items (16 total):\n"
-    },
-    {
-      "number": 9,
-      "title": "Community-Based Corrections",
-      "itemCount": 1,
-      "introduction": "This chapter covers Community-Based Corrections with 1 review items essential for the board examination.",
-      "content": "## Community-Based Corrections\n\nStudy the following concepts and review items related to Community-Based Corrections. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Halfway houses provide transitional housing for inmates preparing for release\n\n### Review Items (1 total):\n"
-    },
-    {
-      "number": 10,
-      "title": "Probation",
-      "itemCount": 3,
-      "introduction": "This chapter covers Probation with 3 review items essential for the board examination.",
-      "content": "## Probation\n\nStudy the following concepts and review items related to Probation. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Technical violations are breaches of probation conditions without committing a new crime\n- Probation allows offenders to serve their sentence in the community under supervision\n- The Parole and Probation Administration (PPA) administers probation services\n\n### Review Items (3 total):\n"
-    },
-    {
-      "number": 11,
-      "title": "Rehabilitation",
-      "itemCount": 2,
-      "introduction": "This chapter covers Rehabilitation with 2 review items essential for the board examination.",
-      "content": "## Rehabilitation\n\nStudy the following concepts and review items related to Rehabilitation. Understanding these concepts is essential for passing the criminology board examination.\n\n### Important Points to Remember:\n\n- Rehabilitation aims to reform offenders so they can reintegrate as productive citizens\n- Vocational training teaches inmates marketable job skills for reintegration into society\n\n### Review Items (2 total):\n"
+     "code": "CA-1.4",
+     "title": "Crisis and incident management in institutions",
+     "note": "In a riot, contain the area first; in a hostage incident, contain and negotiate through trained negotiators under the crisis committee; in fire and disasters, move PDLs under guard to pre-set safe areas."
     }
-  ]
+   ],
+   "keyTerms": [
+    "Penology",
+    "Retribution",
+    "Deterrence",
+    "Incapacitation",
+    "Rehabilitation",
+    "Indeterminate Sentence Law",
+    "Mandela Rules",
+    "Bangkok Rules",
+    "BJMP",
+    "BuCor",
+    "Provincial jail",
+    "Commitment order",
+    "Greyhound operation",
+    "Headcount"
+   ]
+  },
+  {
+   "number": 2,
+   "code": "CA-2",
+   "title": "Non-Institutional Correction",
+   "itemCount": 40,
+   "introduction": "Non-institutional correction lets offenders serve or finish their sentence in the community under supervision. This chapter covers executive clemency, probation, parole, time allowances and the extinction of criminal liability.",
+   "content": "## Non-Institutional Correction\n\n### 2.1 Executive clemency\n\nTOS competency 2.1 (6 items): Discuss the forms of clemency such as but not limited to: Executive Clemency - Pardon, Absolute and Conditional, Commutation of Sentence, and Reprieve; other relevant remedies granted by the Court; other clemency such as Decriminalizing certain criminal acts, Repealed Penal/ Criminal Laws; and Amnesty. Including the processes and procedures of the grant denial/ disqualifications, process of supervision and monitoring, violation of the condition/s, changes in the condition/s, suspension, revocation, arrest of the grantee, early discharge, and release of grantee.\n\n- A conditional pardon is revoked when its conditions are broken; the grantee may be rearrested and prosecuted under Art. 159.\n- Amnesty, with the concurrence of Congress, wipes out the offense.\n- Penal laws favorable to the accused apply retroactively, unless he is a habitual criminal (Art. 22).\n\n### 2.2 The probation system\n\nTOS competency 2.2 (10 items): Apply the processes of the Probation System from petition, investigation, grant, denial/disqualification, supervision, monitoring, violation of the condition/s, changes in the condition/s, suspension, revocation, trial, early discharge, and release of the probationer, including the role of the probation officer, probation aids, and the victim/complainant in the probation process.\n\n- Filing for probation waives the right to appeal; under R.A. 10707, if an appeal reduces the sentence to a probationable one, the accused may still apply.\n- The probation officer reports within 60 days of the order for a post-sentence investigation.\n- Probation lasts up to two years for sentences of one year or less, and up to six years otherwise.\n- On violation, the court may order arrest and, after a hearing, revoke probation.\n- Final discharge restores civil rights and ends criminal liability for the offense.\n- Drug traffickers cannot apply (R.A. 9165, Sec. 24); volunteer probation aides help supervise.\n\n### 2.3 The parole system\n\nTOS competency 2.3 (10 items): Apply the processes of the Parole System from petition/ review/ evaluation of the institution BJMP and BUCOR, investigation, grant of the Board of Pardons and Parole, denial/ disqualifications, the process of supervision and monitoring, violation of the condition/s, changes in the condition/s, suspension, revocation, arrest of the parolee, early discharge, and release of the parolee, including the role of the parole officer, and the victim/complainant in the parole process.\n\n- The ISL does not apply to those sentenced to reclusion perpetua or life imprisonment, habitual delinquents, those who escaped, or terms not exceeding one year (Act 4103, Sec. 2).\n- A parolee who violates his conditions may be rearrested and recommitted (Sec. 8).\n- Supervision lasts until the maximum term ends, unless the Board grants final release earlier.\n- The Board reviews the PDL's carpeta and prison record; a parolee needs approval to change residence.\n\n### 2.4 Time allowances and extinction of criminal liability\n\nTOS competency 2.4 (6 items): Discuss the process and grant of time allowance, qualification/ disqualification/cancellation/ revocation of the grant, and the related provisions of the extinction of criminal liability both total and partial.\n\n- Teaching, studying or mentoring earns another 15 days a month (Art. 97, as amended by R.A. 10592).\n- Partial extinction: conditional pardon, commutation and good conduct allowances (Art. 94).\n- Total extinction: death, service of sentence, amnesty, absolute pardon and prescription (Art. 89).\n\n### 2.5 Preventive imprisonment, GCTA and loyalty allowances\n\nTOS competency 2.5 (8 items): Explain the relevant provisions of the law on PDLs preventive imprisonment, allowance for good conduct, and special time for loyalty.\n\n- A detainee whose preventive imprisonment equals the maximum penalty is released, though the trial continues (Art. 29).\n- Recidivists, habitual delinquents, escapees and persons charged with heinous crimes are excluded from the credit.\n- GCTA: years 1-2, 20 days; years 3-5, 23 days; years 6-10, 25 days; year 11 on, 30 days a month.\n- Special time allowance for loyalty (Art. 98): one-fifth off for leaving during a calamity and returning within 48 hours after it passes; two-fifths for staying.\n",
+   "keyPoints": [
+    {
+     "code": "CA-2.1",
+     "title": "Executive clemency",
+     "note": "The Board of Pardons and Parole recommends clemency; a reprieve postpones a sentence, commutation reduces it, and a pardon is allowed only after final conviction."
+    },
+    {
+     "code": "CA-2.2",
+     "title": "The probation system",
+     "note": "Apply for probation within the period for appeal; those sentenced to more than six years are disqualified; the probationer reports within 72 hours of the order."
+    },
+    {
+     "code": "CA-2.3",
+     "title": "The parole system",
+     "note": "The Board of Pardons and Parole may parole a PDL who has served the minimum of an indeterminate sentence and is fit for release; the PPA supervises parolees."
+    },
+    {
+     "code": "CA-2.4",
+     "title": "Time allowances and extinction of criminal liability",
+     "note": "Good conduct time allowance is 20 days a month in the first two years of good conduct; it is granted by the BuCor Director, the BJMP Chief or the warden, and cannot be revoked once granted."
+    },
+    {
+     "code": "CA-2.5",
+     "title": "Preventive imprisonment, GCTA and loyalty allowances",
+     "note": "A detainee who agrees in writing to the rules gets full credit for preventive imprisonment, otherwise four-fifths; GCTA rises from 20 to 23, 25 and 30 days a month with years of good conduct."
+    }
+   ],
+   "keyTerms": [
+    "Board of Pardons and Parole",
+    "Absolute pardon",
+    "Conditional pardon",
+    "Commutation",
+    "Reprieve",
+    "Amnesty",
+    "Probation",
+    "P.D. 968",
+    "R.A. 10707",
+    "Post-sentence investigation",
+    "Parole",
+    "Act 4103",
+    "GCTA",
+    "R.A. 10592",
+    "Special time allowance for loyalty"
+   ]
+  },
+  {
+   "number": 3,
+   "code": "CA-3",
+   "title": "Therapeutic Modalities",
+   "itemCount": 20,
+   "introduction": "Therapeutic modalities help PDLs change their behavior, manage their emotions, think differently and learn skills for life after release. This chapter covers the Therapeutic Community, rehabilitation and human rights programs, and reintegration.",
+   "content": "## Therapeutic Modalities\n\n### 3.1 The components of therapeutic modalities\n\nTOS competency 3.1 (6 items): Discuss developmental aspects of therapeutic modalities: behavioral management or behavioral therapy; emotional and psychological; intellectual and spiritual or cognitive therapy; vocational and survival skills.\n\n- Behavior management uses rewards and sanctions to reinforce good behavior.\n- Counseling and groups help PDLs manage feelings such as anger.\n- Cognitive therapy targets thinking errors, such as blaming others or minimizing harm.\n\n### 3.2 Rehabilitation and human rights programs\n\nTOS competency 3.2 (10 items): Implement the rehabilitation, reformation, reintegration programs, and promotion of human rights programs among the PDLs across all institutions.\n\n- PDLs get at least one hour of outdoor exercise a day if weather permits (Mandela Rule 23).\n- Religious practice of every faith is allowed within security rules (Mandela Rules 65-66).\n- Decisions about infants of women PDLs follow the child's best interests (Bangkok Rules).\n- PDLs with mental illness are referred for care, not punished for symptoms (R.A. 11036).\n\n### 3.3 Reintegration programs and community policies\n\nTOS competency 3.3 (4 items): Evaluate the re-integration programs (TCMP) of the PDL's of BJMP, Provincial Jails, BuCOR, PPA, and the relevant community policies and laws on former PDL's.\n\n- The Therapeutic Community Modality Program (TCMP) uses peer confrontation and support within a family structure.\n- The PPA and LGUs share responsibility for aftercare.\n- Stigma and unemployment push former PDLs back toward crime.\n",
+   "keyPoints": [
+    {
+     "code": "CA-3.1",
+     "title": "The components of therapeutic modalities",
+     "note": "The Therapeutic Community uses the community of PDLs itself as the agent of change, through behavior shaping, emotional and psychological work, intellectual and spiritual growth, and vocational and survival skills."
+    },
+    {
+     "code": "CA-3.2",
+     "title": "Rehabilitation and human rights programs",
+     "note": "Programs include ALS education, drug rehabilitation, livelihood, pre-release preparation, religious and family contact, and health care equal to that in the community."
+    },
+    {
+     "code": "CA-3.3",
+     "title": "Reintegration programs and community policies",
+     "note": "Reintegration succeeds with family and community support, aftercare and job placement; blanket bans on hiring former PDLs hinder it."
+    }
+   ],
+   "keyTerms": [
+    "Therapeutic Community",
+    "Behavior shaping",
+    "Emotional and psychological component",
+    "Intellectual and spiritual component",
+    "Vocational and survival skills",
+    "Cognitive-behavioral therapy",
+    "ALS",
+    "Livelihood program",
+    "Reintegration",
+    "Aftercare",
+    "Mandela Rules"
+   ]
+  }
+ ]
 }

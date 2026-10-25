@@ -203,6 +203,8 @@ Apply these SQL files **in this exact order**, in the Supabase SQL Editor:
 13. `supabase_student_record.sql` — lets Faculty open a student's full record from **Admin Panel → Students** (tap a student): level reached and segments per subject, topic mastery, recent quizzes. One read-only, admin-only function; no table rules change. Safe to run more than once.
 14. `supabase_rebalance_options_hard.sql`, `_medium.sql`, `_easy.sql` *(review first)* — rewritten wrong answer options for the 759 imported questions, so the correct answer can no longer be spotted by being the longest (CHANGELOG Session 62). Review `content_review/rebalance_review.html` before running. Only the wrong options and their reasons change, and a question Faculty edited in the meantime is skipped. Each file is safe to run twice and has a matching `_rollback.sql`. Regenerate them with `dart run tools/rebalance_options.dart`.
 15. `supabase_document_generation.sql` *(branch `pdf-uploader-gemini`)* — the "Generate from PDF" feature. Run it **after step 8**, which dropped the old table this file recreates. See **Generate questions from a PDF (Google Gemini)** below for the Edge Function and the free API key.
+16. `supabase_tos_alignment.sql` *(branch `tos-aligned-bank`)* — aligns the question bank with the PRC Tables of Specifications: adds the TOS tables, `questions.tos_code` and `bloom_level`, moves existing questions onto the TOS topics (kept in a backup table so `supabase_tos_alignment_rollback.sql` can undo it), deactivates the questions outside the TOS and the 16 flagged as wrong, merges students' topic mastery, and adds `admin_tos_coverage()`. Run it after step 15.
+17. `supabase_tos_bank.sql` *(branch `tos-aligned-bank`)* — the 600 TOS questions, **inactive** until Faculty approve them. Run it after step 16. See **Questions aligned with the PRC TOS** below.
 
 ## Google sign-in
 
@@ -255,6 +257,23 @@ On branch `pdf-uploader-gemini`, Faculty can upload a PDF, such as a reviewer, a
 - **Mistakes:** Gemini can make mistakes. The review screen shows each question with its answer, legal basis and explanation, and nothing reaches students without approval.
 - **Security:** the function checks that the caller is a signed-in admin and processes each upload only once, so the quota can't be used up by others.
 - **Removing the feature:** run `supabase_remove_document_generation.sql`, which also lists the two leftovers SQL can't remove (the storage bucket and the Edge Function).
+
+## Questions aligned with the PRC TOS
+
+On branch `tos-aligned-bank`, the question bank, the subject topics, the study modules and the study notes follow the **PRC Tables of Specifications** for the Criminologist Licensure Examination: Board Res. No. 02 s. 2024 (annexes "as of January 22, 2024"), as amended by Res. No. 06 s. 2025 for Criminology Topic 4. Sources and dates are in `content/tos/SOURCES.md`.
+
+- **The TOS:** `assets/tos/tos_2024.json` (6 subjects, 37 topics, 146 competencies, the items per Bloom level), made from the official annex PDFs by `tools/tos/parse_annex.py` and `tools/tos/build_tos.py`.
+- **600 new questions:** `content/tos/bank/<subject>.jsonl`, exactly the TOS number of items for every competency at every Bloom level. Check and rebuild with `python tools/tos/build_bank.py --sql`.
+- **Existing questions:** moved onto their TOS topic by `assets/tos/topic_map.json` (`python tools/tos/build_alignment.py` writes the SQL and dry-runs it on `content_review/snapshot_imported.jsonl`).
+- **Study modules:** one chapter per TOS topic and one section per competency, from `content/tos/modules/<subject>.md` (`python tools/tos/build_modules.py`). The study notes before a quiz show the key points of the quiz's competencies.
+- **Readiness:** each subject weights easy, medium and hard by its own TOS (Remembering and Understanding = easy, Applying = medium, Analyzing to Creating = hard, about 30 / 50 / 20), and the overall score weights subjects by their exam share.
+
+**To go live:**
+1. Run `supabase_tos_alignment.sql`, then `supabase_tos_bank.sql`, in the SQL Editor (steps 16 and 17). The editor's output says how many questions were linked, moved and deactivated.
+2. Redeploy the Edge Function `generate-questions-from-document` with the new `index.ts` (same steps as above), so a PDF upload can target one TOS competency.
+3. Faculty review the drafts: **Admin Panel → Dashboard → TOS coverage** (or the check-list icon on the Questions screen) → a competency → tick the checked drafts → **Approve**. Students see a question only after it is approved.
+
+The 600 questions and the module notes were **written with AI assistance** from the TOS competencies and the laws they name. They are drafts for faculty review, not verified content.
 
 ### Security notes
 

@@ -8,6 +8,7 @@ import '../../utils/responsive.dart';
 import '../../widgets/ui/ui.dart';
 import 'admin_questions_screen.dart';
 import 'admin_students_screen.dart';
+import 'admin_tos_coverage_screen.dart';
 
 /// Landing screen of the admin panel.
 ///
@@ -91,6 +92,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return;
     }
     await Navigator.push(context, SlidePageRoute(page: const AdminQuestionsScreen()));
+    _load();
+  }
+
+  void _openTosCoverage() async {
+    await Navigator.push(context, SlidePageRoute(page: const AdminTosCoverageScreen()));
     _load();
   }
 
@@ -308,15 +314,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         subtitle: '${_students.length} student${_students.length == 1 ? '' : 's'} tracked',
         onTap: _openStudents,
       ),
+      _shortcut(
+        icon: Icons.fact_check_rounded,
+        color: p.warning,
+        title: 'TOS coverage',
+        subtitle: 'Questions per PRC TOS competency, and drafts to approve',
+        onTap: _openTosCoverage,
+      ),
     ];
     return LayoutBuilder(builder: (context, c) {
       if (c.maxWidth < 560) {
-        return Column(children: [cards[0], const SizedBox(height: 10), cards[1]]);
+        return Column(children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            cards[i],
+          ],
+        ]);
       }
-      return Row(children: [
-        Expanded(child: cards[0]),
-        const SizedBox(width: 10),
-        Expanded(child: cards[1]),
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(width: 10),
+          Expanded(child: cards[i]),
+        ],
       ]);
     });
   }

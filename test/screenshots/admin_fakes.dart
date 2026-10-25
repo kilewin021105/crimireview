@@ -3,6 +3,7 @@
 import 'package:crimireview/models/question.dart';
 import 'package:crimireview/models/student_record.dart';
 import 'package:crimireview/models/subject.dart';
+import 'package:crimireview/models/tos.dart';
 import 'package:crimireview/services/admin_service.dart';
 import 'package:crimireview/services/document_generation_service.dart';
 
@@ -66,18 +67,58 @@ class FakeAdminService extends AdminService {
   String _ago(double hours) =>
       DateTime.now().subtract(Duration(minutes: (hours * 60).round())).toIso8601String();
 
+  /// Coverage worked out from the real TOS file: the 600 TOS drafts are all
+  /// waiting, and the imported questions cover some competencies.
+  @override
+  Future<List<TosCoverageRow>> tosCoverage() async {
+    final tos = TosCatalog.loaded ?? await TosCatalog.load();
+    final rows = <TosCoverageRow>[];
+    var n = 0;
+    for (final s in tos.subjects) {
+      for (final t in s.topics) {
+        var topicActive = 0;
+        for (final c in t.competencies) {
+          final active = (n++ % 3 == 0) ? c.items : (n % 3 == 1 ? c.items ~/ 2 : 0);
+          topicActive += active;
+          rows.add(TosCoverageRow(
+            code: c.code, subjectId: s.subjectId, topicCode: t.code, isTopic: false,
+            tosItems: c.items, active: active, drafts: c.items,
+          ));
+        }
+        rows.add(TosCoverageRow(
+          code: t.code, subjectId: s.subjectId, topicCode: t.code, isTopic: true,
+          tosItems: t.items, active: topicActive + t.items ~/ 2, drafts: t.items,
+        ));
+      }
+    }
+    return rows;
+  }
+
+  @override
+  Future<int> setActiveMany(List<String> questionIds, bool active) async => questionIds.length;
+
   @override
   Future<List<AdminQuestionEntry>> listQuestions({
     String? subjectId,
     Difficulty? difficulty,
     bool includeInactive = true,
+    bool onlyInactive = false,
     String? search,
     QuestionSource? source,
     String? templateId,
+    String? tosCode,
+    TosLinkFilter tosLink = TosLinkFilter.any,
     int limit = 50,
     int offset = 0,
   }) async {
     if (offset > 0) return [];
+    // One TOS competency (review screen): four drafts, two approved.
+    if (tosCode != null) {
+      return [
+        for (var i = 0; i < 6; i++)
+          AdminQuestionEntry(isActive: i >= 4, question: sampleTosQuestion(i)),
+      ];
+    }
     // One PDF upload's batch (review screen): three waiting, one approved.
     if (templateId != null) {
       return [
@@ -99,7 +140,16 @@ class FakeAdminService extends AdminService {
 Question sampleAdminQuestion(int i, String subjectId) => Question(
       id: 'q_$i',
       subject: subjectId,
-      topic: ['Justifying Circumstances', 'Police Planning', 'Dactyloscopy', 'Crime Scene Management', 'Strain Theory', 'Parole and Probation'][i % 6],
+      topic: [
+        'Criminal Law (Book 1)',
+        'Law Enforcement Operations and Planning with Crime Mapping',
+        'Personal Identification Techniques',
+        'Fundamentals of Criminal Investigation and Intelligence',
+        'Theories of Crime Causation',
+        'Non-Institutional Correction',
+      ][i % 6],
+      tosCode: const ['CLJ-3.4', 'LEA-4.3', 'FS-1.2', null, 'CRIM-2', 'CA-2.2'][i % 6],
+      bloomLevel: const ['Applying', 'Understanding', 'Analyzing', null, null, 'Applying'][i % 6],
       questionText: [
         'Which of the following is a justifying circumstance under Article 11 of the Revised Penal Code?',
         'What is the first step in the police planning process?',
@@ -186,10 +236,10 @@ Map<String, dynamic> sampleStudentRecordJson() {
       },
     ],
     'mastery': [
-      {'subject_id': 'criminalistics', 'topic': 'Dactyloscopy', 'p_known': 0.34, 'attempts': 6, 'correct': 2, 'is_mastered': false, 'last_practiced': ago(72)},
-      {'subject_id': 'criminology', 'topic': 'Strain Theory', 'p_known': 0.52, 'attempts': 5, 'correct': 3, 'is_mastered': false, 'last_practiced': ago(30)},
-      {'subject_id': 'criminal_jurisprudence', 'topic': 'Exempting Circumstances', 'p_known': 0.71, 'attempts': 8, 'correct': 6, 'is_mastered': false, 'last_practiced': ago(5)},
-      {'subject_id': 'criminal_jurisprudence', 'topic': 'Justifying Circumstances', 'p_known': 0.94, 'attempts': 9, 'correct': 8, 'is_mastered': true, 'last_practiced': ago(5)},
+      {'subject_id': 'criminalistics', 'topic': 'Personal Identification Techniques', 'p_known': 0.34, 'attempts': 6, 'correct': 2, 'is_mastered': false, 'last_practiced': ago(72)},
+      {'subject_id': 'criminology', 'topic': 'Theories of Crime Causation', 'p_known': 0.52, 'attempts': 5, 'correct': 3, 'is_mastered': false, 'last_practiced': ago(30)},
+      {'subject_id': 'criminal_jurisprudence', 'topic': 'Criminal Evidence', 'p_known': 0.71, 'attempts': 8, 'correct': 6, 'is_mastered': false, 'last_practiced': ago(5)},
+      {'subject_id': 'criminal_jurisprudence', 'topic': 'Criminal Law (Book 1)', 'p_known': 0.94, 'attempts': 9, 'correct': 8, 'is_mastered': true, 'last_practiced': ago(5)},
     ],
     'quizzes': [
       {'subject_id': 'criminal_jurisprudence', 'difficulty': 'hard', 'score': 60, 'total_questions': 10, 'correct_answers': 6, 'created_at': ago(5)},
@@ -203,6 +253,47 @@ Map<String, dynamic> sampleStudentRecordJson() {
   };
 }
 
+
+/// Six questions of TOS competency CLJ-3.4 (justifying, exempting, mitigating,
+/// aggravating and alternative circumstances), as in content/tos/bank/clj.jsonl.
+Question sampleTosQuestion(int i) {
+  const stems = [
+    'J was suddenly attacked with a knife by K. J grabbed a piece of wood and hit K once, disabling him. J did not provoke the attack. Which circumstance applies to J?',
+    'L, who suffers from a mental illness that totally deprived him of reason at the time, killed his neighbor. Which circumstance applies?',
+    'After committing homicide, M went to the police station on his own and surrendered before any warrant was issued. How does this affect his liability?',
+    'N attacked a sleeping man who had no chance to defend himself, choosing that means so the victim could not resist. What circumstance attended the killing?',
+    'O, a habitual drunkard, killed a man while intoxicated. How is the intoxication treated?',
+    'A boat was sinking, so P threw cargo owned by Q overboard to keep the boat afloat and save the passengers. What applies to P?',
+  ];
+  const answers = [
+    ['Self-defense, a justifying circumstance', 'Passion or obfuscation, a mitigating circumstance', 'Accident, an exempting circumstance', 'Uncontrollable fear, an exempting circumstance'],
+    ['Insanity, an exempting circumstance', 'Self-defense, a justifying circumstance', 'Lack of intent, a mitigating circumstance', 'Lucid interval, an aggravating circumstance'],
+    ['It is a mitigating circumstance of voluntary surrender', 'It is an exempting circumstance that frees him from liability', 'It is a justifying circumstance that makes the killing lawful', 'It has no effect because he already committed the crime'],
+    ['Treachery (alevosia)', 'Evident premeditation', 'Nighttime', 'Abuse of superior strength'],
+    ['As an aggravating circumstance, because the intoxication is habitual', 'As a mitigating circumstance, because drunkenness reduces control', 'As an exempting circumstance, because he was not in his right mind', 'As a justifying circumstance, because he acted without intent'],
+    ['State of necessity, a justifying circumstance, though civil liability may arise', 'Accident, an exempting circumstance with no civil liability', 'Lawful exercise of a right, an exempting circumstance', 'Obedience to an order, a mitigating circumstance'],
+  ];
+  final correct = [0, 2, 1, 3, 0, 1][i % 6];
+  final texts = List<String>.of(answers[i % 6]);
+  final right = texts.removeAt(0);
+  texts.insert(correct, right);
+  return Question(
+    id: 'tos24_CLJ-3.4_0${i + 1}',
+    subject: 'criminal_jurisprudence',
+    topic: 'Criminal Law (Book 1)',
+    questionText: stems[i % 6],
+    answerOptions: [
+      for (var k = 0; k < 4; k++) AnswerOption(text: texts[k], isCorrect: k == correct, rationale: 'See the explanation.'),
+    ],
+    difficulty: Difficulty.medium,
+    explanation: 'Revised Penal Code, Arts. 11-15.',
+    legalBasis: const ['RPC Art. 11(1)', 'RPC Art. 12(1)', 'RPC Art. 13(7)', 'RPC Art. 14(16)', 'RPC Art. 15', 'RPC Arts. 11(4) and 101'][i % 6],
+    source: QuestionSource.generated,
+    templateId: 'tos_2024',
+    tosCode: 'CLJ-3.4',
+    bloomLevel: 'Applying',
+  );
+}
 
 Question sampleGeneratedQuestion(int i, String uploadId) => Question(
       id: 'gen_$i',
@@ -232,7 +323,8 @@ Question sampleGeneratedQuestion(int i, String uploadId) => Question(
 class FakeDocumentGenerationService extends DocumentGenerationService {
   FakeDocumentGenerationService() : super.forTesting();
 
-  static DocumentUpload sample(String status, {int generated = 0, String? error, int minutesAgo = 1, String? topic}) =>
+  static DocumentUpload sample(String status,
+          {int generated = 0, String? error, int minutesAgo = 1, String? topic, String? tosCode}) =>
       DocumentUpload(
         id: 'doc_$status',
         filename: {
@@ -242,6 +334,7 @@ class FakeDocumentGenerationService extends DocumentGenerationService {
         }[status]!,
         subjectId: {'processing': 'criminology', 'completed': 'criminal_jurisprudence', 'failed': 'corrections'}[status]!,
         topic: topic,
+        tosCode: tosCode,
         requestedCount: 10,
         status: status,
         generatedCount: generated,
@@ -251,7 +344,7 @@ class FakeDocumentGenerationService extends DocumentGenerationService {
 
   @override
   Future<List<DocumentUpload>> recentUploads({int limit = 20}) async => [
-        sample('processing'),
+        sample('processing', tosCode: 'CRIM-4.3', topic: 'Professional Conduct and Ethical Standards for Criminologists'),
         sample('completed', generated: 4, minutesAgo: 30, topic: 'Justifying Circumstances',
             error: '1 question(s) were skipped (incomplete or duplicate).'),
         sample('failed', minutesAgo: 300,

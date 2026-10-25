@@ -17,6 +17,7 @@ import 'package:crimireview/screens/admin/admin_settings_screen.dart';
 import 'package:crimireview/screens/admin/admin_shell_screen.dart';
 import 'package:crimireview/screens/admin/admin_student_record_screen.dart';
 import 'package:crimireview/screens/admin/admin_students_screen.dart';
+import 'package:crimireview/screens/admin/admin_tos_coverage_screen.dart';
 import 'package:crimireview/screens/auth_screen.dart';
 import 'package:crimireview/screens/change_password_screen.dart';
 import 'package:crimireview/screens/daily_challenge_screen.dart';
@@ -82,7 +83,9 @@ List<Question> sampleQuestions() => [
       Question(
         id: 'sample-1',
         subject: _subject.id,
-        topic: 'Justifying Circumstances',
+        topic: 'Criminal Law (Book 1)',
+        tosCode: 'CLJ-3.4',
+        bloomLevel: 'Applying',
         questionText:
             'Which of the following is a justifying circumstance under Article 11 of the Revised Penal Code?',
         options: const [
@@ -100,7 +103,8 @@ List<Question> sampleQuestions() => [
         Question(
           id: 'sample-$i',
           subject: _subject.id,
-          topic: 'Criminal Law Book I',
+          topic: i.isEven ? 'Criminal Law (Book 1)' : 'Criminal Evidence',
+          tosCode: i.isEven ? 'CLJ-3.${i % 5 + 1}' : 'CLJ-5.4',
           questionText: 'Sample question $i about the general provisions of the Revised Penal Code?',
           options: const ['Option one', 'Option two', 'Option three', 'Option four'],
           correctAnswerIndex: 0,
@@ -164,6 +168,17 @@ List<Shot> screenCatalog() => [
         ),
       ),
       Shot(
+        'study_notes_tall',
+        (_) => StudyNotesScreen(
+          subject: _subject,
+          difficulty: Difficulty.medium,
+          questions: sampleQuestions(),
+          segmentIndex: 1,
+        ),
+        dark: false,
+        size: const Size(390, 1900),
+      ),
+      Shot(
         'quiz',
         (_) => QuizScreen(
           subject: _subject,
@@ -220,6 +235,17 @@ List<Shot> screenCatalog() => [
           accent: AppColors.subjectColor(_subject.id),
         ),
       ),
+      Shot(
+        'module_reader_tos',
+        (_) => ModuleReaderScreen(
+          moduleData: jsonDecode(File('assets/modules/criminology_module.json').readAsStringSync())
+              as Map<String, dynamic>,
+          startChapter: 3,
+          accent: AppColors.subjectColor('criminology'),
+        ),
+        dark: false,
+        size: const Size(390, 1600),
+      ),
       Shot('achievements', (_) => const AchievementsScreen()),
       Shot(
         'leaderboard',
@@ -267,6 +293,15 @@ List<Shot> screenCatalog() => [
       Shot('admin_editor', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(0, _subject.id))),
       Shot('admin_editor_stands_out', (_) => AdminQuestionEditorScreen(existing: sampleAdminQuestion(1, _subject.id)),
           size: const Size(390, 1600)),
+      Shot('admin_tos_coverage', (_) => const AdminTosCoverageScreen()),
+      Shot('admin_tos_coverage_tall', (_) => const AdminTosCoverageScreen(initialSubjectId: 'criminology'),
+          dark: false, size: const Size(390, 2400)),
+      Shot('admin_tos_coverage_wide', (_) => const AdminTosCoverageScreen(), size: const Size(1280, 900)),
+      Shot('admin_tos_review', (_) => const AdminTosReviewScreen(tosCode: 'CLJ-3.4')),
+      Shot('admin_tos_review_tall', (_) => const AdminTosReviewScreen(tosCode: 'CLJ-3.4'),
+          dark: false, size: const Size(390, 2000)),
+      Shot('admin_editor_tos', (_) => AdminQuestionEditorScreen(existing: sampleTosQuestion(0)),
+          dark: false, size: const Size(390, 1500)),
       Shot('admin_students', (_) => const AdminStudentsScreen(showBackButton: false)),
       Shot(
         'admin_student_record',

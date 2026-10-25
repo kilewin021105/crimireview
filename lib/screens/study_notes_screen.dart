@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import '../models/subject.dart';
 import '../models/question.dart';
 import '../models/user_progress.dart';
+import '../services/study_notes_service.dart';
 import '../utils/page_transitions.dart';
 import '../utils/responsive.dart';
 import '../widgets/ui/ui.dart';
 import 'quiz_screen.dart';
 
-class StudyNotesScreen extends StatelessWidget {
+/// Key points to review before a quiz, taken from the study module of the
+/// quiz's TOS topics and competencies (assets/modules, built from the PRC
+/// Tables of Specifications).
+class StudyNotesScreen extends StatefulWidget {
   final Subject subject;
   final Difficulty difficulty;
   final List<Question> questions;
@@ -22,8 +26,20 @@ class StudyNotesScreen extends StatelessWidget {
   });
 
   @override
+  State<StudyNotesScreen> createState() => _StudyNotesScreenState();
+}
+
+class _StudyNotesScreenState extends State<StudyNotesScreen> {
+  late final Future<StudyNotesContent> _content =
+      StudyNotesService.instance.forQuiz(widget.subject.id, widget.questions);
+
+  Subject get subject => widget.subject;
+  Difficulty get difficulty => widget.difficulty;
+  List<Question> get questions => widget.questions;
+  int get segmentIndex => widget.segmentIndex;
+
+  @override
   Widget build(BuildContext context) {
-    final notes = _getStudyNotes(subject.id, difficulty);
     final padding = Responsive.horizontalPadding(context);
 
     return Scaffold(
@@ -39,10 +55,31 @@ class StudyNotesScreen extends StatelessWidget {
                   children: [
                     Appear(index: 0, child: _buildSubjectCard(context)),
                     const SizedBox(height: AppSpace.section),
-                    Appear(index: 1, child: _buildNotesSection(context, notes)),
-                    const SizedBox(height: AppSpace.section),
-                    Appear(index: 2, child: _buildKeyTerms(context)),
-                    const SizedBox(height: AppSpace.section),
+                    FutureBuilder<StudyNotesContent>(
+                      future: _content,
+                      builder: (context, snap) {
+                        if (snap.connectionState != ConnectionState.done) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: LoadingView(label: 'Opening your notes...'),
+                          );
+                        }
+                        final content = snap.data ?? StudyNotesContent.empty;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (content.notes.isNotEmpty) ...[
+                              Appear(index: 1, child: _buildNotesSection(context, content)),
+                              const SizedBox(height: AppSpace.section),
+                            ],
+                            if (content.keyTerms.isNotEmpty) ...[
+                              Appear(index: 2, child: _buildKeyTerms(context, content.keyTerms)),
+                              const SizedBox(height: AppSpace.section),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
                     Appear(index: 3, child: _buildTips(context)),
                   ],
                 ),
@@ -100,14 +137,16 @@ class StudyNotesScreen extends StatelessWidget {
   String get _difficultyLabel =>
       difficulty.name[0].toUpperCase() + difficulty.name.substring(1);
 
-  Widget _buildNotesSection(BuildContext context, List<StudyNote> notes) {
+  Widget _buildNotesSection(BuildContext context, StudyNotesContent content) {
     final p = context.palette;
     final text = context.textStyles;
     final color = AppColors.subjectColor(subject.id);
+    final notes = content.notes;
+    final from = content.topics.isEmpty ? 'the study module' : content.topics.join(' · ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: 'Key concepts', subtitle: '${notes.length} things to remember'),
+        SectionHeader(title: 'Key concepts', subtitle: 'From the PRC TOS: $from'),
         const SizedBox(height: 12),
         for (var i = 0; i < notes.length; i++) ...[
           AppCard(
@@ -134,6 +173,8 @@ class StudyNotesScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(notes[i].title, style: text.titleSmall),
+                      const SizedBox(height: 2),
+                      Text(notes[i].code, style: text.labelSmall?.copyWith(color: color)),
                       const SizedBox(height: 6),
                       Text(
                         notes[i].content,
@@ -151,10 +192,9 @@ class StudyNotesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildKeyTerms(BuildContext context) {
+  Widget _buildKeyTerms(BuildContext context, List<String> terms) {
     final p = context.palette;
     final text = context.textStyles;
-    final terms = _getKeyTerms(subject.id);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,75 +321,4 @@ class StudyNotesScreen extends StatelessWidget {
       ),
     );
   }
-
-  List<StudyNote> _getStudyNotes(String subjectId, Difficulty diff) {
-    final notes = <String, List<StudyNote>>{
-      'criminal_jurisprudence': [
-        StudyNote('Revised Penal Code (RPC)', 'The main source of criminal law in the Philippines. Contains Book I (general provisions) and Book II (specific crimes and penalties).'),
-        StudyNote('Elements of a Crime', '1. Act or omission 2. Punishable by law 3. Performed with dolo (intent) or culpa (negligence)'),
-        StudyNote('Justifying Circumstances', 'Self-defense, Defense of relatives, Defense of stranger, Fulfillment of duty, Obedience to lawful order. These EXEMPT from criminal AND civil liability.'),
-        StudyNote('Exempting Circumstances', 'Insanity, Minority (below 15), Accident, Irresistible force, Uncontrollable fear. Exempt from criminal liability but NOT civil liability.'),
-        StudyNote('Mitigating Circumstances', 'Reduce the penalty: Voluntary surrender, Passion/obfuscation, Sufficient provocation, Plea of guilty.'),
-      ],
-      'criminalistics': [
-        StudyNote('Forensic Science Branches', 'Forensic Chemistry, Forensic Biology, Forensic Medicine, Questioned Documents, Ballistics, Dactyloscopy (fingerprints).'),
-        StudyNote('Chain of Custody', 'Documentation of evidence from collection to presentation in court. Must be unbroken to ensure integrity.'),
-        StudyNote('Types of Fingerprints', 'Loops (60-65%), Whorls (30-35%), Arches (5%). Used for positive identification.'),
-        StudyNote('Ballistics', 'Study of firearms and projectiles. Includes internal, external, and terminal ballistics.'),
-        StudyNote('DNA Evidence', 'Genetic material used for identification. Nuclear DNA from both parents, Mitochondrial DNA from mother only.'),
-      ],
-      'law_enforcement': [
-        StudyNote('PNP Organization', 'Under DILG. National headquarters, Regional offices, Provincial offices, City/Municipal stations.'),
-        StudyNote('Police Powers', 'Power to arrest, Search and seizure, Use of force (only when necessary and reasonable).'),
-        StudyNote('RA 6975', 'DILG Act - Established PNP as the primary law enforcement agency.'),
-        StudyNote('Community Policing', 'Partnership between police and community to prevent crime and maintain peace.'),
-        StudyNote('Human Rights in Policing', 'Miranda Rights, Right against torture, Right to counsel, Presumption of innocence.'),
-      ],
-      'corrections': [
-        StudyNote('Bureau of Corrections (BuCor)', 'Manages national penitentiaries for those sentenced to more than 3 years.'),
-        StudyNote('BJMP', 'Bureau of Jail Management and Penology - Manages city/municipal jails for those awaiting trial or sentenced to 3 years or less.'),
-        StudyNote('Types of Release', 'Parole (conditional), Probation (instead of imprisonment), Pardon (executive clemency), Amnesty (group pardon for political offenses).'),
-        StudyNote('Rehabilitation Programs', 'Education, Vocational training, Therapeutic communities, Religious programs, Sports/recreation.'),
-        StudyNote('Prisoner Classification', 'By security risk: Maximum, Medium, Minimum. By sentence: Insular, Provincial, City/Municipal.'),
-      ],
-      'criminology': [
-        StudyNote('Classical School', 'Beccaria & Bentham - Free will, Rational choice, Punishment should fit the crime.'),
-        StudyNote('Positivist School', 'Lombroso - Criminal behavior determined by biological, psychological, or social factors.'),
-        StudyNote('Strain Theory', 'Merton - Crime results from gap between cultural goals and legitimate means to achieve them.'),
-        StudyNote('Social Learning Theory', 'Sutherland - Criminal behavior is learned through interaction with others.'),
-        StudyNote('Labeling Theory', 'Being labeled as criminal leads to more criminal behavior (self-fulfilling prophecy).'),
-      ],
-      'crime_detection': [
-        StudyNote('Criminal Investigation', 'Systematic inquiry to determine facts about a crime - who, what, when, where, why, how.'),
-        StudyNote('Crime Scene Management', '1. Secure the scene 2. Document everything 3. Collect evidence 4. Process evidence 5. Release scene.'),
-        StudyNote('Types of Evidence', 'Physical, Documentary, Testimonial. Direct vs Circumstantial evidence.'),
-        StudyNote('Interviewing vs Interrogation', 'Interview: gather information from witnesses. Interrogation: question suspects to obtain confession.'),
-        StudyNote('Modus Operandi', 'Method of operation - Pattern or technique used by criminal. Helps link crimes.'),
-      ],
-    };
-
-    return notes[subjectId] ?? [
-      StudyNote('General Tips', 'Focus on key concepts and definitions. Practice with multiple choice questions.'),
-    ];
-  }
-
-  List<String> _getKeyTerms(String subjectId) {
-    final terms = <String, List<String>>{
-      'criminal_jurisprudence': ['RPC', 'Mala in se', 'Mala prohibita', 'Dolo', 'Culpa', 'Felony', 'Recidivism', 'Treachery', 'Evident premeditation'],
-      'criminalistics': ['Forensics', 'DNA', 'Ballistics', 'Dactyloscopy', 'Chain of custody', 'Autopsy', 'Toxicology'],
-      'law_enforcement': ['PNP', 'DILG', 'RA 6975', 'Miranda rights', 'Arrest', 'Search warrant', 'Hot pursuit'],
-      'corrections': ['BuCor', 'BJMP', 'Parole', 'Probation', 'Pardon', 'Amnesty', 'Rehabilitation'],
-      'criminology': ['Classical', 'Positivist', 'Strain theory', 'Anomie', 'Deviance', 'Recidivism'],
-      'crime_detection': ['Investigation', 'Evidence', 'Modus operandi', 'Crime scene', 'Witness', 'Suspect'],
-    };
-
-    return terms[subjectId] ?? ['Study', 'Review', 'Practice'];
-  }
-}
-
-class StudyNote {
-  final String title;
-  final String content;
-
-  StudyNote(this.title, this.content);
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'question.dart';
+import 'tos.dart';
 
 class QuestionAttempt {
   final String questionId;
@@ -212,14 +213,17 @@ class SubjectProgress {
   String currentSegmentRangeForDifficulty(Difficulty difficulty) =>
       SegmentProgress.rangeLabelFor(currentSegmentIndexForDifficulty(difficulty));
 
-  /// Board exam readiness based on PRC TOS weights:
-  /// Easy 30%, Medium 50%, Hard 20%
-  /// Unattempted difficulties penalize the score
+  /// Board exam readiness for this subject, weighting each difficulty by its
+  /// share of the subject's PRC TOS items (Board Res. No. 02 s. 2024): the
+  /// Remembering and Understanding items count as easy, Applying as medium,
+  /// and Analyzing, Evaluating and Creating as hard. That gives about 30% /
+  /// 50% / 20% in every subject; the exact split is in [TosDifficultyMix].
+  /// Unattempted difficulties penalize the score.
   double get boardExamReadiness {
-    // PRC TOS difficulty distribution weights
-    const easyWeight = 0.30;
-    const mediumWeight = 0.50;
-    const hardWeight = 0.20;
+    final mix = TosDifficultyMix.forSubject(subjectId);
+    final easyWeight = mix.weightOf(Difficulty.easy);
+    final mediumWeight = mix.weightOf(Difficulty.medium);
+    final hardWeight = mix.weightOf(Difficulty.hard);
 
     final eAcc = easyAccuracy;
     final mAcc = mediumAccuracy;

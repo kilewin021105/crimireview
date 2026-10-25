@@ -830,27 +830,35 @@ class AdaptiveLearningService extends ChangeNotifier {
     };
   }
 
-  /// Calculate overall Board Exam Readiness across all subjects
-  /// Uses PRC TOS weights: Easy 30%, Medium 50%, Hard 20%
-  double getOverallBoardExamReadiness() {
-    if (_userProgress.subjectProgress.isEmpty) return 0.0;
+  /// Overall Board Exam Readiness across the subjects the student has
+  /// practiced, weighted by each subject's share of the examination (Criminal
+  /// Law, CDI and Criminology 20% each; LEA and Forensic Science 15% each;
+  /// Correctional Administration 10%; PRB Crim. Res. No. 01 s. 2021). Each
+  /// subject's own score already weights easy, medium and hard by its TOS
+  /// (see [SubjectProgress.boardExamReadiness]).
+  double getOverallBoardExamReadiness() => overallReadinessFrom(_userProgress.subjectProgress);
 
-    double totalReadiness = 0.0;
-    int subjectsWithData = 0;
+  /// [getOverallBoardExamReadiness] for any set of subject progress records.
+  @visibleForTesting
+  static double overallReadinessFrom(Map<String, SubjectProgress> subjectProgress) {
+    if (subjectProgress.isEmpty) return 0.0;
+
+    double weightedReadiness = 0.0;
+    int weightWithData = 0;
 
     for (var subject in CriminologySubjects.all) {
-      final progress = _userProgress.subjectProgress[subject.id];
+      final progress = subjectProgress[subject.id];
       if (progress == null) continue;
 
       final readiness = progress.boardExamReadiness;
       if (readiness > 0) {
-        totalReadiness += readiness;
-        subjectsWithData++;
+        weightedReadiness += readiness * subject.weight;
+        weightWithData += subject.weight;
       }
     }
 
-    if (subjectsWithData == 0) return 0.0;
-    return totalReadiness / subjectsWithData;
+    if (weightWithData == 0) return 0.0;
+    return weightedReadiness / weightWithData;
   }
 
   /// Get how many subjects have completed each difficulty level

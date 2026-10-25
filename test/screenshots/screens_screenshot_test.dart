@@ -20,6 +20,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:crimireview/models/subject.dart';
+import 'package:crimireview/models/tos.dart';
 import 'package:crimireview/models/user_progress.dart';
 import 'package:crimireview/services/adaptive_learning_service.dart';
 import 'package:crimireview/services/adaptive_ml_service.dart';
@@ -149,7 +150,7 @@ Map<String, Object> sampleMastery() {
   final rows = [
     ('criminal_jurisprudence', 'Justifying Circumstances', 0.34, 6, 2),
     ('law_enforcement', 'Police Patrol Operations', 0.48, 5, 3),
-    ('criminalistics', 'Fingerprint Classification', 0.57, 8, 5),
+    ('criminalistics', 'Personal Identification Techniques', 0.57, 8, 5),
     ('criminology', 'Theories of Crime Causation', 0.95, 9, 9),
   ];
   return {
@@ -192,6 +193,9 @@ void main() {
     // Learning models the dashboard reads: a few BKT topic records, and
     // the bundled ML model (readiness, recommended difficulty).
     SharedPreferences.setMockInitialValues({'topic_mastery_v1': jsonEncode(sampleMastery())});
+    // The TOS (admin screens, study notes). Two sample topics above still use
+    // pre-TOS names, so init() also exercises the topic renaming.
+    await TosCatalog.load();
     await MasteryService.instance.init();
     try {
       await AdaptiveMLService.instance.initialize();

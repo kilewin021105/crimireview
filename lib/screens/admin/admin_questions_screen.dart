@@ -10,6 +10,7 @@ import '../../utils/responsive.dart';
 import '../../widgets/ui/ui.dart';
 import 'admin_document_generation_screen.dart';
 import 'admin_question_editor_screen.dart';
+import 'admin_tos_coverage_screen.dart';
 
 /// The question bank the admin actually edits.
 ///
@@ -39,6 +40,7 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
   String? _subjectId;
   Difficulty? _difficulty;
   bool _includeInactive = true;
+  TosLinkFilter _tosLink = TosLinkFilter.any;
 
   final List<AdminQuestionEntry> _questions = [];
   bool _loading = true;
@@ -70,6 +72,7 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
         subjectId: _subjectId,
         difficulty: _difficulty,
         includeInactive: _includeInactive,
+        tosLink: _tosLink,
         search: _searchController.text,
         limit: _pageSize,
         offset: 0,
@@ -97,6 +100,7 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
         subjectId: _subjectId,
         difficulty: _difficulty,
         includeInactive: _includeInactive,
+        tosLink: _tosLink,
         search: _searchController.text,
         limit: _pageSize,
         offset: _questions.length,
@@ -177,6 +181,19 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
             : '${_questions.length}${_hasMore ? '+' : ''} question${_questions.length == 1 ? '' : 's'} shown',
         showBack: widget.showBackButton,
         actions: [
+          ToolbarIconButton(
+            icon: Icons.fact_check_rounded,
+            tooltip: 'TOS coverage',
+            size: 40,
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                SlidePageRoute(page: AdminTosCoverageScreen(initialSubjectId: _subjectId)),
+              );
+              if (mounted) _reload();
+            },
+          ),
+          const SizedBox(width: 6),
           ToolbarIconButton(
             icon: Icons.picture_as_pdf_rounded,
             tooltip: 'Generate from PDF',
@@ -315,6 +332,25 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
                 },
               ),
               const SizedBox(width: 8),
+              _MenuChip<TosLinkFilter>(
+                icon: Icons.fact_check_rounded,
+                label: switch (_tosLink) {
+                  TosLinkFilter.any => 'Any TOS link',
+                  TosLinkFilter.linked => 'Linked to TOS',
+                  TosLinkFilter.unlinked => 'Not linked to TOS',
+                },
+                active: _tosLink != TosLinkFilter.any,
+                options: const [
+                  (TosLinkFilter.any, 'Any TOS link'),
+                  (TosLinkFilter.linked, 'Linked to TOS'),
+                  (TosLinkFilter.unlinked, 'Not linked to TOS'),
+                ],
+                onSelected: (v) {
+                  setState(() => _tosLink = v);
+                  _reload();
+                },
+              ),
+              const SizedBox(width: 8),
               FilterChip(
                 label: const Text('Inactive'),
                 selected: _includeInactive,
@@ -363,6 +399,21 @@ class _AdminQuestionsScreenState extends State<AdminQuestionsScreen> {
                         color: p.forDifficulty(q.difficulty.index),
                         fontSize: 10.5,
                       ),
+                      // Which part of the PRC TOS the item tests.
+                      if (q.tosCode != null)
+                        Pill(
+                          label: q.bloomLevel == null ? q.tosCode! : '${q.tosCode} · ${q.bloomLevel}',
+                          icon: Icons.fact_check_rounded,
+                          color: p.primary,
+                          fontSize: 10.5,
+                        )
+                      else
+                        Pill(
+                          label: 'No TOS link',
+                          color: p.textSecondary,
+                          background: p.surfaceAlt,
+                          fontSize: 10.5,
+                        ),
                       // The correct option is much longer than the others,
                       // so students can guess it by length.
                       if (questionAnswerStandsOut(q))

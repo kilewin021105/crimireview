@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/question.dart';
 import '../../models/subject.dart';
+import '../../models/tos.dart';
 import '../../services/admin_service.dart';
 import '../../utils/answer_length_check.dart';
 import '../../utils/error_messages.dart';
@@ -50,6 +51,18 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
 
   late String _subjectId;
   late Difficulty _difficulty;
+
+  /// The TOS topic picked (e.g. `CLJ-3`), or null for "Other topic", which
+  /// uses the free-text topic field instead.
+  String? _tosTopicCode;
+
+  /// The TOS competency picked (e.g. `CLJ-3.4`), or null for the whole topic.
+  String? _competencyCode;
+  BloomLevel? _bloom;
+
+  /// Null when the TOS asset could not be loaded: the form then falls back
+  /// to the free-text topic field alone.
+  TosCatalog? get _tos => TosCatalog.loaded;
   late int _correctIndex;
   final List<_OptionDraft> _options = [];
 
@@ -70,6 +83,19 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
 
     _subjectId = q?.subject.isNotEmpty == true ? q!.subject : CriminologySubjects.all.first.id;
     _difficulty = q?.difficulty ?? Difficulty.medium;
+    _bloom = BloomLevel.tryParse(q?.bloomLevel);
+
+    final tos = _tos;
+    if (tos != null) {
+      // A link to another subject's TOS (the database refuses those) is ignored.
+      var linked = tos.topicOf(q?.tosCode);
+      if (linked != null && linked.subjectId != _subjectId) linked = null;
+      final byTitle = q == null ? null : tos.topicByTitle(q.subject, q.topic);
+      final topic = linked ?? byTitle ?? (q == null ? tos.subject(_subjectId)?.topics.first : null);
+      _tosTopicCode = topic?.code;
+      final competency = tos.competency(q?.tosCode ?? '');
+      _competencyCode = competency != null && competency.topicCode == topic?.code ? competency.code : null;
+    }
 
     if (q != null && q.answerOptions.isNotEmpty) {
       for (final o in q.answerOptions) {
@@ -120,7 +146,7 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
   }
 
   String? _validate() {
-    if (_topicController.text.trim().isEmpty) return 'Topic is required.';
+    if (_tosTopicCode == null && _topicController.text.trim().isEmpty) return 'Topic is required.';
     if (_questionController.text.trim().isEmpty) return 'Question text is required.';
     final filled = _options.where((o) => o.text.text.trim().isNotEmpty).length;
     if (filled < _minOptions) return 'At least $_minOptions options are required.';
@@ -147,10 +173,12 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
         ),
     ];
 
+    final tosTopic = _tos?.topic(_tosTopicCode ?? '');
+    final tosCode = tosTopic == null ? null : (_competencyCode ?? tosTopic.code);
     final question = Question(
       id: _idController.text.trim(),
       subject: _subjectId,
-      topic: _topicController.text.trim(),
+      topic: tosTopic?.title ?? _topicController.text.trim(),
       questionText: _questionController.text.trim(),
       answerOptions: answerOptions,
       difficulty: _difficulty,
@@ -160,11 +188,16 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
       source: widget.existing?.source ?? QuestionSource.admin,
       version: widget.existing?.version ?? 1,
       templateId: widget.existing?.templateId,
+      tosCode: tosCode,
+      bloomLevel: _bloom?.label,
     );
 
     try {
       if (_isEditing) {
-        await AdminService.instance.updateQuestion(question);
+        await AdminService.instance.updateQuestion(
+          question,
+          clearTosLink: widget.existing?.tosCode != null && tosCode == null,
+        );
         _showSnack('Question updated');
       } else {
         await AdminService.instance.createQuestion(question);
@@ -176,6 +209,95 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
       setState(() => _saving = false);
       _showSnack(friendlyError(e, fallback: 'Could not save the question. Please try again.'), isError: true);
     }
+  }
+
+  /// TOS topic, competency and Bloom level pickers (Board Res. No. 02 s.
+  /// 2024). Empty when the TOS could not be loaded.
+  List<Widget> _buildTosFields() {
+    final tos = _tos;
+    final subject = tos?.subject(_subjectId);
+    if (tos == null || subject == null) return const [];
+    final p = context.palette;
+    final text = context.textStyles;
+    final topic = tos.topic(_tosTopicCode ?? '');
+    final competency = tos.competency(_competencyCode ?? '');
+    final bloomHint = competency == null
+        ? null
+        : 'TOS: ${competency.bloom.entries.map((e) => '${e.key.label} ${e.value}').join(', ')} '
+            '(${competency.items} item${competency.items == 1 ? '' : 's'})';
+
+    return [
+      _label('TOS topic'),
+      DropdownButtonFormField<String?>(
+        key: ValueKey('tos-topic-$_subjectId'),
+        initialValue: _tosTopicCode,
+        isExpanded: true,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+        borderRadius: BorderRadius.circular(AppSpace.radiusMd),
+        items: [
+          for (final t in subject.topics)
+            DropdownMenuItem(
+              value: t.code,
+              child: Text('${t.number}. ${t.title}', overflow: TextOverflow.ellipsis),
+            ),
+          const DropdownMenuItem(value: null, child: Text('Other topic (not in the TOS)')),
+        ],
+        onChanged: (v) => setState(() {
+          _tosTopicCode = v;
+          _competencyCode = null;
+        }),
+      ),
+      const SizedBox(height: 16),
+      if (topic != null) ...[
+        _label('TOS competency'),
+        DropdownButtonFormField<String?>(
+          key: ValueKey('tos-competency-${topic.code}'),
+          initialValue: _competencyCode,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          borderRadius: BorderRadius.circular(AppSpace.radiusMd),
+          selectedItemBuilder: (context) => [
+            const Text('Whole topic', overflow: TextOverflow.ellipsis),
+            for (final c in topic.competencies) Text('${c.number}  ${c.text}', overflow: TextOverflow.ellipsis),
+          ],
+          items: [
+            const DropdownMenuItem(value: null, child: Text('Whole topic')),
+            for (final c in topic.competencies)
+              DropdownMenuItem(
+                value: c.code,
+                child: Text('${c.number}  ${c.text}', maxLines: 3, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: (v) => setState(() => _competencyCode = v),
+        ),
+        const SizedBox(height: 16),
+        _label('Bloom level'),
+        DropdownButtonFormField<BloomLevel?>(
+          initialValue: _bloom,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          borderRadius: BorderRadius.circular(AppSpace.radiusMd),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('Not set')),
+            for (final level in BloomLevel.values)
+              DropdownMenuItem(
+                value: level,
+                child: Text('${level.label} (${level.difficulty.name})'),
+              ),
+          ],
+          // The Bloom level decides the difficulty tier, as in the TOS bank.
+          onChanged: (v) => setState(() {
+            _bloom = v;
+            if (v != null) _difficulty = v.difficulty;
+          }),
+        ),
+        if (bloomHint != null) ...[
+          const SizedBox(height: 6),
+          Text(bloomHint, style: text.bodySmall?.copyWith(color: p.textSecondary)),
+        ],
+        const SizedBox(height: 16),
+      ],
+    ];
   }
 
   void _showSnack(String message, {bool isError = false}) {
@@ -231,15 +353,25 @@ class _AdminQuestionEditorScreenState extends State<AdminQuestionEditorScreen> {
                                   ),
                                 ),
                             ],
-                            onChanged: (v) => setState(() => _subjectId = v ?? _subjectId),
+                            onChanged: (v) => setState(() {
+                              if (v == null || v == _subjectId) return;
+                              _subjectId = v;
+                              // A TOS topic belongs to one subject: start the new
+                              // subject at its first topic.
+                              _tosTopicCode = _tos?.subject(v)?.topics.first.code;
+                              _competencyCode = null;
+                            }),
                           ),
                           const SizedBox(height: 16),
-                          AppTextField(
-                            controller: _topicController,
-                            label: 'Topic',
-                            hint: 'e.g. Justifying Circumstances',
-                          ),
-                          const SizedBox(height: 16),
+                          ..._buildTosFields(),
+                          if (_tosTopicCode == null) ...[
+                            AppTextField(
+                              controller: _topicController,
+                              label: 'Topic',
+                              hint: 'e.g. Justifying Circumstances',
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                           _label('Difficulty'),
                           PillTabs(
                             labels: const ['Easy', 'Medium', 'Hard'],

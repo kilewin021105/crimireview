@@ -111,7 +111,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Pill(
-                  label: '${_moduleData!['totalItems']} review items · $chapters chapters',
+                  label: '${_moduleData!['totalItems']} TOS items · $chapters chapters',
                   color: Colors.white,
                   background: Colors.white.withValues(alpha: 0.16),
                 ),
@@ -122,6 +122,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
+                  'Organized by the topics and competencies of the PRC Table of Specifications. '
                   'Start from chapter 1 and work through it in order.',
                   style: text.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.78)),
                 ),
@@ -174,7 +175,10 @@ class _ModulesScreenState extends State<ModulesScreen> {
               children: [
                 Text(ch['title'], style: text.titleSmall),
                 const SizedBox(height: 2),
-                Text('${ch['itemCount']} items', style: text.bodySmall),
+                Text(
+                  [if (ch['code'] != null) ch['code'], '${ch['itemCount']} TOS items'].join(' · '),
+                  style: text.bodySmall,
+                ),
               ],
             ),
           ),

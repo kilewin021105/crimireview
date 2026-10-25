@@ -14,6 +14,7 @@ import 'services/offline_sync_service.dart';
 import 'services/admin_service.dart';
 import 'services/mastery_service.dart';
 import 'services/question_selection_service.dart';
+import 'models/tos.dart';
 import 'screens/splash_screen.dart';
 import 'utils/responsive.dart';
 //import 'screens/home_screen.dart';
@@ -61,6 +62,14 @@ void main() {
       await AdminService.instance.init();
     } catch (e) {
       debugPrint('AdminService init failed: $e');
+    }
+
+    try {
+      // The PRC Tables of Specifications (a local asset): the admin screens,
+      // the study notes and the topic mastery all read it.
+      await TosCatalog.load();
+    } catch (e) {
+      debugPrint('TOS not loaded: $e');
     }
 
     try {

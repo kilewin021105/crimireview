@@ -12,6 +12,11 @@
 //      rows (source = 'generated', template_id = upload id), write an audit
 //      row, and mark the upload completed or failed with a plain message.
 //
+// When the upload names a PRC TOS topic or competency (document_uploads.tos_code,
+// added by supabase_tos_alignment.sql), the prompt asks for questions on that
+// competency at its TOS Bloom levels, and every question is saved with that
+// tos_code, the TOS topic title, and its Bloom level.
+//
 // Invoked from lib/services/document_generation_service.dart:
 //   supabase.functions.invoke('generate-questions-from-document', body: {'upload_id': ...})
 //
@@ -33,6 +38,15 @@ const CORS_HEADERS = {
 };
 
 const DEFAULT_MODEL = "gemini-flash-latest";
+const BLOOM_LEVELS = ["Remembering", "Understanding", "Applying", "Analyzing", "Evaluating", "Creating"];
+
+/** The app's difficulty tier for a Bloom level (same rule as lib/models/tos.dart). */
+export function difficultyForBloom(level: string | undefined): "easy" | "medium" | "hard" | null {
+  if (level === "Remembering" || level === "Understanding") return "easy";
+  if (level === "Applying") return "medium";
+  if (level === "Analyzing" || level === "Evaluating" || level === "Creating") return "hard";
+  return null;
+}
 const MAX_PDF_BYTES = 20 * 1024 * 1024;
 const OPTION_COUNT = 4;
 
@@ -48,6 +62,11 @@ const RESPONSE_SCHEMA = {
           topic: { type: "STRING", description: "Short topic label, e.g. 'Justifying Circumstances'." },
           question_text: { type: "STRING" },
           difficulty: { type: "STRING", enum: ["easy", "medium", "hard"] },
+          bloom_level: {
+            type: "STRING",
+            enum: BLOOM_LEVELS,
+            description: "The Bloom's taxonomy level the question tests.",
+          },
           options: {
             type: "ARRAY",
             description: "Exactly 4 options; exactly one has is_correct = true.",
@@ -74,9 +93,10 @@ const RESPONSE_SCHEMA = {
             description: "What part of the document to re-read after missing this item, or null.",
           },
         },
-        required: ["topic", "question_text", "difficulty", "options", "explanation"],
+        required: ["topic", "question_text", "difficulty", "bloom_level", "options", "explanation"],
         propertyOrdering: [
-          "topic", "question_text", "difficulty", "options", "explanation", "legal_basis", "remediation_hint",
+          "topic", "question_text", "difficulty", "bloom_level", "options", "explanation", "legal_basis",
+          "remediation_hint",
         ],
       },
     },
@@ -89,6 +109,7 @@ type GeneratedQuestion = {
   topic?: string;
   question_text?: string;
   difficulty?: string;
+  bloom_level?: string;
   options?: GeneratedOption[];
   explanation?: string;
   legal_basis?: string | null;
@@ -164,9 +185,41 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
     if (bytes.length > MAX_PDF_BYTES) throw new Error("The PDF is larger than 20 MB.");
     if (new TextDecoder().decode(bytes.subarray(0, 5)) !== "%PDF-") throw new Error("The file is not a PDF.");
 
-    // 2. Ask Gemini.
+    // 2. The TOS competency or topic, when the upload names one.
+    let tos: { code: string; title: string; text: string; bloom: Record<string, number> } | null = null;
+    if (upload.tos_code) {
+      const code = String(upload.tos_code);
+      const { data: comp } = await admin.from("tos_competencies")
+        .select("code, competency, bloom, topic_code, tos_topics(title)")
+        .eq("code", code).maybeSingle();
+      if (comp) {
+        tos = {
+          code,
+          title: (comp as any).tos_topics?.title ?? upload.topic ?? "",
+          text: comp.competency,
+          bloom: comp.bloom ?? {},
+        };
+      } else {
+        const { data: topicRow } = await admin.from("tos_topics")
+          .select("code, title, bloom").eq("code", code).maybeSingle();
+        if (topicRow) tos = { code, title: topicRow.title, text: topicRow.title, bloom: topicRow.bloom ?? {} };
+      }
+      if (!tos) throw new Error(`TOS code ${code} was not found. Run supabase_tos_alignment.sql first.`);
+    }
+
+    // 3. Ask Gemini.
     const count = Math.min(Math.max(Number(upload.requested_count) || 10, 1), 20);
-    const topicHint = upload.topic ? `Focus only on this topic: ${upload.topic}.` : "";
+    const bloomMix = tos
+      ? Object.entries(tos.bloom).map(([level, n]) => `${level} ${n}`).join(", ")
+      : "";
+    const topicHint = tos
+      ? `Every question must test this competency of the PRC Table of Specifications for the ` +
+        `Criminologist Licensure Examination (${tos.code}, topic "${tos.title}"): "${tos.text}". ` +
+        `Write at the Bloom's taxonomy levels the TOS gives it (${bloomMix}), in about that proportion, ` +
+        `and set bloom_level for each question.`
+      : upload.topic
+      ? `Focus only on this topic: ${upload.topic}.`
+      : "";
     const difficultyHint = upload.target_difficulty
       ? `Make every question ${upload.target_difficulty} difficulty.`
       : "Mix easy, medium and hard, mostly medium.";
@@ -213,7 +266,7 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
     }
     const parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")) as { questions?: GeneratedQuestion[] };
 
-    // 3. Insert the good questions, inactive, one at a time so one bad or
+    // 4. Insert the good questions, inactive, one at a time so one bad or
     //    duplicate item never loses the whole batch.
     let inserted = 0;
     let skipped = 0;
@@ -227,10 +280,11 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
         is_correct: o.is_correct === true,
         rationale: (o.rationale ?? "").trim(),
       }));
-      const row = {
+      const bloom = BLOOM_LEVELS.includes(q.bloom_level ?? "") ? q.bloom_level! : null;
+      const row: Record<string, unknown> = {
         id: `gen_${crypto.randomUUID()}`,
         subject_id: upload.subject_id,
-        topic: (q.topic?.trim() || upload.topic || "General").slice(0, 120),
+        topic: (tos?.title || q.topic?.trim() || upload.topic || "General").slice(0, 120),
         question_text: q.question_text!.trim(),
         options,
         correct_answer_index: options.findIndex((o) => o.is_correct),
@@ -238,6 +292,7 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
         legal_basis: q.legal_basis?.trim() || null,
         remediation_hint: q.remediation_hint?.trim() || null,
         difficulty: upload.target_difficulty ??
+          (tos ? difficultyForBloom(bloom ?? undefined) : null) ??
           (["easy", "medium", "hard"].includes(q.difficulty ?? "") ? q.difficulty : "medium"),
         source: "generated",
         template_id: uploadId,
@@ -245,6 +300,11 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
         is_active: false,
         created_by: callerId,
       };
+      if (tos) {
+        // Only for a TOS upload: these columns exist once supabase_tos_alignment.sql has run.
+        row.tos_code = tos.code;
+        row.bloom_level = bloom;
+      }
       const { error } = await admin.from("questions").insert(row);
       if (error) {
         skipped++;
@@ -259,7 +319,9 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
       action: "generate",
       target_table: "questions",
       target_id: uploadId,
-      details: { method: "pdf", model, filename: upload.filename, generated: inserted, skipped },
+      details: {
+        method: "pdf", model, filename: upload.filename, tos_code: tos?.code ?? null, generated: inserted, skipped,
+      },
     });
 
     if (inserted === 0) {

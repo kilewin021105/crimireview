@@ -14,6 +14,10 @@ class DocumentUpload {
   final String storagePath;
   final String subjectId;
   final String? topic;
+
+  /// The PRC TOS topic or competency the questions should test, e.g.
+  /// `CLJ-3.4`; null for a general upload.
+  final String? tosCode;
   final String? targetDifficulty;
   final int requestedCount;
 
@@ -30,6 +34,7 @@ class DocumentUpload {
     this.storagePath = '',
     required this.subjectId,
     this.topic,
+    this.tosCode,
     this.targetDifficulty,
     required this.requestedCount,
     required this.status,
@@ -52,6 +57,7 @@ class DocumentUpload {
         storagePath: (json['storage_path'] ?? '').toString(),
         subjectId: (json['subject_id'] ?? '').toString(),
         topic: json['topic'] as String?,
+        tosCode: json['tos_code'] as String?,
         targetDifficulty: json['target_difficulty'] as String?,
         requestedCount: (json['requested_count'] as num?)?.toInt() ?? 0,
         status: (json['status'] ?? 'pending').toString(),
@@ -115,6 +121,7 @@ class DocumentGenerationService {
     required Uint8List bytes,
     required String subjectId,
     String? topic,
+    String? tosCode,
     Difficulty? targetDifficulty,
     int requestedCount = 10,
   }) async {
@@ -141,6 +148,8 @@ class DocumentGenerationService {
       'target_difficulty': targetDifficulty?.name,
       'requested_count': requestedCount.clamp(1, maxQuestions),
       'uploaded_by': userId,
+      // Sent only when set: the column comes with supabase_tos_alignment.sql.
+      if (tosCode != null) 'tos_code': tosCode,
     };
     await _client.from(_table).insert(row);
 

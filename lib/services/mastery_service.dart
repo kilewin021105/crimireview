@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/mastery.dart';
 import '../models/question.dart' show Difficulty;
+import '../models/tos.dart';
 import 'supabase_service.dart';
 
 /// The learner model of CrimiReview: **Bayesian Knowledge Tracing (BKT)**.
@@ -194,6 +195,14 @@ class MasteryService extends ChangeNotifier {
   /// `'subjectId::topic'` -> traced state. The whole learner model.
   final Map<String, TopicMastery> _mastery = <String, TopicMastery>{};
 
+  /// Maps topics saved before the TOS alignment onto the TOS topics. Null
+  /// until [init] loads it, or if the asset could not be read (then saved
+  /// topics are used as they are).
+  TosTopicMap? _topicMap;
+
+  @visibleForTesting
+  set debugTopicMap(TosTopicMap? map) => _topicMap = map;
+
   bool _initialized = false;
   bool _isSyncing = false;
   Timer? _syncTimer;
@@ -219,6 +228,11 @@ class MasteryService extends ChangeNotifier {
   /// network leaves the service usable with an empty model.
   Future<void> init() async {
     if (_initialized) return;
+    try {
+      _topicMap ??= await TosTopicMap.load();
+    } catch (e) {
+      debugPrint('MasteryService: TOS topic map not loaded ($e)');
+    }
     try {
       _prefs = await SharedPreferences.getInstance();
       _loadLocal();
@@ -635,7 +649,7 @@ class MasteryService extends ChangeNotifier {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
-      _mastery.clear();
+      final saved = <TopicMastery>[];
       decoded.forEach((key, value) {
         if (value is! Map) return;
         try {
@@ -643,11 +657,21 @@ class MasteryService extends ChangeNotifier {
             value.map((k, v) => MapEntry(k.toString(), v)),
           );
           if (m.subjectId.isEmpty || m.topic.isEmpty) return;
-          _mastery[m.key] = m;
+          saved.add(m);
         } catch (_) {
           // One malformed entry must never wipe the whole model.
         }
       });
+      final aligned = alignTopics(saved, _topicMap);
+      _mastery
+        ..clear()
+        ..addEntries(aligned.map((m) => MapEntry(m.key, m)));
+      final savedKeys = saved.map((m) => m.key).toSet();
+      if (aligned.length != saved.length || aligned.any((m) => !savedKeys.contains(m.key))) {
+        // Write the TOS topic names back at once, so the next cloud sync
+        // cannot push the old names up again.
+        unawaited(_saveLocal());
+      }
     } catch (e) {
       debugPrint('MasteryService: corrupt local model, starting fresh ($e)');
       _mastery.clear();
@@ -742,19 +766,25 @@ class MasteryService extends ChangeNotifier {
       final rows = List<Map<String, dynamic>>.from(response as List);
       if (rows.isEmpty) return;
 
-      var changed = false;
+      final remoteRows = <TopicMastery>[];
       for (final row in rows) {
         try {
           final remote = TopicMastery.fromJson(row);
           if (remote.subjectId.isEmpty || remote.topic.isEmpty) continue;
-
-          final local = _mastery[remote.key];
-          if (local == null || _remoteWins(local, remote)) {
-            _mastery[remote.key] = remote;
-            changed = true;
-          }
+          remoteRows.add(remote);
         } catch (_) {
           // Skip an unreadable row rather than aborting the whole merge.
+        }
+      }
+
+      // A database where supabase_tos_alignment.sql has not run yet still has
+      // the old topic names; align them the same way as the local model.
+      var changed = false;
+      for (final remote in alignTopics(remoteRows, _topicMap)) {
+        final local = _mastery[remote.key];
+        if (local == null || _remoteWins(local, remote)) {
+          _mastery[remote.key] = remote;
+          changed = true;
         }
       }
 
@@ -765,6 +795,43 @@ class MasteryService extends ChangeNotifier {
     } catch (e) {
       debugPrint('MasteryService.loadFromCloud failed (kept local): $e');
     }
+  }
+
+  /// Moves topic mastery saved under a topic name from before the TOS
+  /// alignment onto its TOS topic, the way supabase_tos_alignment.sql does in
+  /// the database: several old topics that became one TOS topic are combined
+  /// (attempts and correct answers added up, p(known) averaged by attempts),
+  /// and a topic the TOS dropped leaves the live model. Its row in the
+  /// database is not touched. Without a [map] the items come back unchanged.
+  @visibleForTesting
+  static List<TopicMastery> alignTopics(Iterable<TopicMastery> items, TosTopicMap? map) {
+    if (map == null) return List<TopicMastery>.of(items);
+    final merged = <String, TopicMastery>{};
+    for (final m in items) {
+      final target = map.resolve(m.subjectId, m.topic);
+      if (target == null) continue;
+      final moved = target.subjectId == m.subjectId && target.topic == m.topic
+          ? m
+          : m.copyWith(subjectId: target.subjectId, topic: target.topic);
+      final existing = merged[moved.key];
+      merged[moved.key] = existing == null ? moved : _combine(existing, moved);
+    }
+    return merged.values.toList();
+  }
+
+  static TopicMastery _combine(TopicMastery a, TopicMastery b) {
+    final wa = math.max(a.attempts, 1);
+    final wb = math.max(b.attempts, 1);
+    var last = a.lastPracticed;
+    final other = b.lastPracticed;
+    if (other != null && (last == null || other.isAfter(last))) last = other;
+    return a.copyWith(
+      pKnown: (a.pKnown * wa + b.pKnown * wb) / (wa + wb),
+      attempts: a.attempts + b.attempts,
+      correct: a.correct + b.correct,
+      consecutiveCorrect: math.max(a.consecutiveCorrect, b.consecutiveCorrect),
+      lastPracticed: last,
+    );
   }
 
   static bool _remoteWins(TopicMastery local, TopicMastery remote) {

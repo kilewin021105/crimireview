@@ -70,6 +70,7 @@ flutter:
     - assets/ml/
     - assets/sounds/
     - assets/modules/
+    - assets/tos/
 
   # Plus Jakarta Sans (SIL Open Font License, assets/fonts/OFL.txt).
   # Bundled so text renders correctly even on a first launch offline.

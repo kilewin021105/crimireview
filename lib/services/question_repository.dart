@@ -524,9 +524,11 @@ class QuestionRepository extends ChangeNotifier {
     return changed;
   }
 
-  /// Cheap content fingerprint: id, version, stem and option count of every
-  /// item. Catches admin edits and version bumps without deep-comparing a few
-  /// thousand objects.
+  /// Cheap content fingerprint: id, version, stem, option count, subject,
+  /// topic and TOS code of every item. Catches admin edits and version bumps
+  /// without deep-comparing a few thousand objects; subject and topic are in
+  /// it because supabase_tos_alignment.sql moves questions onto TOS topics
+  /// without bumping their version.
   static String _computeSignature(List<Question> qs) {
     var h = qs.length;
     for (final q in qs) {
@@ -534,6 +536,9 @@ class QuestionRepository extends ChangeNotifier {
       h = 0x1fffffff & (h * 31 + q.version);
       h = 0x1fffffff & (h * 31 + q.questionText.hashCode);
       h = 0x1fffffff & (h * 31 + q.answerOptions.length);
+      h = 0x1fffffff & (h * 31 + q.subject.hashCode);
+      h = 0x1fffffff & (h * 31 + q.topic.hashCode);
+      h = 0x1fffffff & (h * 31 + (q.tosCode ?? '').hashCode);
     }
     return '${qs.length}:$h';
   }
