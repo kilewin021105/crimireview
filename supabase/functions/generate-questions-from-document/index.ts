@@ -21,8 +21,13 @@
 //   supabase.functions.invoke('generate-questions-from-document', body: {'upload_id': ...})
 //
 // Secrets (Dashboard -> Edge Functions -> Secrets, or `supabase secrets set`):
-//   GEMINI_API_KEY   required. Free key from https://aistudio.google.com/apikey
-//   GEMINI_MODEL     optional. Defaults to "gemini-flash-latest".
+//   GEMINI_API_KEY          required. Free key from https://aistudio.google.com/apikey
+//   GEMINI_MODEL            optional. Defaults to "gemini-flash-latest".
+//   GEMINI_THINKING         optional. How much Gemini reasons before answering:
+//                           minimal, low (default), medium, high, or off (send no setting).
+//   GEMINI_TIMEOUT_SECONDS  optional. Defaults to 120. Supabase stops a function after
+//                           150 s on the free plan (400 s on paid plans); raise this only
+//                           on a paid plan.
 // SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are injected
 // automatically.
 //
@@ -49,6 +54,31 @@ export function difficultyForBloom(level: string | undefined): "easy" | "medium"
 }
 const MAX_PDF_BYTES = 20 * 1024 * 1024;
 const OPTION_COUNT = 4;
+
+// Supabase stops an Edge Function after 150 s on the free plan, background work
+// included, and no catch block runs: the upload would stay "processing" forever.
+// Gemini gets this long from the start of the job, so a slow answer still ends
+// with a clear "failed" message.
+const DEFAULT_TIMEOUT_SECONDS = 120;
+const MAX_TIMEOUT_SECONDS = 390;
+
+/**
+ * How much Gemini reasons before it answers. Full reasoning on a long PDF is what
+ * runs past the time limit, so ask for a little. Gemini 2.5 models take a token
+ * budget; Gemini 3 and the "-latest" aliases take a level. A model that refuses
+ * the setting is asked once more without it (see generate()).
+ */
+export function thinkingConfigFor(model: string, setting: string | undefined): Record<string, unknown> | null {
+  const level = (setting ?? "low").trim().toLowerCase();
+  if (!["minimal", "low", "medium", "high"].includes(level)) return null;
+  if (/gemini-2\.5/.test(model)) {
+    const budgets: Record<string, number> = { minimal: 0, low: 0, medium: 2048, high: -1 };
+    const budget = budgets[level];
+    // 2.5 Pro cannot switch reasoning off; 128 tokens is its smallest budget.
+    return { thinkingBudget: budget === 0 && /pro/.test(model) ? 128 : budget };
+  }
+  return { thinkingLevel: level };
+}
 
 // Gemini's structured-output schema (OpenAPI subset, generateContent API).
 const RESPONSE_SCHEMA = {
@@ -160,6 +190,7 @@ export function validQuestion(q: GeneratedQuestion): boolean {
 }
 
 async function generate(admin: SupabaseClient, upload: Record<string, any>, callerId: string): Promise<void> {
+  const startedAt = Date.now();
   const uploadId = upload.id as string;
   const finish = (fields: Record<string, unknown>) =>
     admin.from("document_uploads")
@@ -232,28 +263,57 @@ async function generate(admin: SupabaseClient, upload: Record<string, any>, call
       `options of similar length to the correct one, and a specific rationale for every option saying why ` +
       `it is right or wrong. Write in clear English.`;
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: [
-              { inline_data: { mime_type: "application/pdf", data: toBase64(bytes) } },
-              { text: prompt },
-            ],
-          }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-            temperature: 0.4,
-          },
-        }),
-      },
-    );
-    const raw = await res.text();
+    const contents = [{
+      role: "user",
+      parts: [
+        { inline_data: { mime_type: "application/pdf", data: toBase64(bytes) } },
+        { text: prompt },
+      ],
+    }];
+    const thinking = thinkingConfigFor(model, Deno.env.get("GEMINI_THINKING"));
+    const timeoutSeconds = Math.min(Number(Deno.env.get("GEMINI_TIMEOUT_SECONDS")) || DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.max(startedAt + timeoutSeconds * 1000 - Date.now(), 0));
+    const ask = async (thinkingConfig: Record<string, unknown> | null) => {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents,
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: RESPONSE_SCHEMA,
+              temperature: 0.4,
+              ...(thinkingConfig ? { thinkingConfig } : {}),
+            },
+          }),
+        },
+      );
+      return { res: response, raw: await response.text() };
+    };
+    let res: Response;
+    let raw: string;
+    try {
+      ({ res, raw } = await ask(thinking));
+      if (res.status === 400 && thinking && /thinking/i.test(raw)) {
+        console.warn(`Gemini ${model} refused ${JSON.stringify(thinking)}; asking again without it.`);
+        ({ res, raw } = await ask(null));
+      }
+    } catch (err) {
+      if (controller.signal.aborted) {
+        throw new Error(
+          `Gemini did not finish within ${timeoutSeconds} seconds, so the upload was stopped before ` +
+            "Supabase's time limit. Try a shorter PDF (one chapter at a time) or fewer questions.",
+        );
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+    console.log(`Gemini ${model} answered ${res.status} after ${((Date.now() - startedAt) / 1000).toFixed(1)} s.`);
     if (!res.ok) throw new Error(geminiError(res.status, raw));
 
     const data = JSON.parse(raw);

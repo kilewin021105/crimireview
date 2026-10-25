@@ -1772,6 +1772,43 @@ You asked for the manuscript in the Desktop folder `CrimiReview manuscript` to b
 - The compliance checklist page was not updated.
 - The evaluation table (Table 22) and the plan durations are still highlighted placeholders.
 
+## 2026-10-25 — Session 71: a PDF upload stopped at "took too long" — time limit and Gemini reasoning (same branch)
+
+You uploaded a PDF from Generate from PDF, and it ended with "This took too long and probably stopped."
+
+**What happened (read-only checks on the live project)**
+- The file was `LEA-3-Industrial-Security-Concepts-by-Prof.-Ellaiza-Salvador_(1).pdf`, 4.2 MB, 10 questions.
+- The function accepted both tries (5:00 and 5:03 PM, `202`). Its logs then show `shutdown` about **148 seconds** after each start, with no error.
+- Supabase stops an Edge Function after **150 seconds** on the free plan, background work included, and no error handler runs. Gemini had not answered by then.
+- The function was killed before it could mark the upload failed, so the row stayed at `processing`. After 5 minutes, the app shows such a row as "took too long".
+- The upload was saved under **Criminal Law** although the PDF is an LEA reviewer: the subject was left at its default.
+
+**Fix in `supabase/functions/generate-questions-from-document/index.ts`**
+- **A deadline.** Gemini gets 120 seconds from the start of the job, which stays under the 150-second limit. A slow answer now ends as a real `failed` upload with the message: "Gemini did not finish within 120 seconds … Try a shorter PDF (one chapter at a time) or fewer questions."
+  - The new optional secret `GEMINI_TIMEOUT_SECONDS` changes the deadline. Raise it only on a paid plan, where the limit is 400 seconds.
+- **Less reasoning, so faster answers.** By default, the "flash-latest" model reasons at length before it answers, and on a long PDF that is what runs past the limit. The request now asks it to reason a little:
+  - `thinkingLevel: "low"` for Gemini 3 and the `-latest` aliases;
+  - `thinkingBudget: 0` for Gemini 2.5 Flash;
+  - `thinkingBudget: 128` for 2.5 Pro, its smallest budget.
+  - Google's docs don't say which model `gemini-flash-latest` points to. So if Gemini refuses the setting with a 400 that mentions thinking, the function asks once more without it. Other 400 errors are not retried.
+  - The new optional secret `GEMINI_THINKING` takes minimal, low, medium, high or off.
+- **A log line** with Gemini's status and how many seconds it took, so the next slow upload is easy to diagnose in the function's logs.
+
+**Checks**
+- Edge Function under Node 24 with stand-ins: **40 of 40 pass**, including 9 new ones:
+  - the setting chosen for each model;
+  - `off`;
+  - the single retry when a model refuses the setting;
+  - no retry for other 400s;
+  - a Gemini that never answers, stopped at the deadline and marked failed with the reason.
+- VS Code shows no errors in the file.
+- **Not checked:** a real Gemini call, because there is no key here and you shouldn't send one. Whether `thinkingLevel: "low"` is accepted, and how fast your PDF now comes back, will show on the next real upload.
+
+**What you need to do**
+1. Redeploy `generate-questions-from-document` with the new `index.ts`. It becomes version 8.
+2. In the app, remove the stuck upload with the trash icon.
+3. Upload again with **Subject: Law Enforcement Administration** and **Target in the TOS: LEA-3, Introduction to Industrial Security Concepts**. If it still runs out of time, use 5 questions or a shorter part of the PDF.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
