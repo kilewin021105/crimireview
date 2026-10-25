@@ -1866,6 +1866,51 @@ The next upload of the same PDF ended as **Failed** with "Gemini did not finish 
 
 ---
 
+## 2026-10-25 — Session 73: still "did not finish within 120 seconds" — a faster default model, and the answer is read as it streams in (same branch)
+
+You deployed version 9 and uploaded twice more (10 questions, then 5). Both failed with the same message.
+
+**What the logs show (read-only check on the live project)**
+- Version 9 asked for 5 questions per step, as planned ("step 1: asking for 5 of 10" and "5 of 5").
+- `gemini-flash-latest` refused the "minimal" reasoning setting within 1.5 seconds. The function then asked with "low", and Gemini did not answer within the remaining ~118 seconds, even for 5 questions.
+- So the size of the request was not the problem. `gemini-flash-latest` is an alias that Google moves to newer models.
+  - Google's thinking table (checked 2026-10-25) lists the newest Flash model, `gemini-3.8-flash`, as accepting only low, medium or high. That matches the refusal.
+  - Google's pages don't say which model the alias points to.
+- The upload rows had already been deleted, so only the logs were read.
+
+**Fix in `supabase/functions/generate-questions-from-document/index.ts`**
+- **Default model `gemini-3.5-flash-lite`.** Google describes it as a "low-latency, cost-effective multimodal model". Its pricing page lists it as free of charge, and it reads PDFs, supports structured output and accepts minimal reasoning (its default).
+  - The `GEMINI_MODEL` secret still overrides it. If you set that secret to `gemini-flash-latest`, delete it.
+- **The answer is read as it streams in** (`streamGenerateContent`, server-sent events).
+  - At the time limit, the questions Gemini had finished are kept. A partly written question is dropped.
+  - A step cut off this way still goes on to the next step.
+  - If the last step is cut off, the upload says "Saved X of Y questions before this happened: Gemini did not finish within 120 seconds…".
+  - The same applies when Gemini stops at its own output limit.
+- **Better log line.** It now shows when Gemini's first text arrived, when it finished or was stopped, and the token counts (PDF and prompt, reasoning, answer). If the next upload is slow, the logs will show whether the time went to reading the PDF or to writing the questions.
+- A "model not found" error now names the model.
+- `README.md`: the default model and a note about the time limit.
+
+**Checks**
+- Edge Function under Node 24 with stand-ins: **56 of 56 pass**, 7 of them new:
+  - finished questions read from whole, fenced, and cut-off answers, including quotes and braces inside a question;
+  - a streamed answer split mid-line, with the reasoning part ignored and the token counts logged;
+  - the time limit mid-answer: 2 finished questions kept, with the reason;
+  - the time limit before any text: failed, with the reason;
+  - a step cut off after 2 of 4 still goes on to the next step: 6 of 8 saved;
+  - a streamed block, and a 404 that names the model.
+- VS Code shows no errors in the file.
+- No Dart code changed this session.
+- **Not checked:**
+  - a real call to `gemini-3.5-flash-lite` (no key here), so its speed on your PDF is not known;
+  - whether your API key's project has access to that model. A 404 or 429 would say so in the upload's message.
+
+**What you need to do**
+1. Redeploy `generate-questions-from-document` with the new `index.ts`. It becomes version 10.
+2. In *Edge Functions → Secrets*, check for a `GEMINI_MODEL` secret. If there is one, delete it or set it to `gemini-3.5-flash-lite`.
+3. Upload the PDF again: Law Enforcement Administration, LEA-3, 5 or 10 questions.
+
+---
+
 ## Known gaps — not fixed yet, worth knowing about
 
 - **On branch `adaptive-focus` there is no question generator in the app** (Session 61); the two notes below describe the feature branches.

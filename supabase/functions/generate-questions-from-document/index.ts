@@ -25,7 +25,10 @@
 //
 // Secrets (Dashboard -> Edge Functions -> Secrets, or `supabase secrets set`):
 //   GEMINI_API_KEY          required. Free key from https://aistudio.google.com/apikey
-//   GEMINI_MODEL            optional. Defaults to "gemini-flash-latest".
+//   GEMINI_MODEL            optional. Defaults to "gemini-3.5-flash-lite" (fast, free tier).
+//                           Avoid "gemini-flash-latest": in October 2026 it pointed to a
+//                           model that refuses minimal reasoning and took over two minutes
+//                           for 5 questions from a 4 MB PDF.
 //   GEMINI_THINKING         optional. How much Gemini reasons before answering:
 //                           minimal (default), low, medium, high, or off (send no setting).
 //   GEMINI_TIMEOUT_SECONDS  optional. Defaults to 120. Supabase stops a function after
@@ -50,7 +53,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const DEFAULT_MODEL = "gemini-flash-latest";
+const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 const BLOOM_LEVELS = ["Remembering", "Understanding", "Applying", "Analyzing", "Evaluating", "Creating"];
 
 /** The app's difficulty tier for a Bloom level (same rule as lib/models/tos.dart). */
@@ -173,7 +176,7 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 /** Plain-language message for a failed Gemini call. */
-function geminiError(status: number, text: string): string {
+function geminiError(status: number, text: string, model: string): string {
   if (status === 429) {
     return "Gemini's free limit was reached. Try again later; the free quota resets every day.";
   }
@@ -184,7 +187,8 @@ function geminiError(status: number, text: string): string {
     return "Gemini refused the request (403). Check that the API key is allowed to use the Gemini API.";
   }
   if (status === 404) {
-    return "The Gemini model was not found. Remove or correct the GEMINI_MODEL secret.";
+    return `The Gemini model "${model}" was not found. Set the GEMINI_MODEL secret to a model listed at ` +
+      "ai.google.dev/gemini-api/docs/models.";
   }
   return `Gemini returned an error (${status}). ${text.slice(0, 300)}`;
 }
@@ -199,27 +203,113 @@ export function validQuestion(q: GeneratedQuestion): boolean {
   return texts.size === OPTION_COUNT;
 }
 
+/**
+ * The questions in Gemini's JSON answer. From an answer cut off by the time limit
+ * (or by its token limit), the questions it finished.
+ */
+export function questionsIn(text: string): GeneratedQuestion[] {
+  const clean = text.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "");
+  try {
+    return (JSON.parse(clean) as { questions?: GeneratedQuestion[] }).questions ?? [];
+  } catch {
+    const start = clean.indexOf("[", Math.max(clean.indexOf('"questions"'), 0));
+    if (start < 0) return [];
+    const found: GeneratedQuestion[] = [];
+    let depth = 0, inString = false, escaped = false, from = -1;
+    for (let i = start + 1; i < clean.length; i++) {
+      const c = clean[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (c === "\\") escaped = true;
+        else if (c === '"') inString = false;
+      } else if (c === '"') inString = true;
+      else if (c === "{" && depth++ === 0) from = i;
+      else if (c === "}" && --depth === 0) {
+        try {
+          found.push(JSON.parse(clean.slice(from, i + 1)));
+        } catch {
+          // an unreadable question is skipped like an incomplete one
+        }
+      } else if (c === "]" && depth === 0) break;
+    }
+    return found;
+  }
+}
+
 /** Where a multi-step job is: its step number and the questions skipped so far. */
 type Job = { step: number; skipped: number };
 
+/** What Gemini sent back for one step. */
+type GeminiAnswer = {
+  ok: boolean;
+  status: number;
+  error: string;
+  text: string;
+  blockReason?: string;
+  finishReason?: string;
+  timedOut: boolean;
+};
+
+const timeoutSeconds = () =>
+  Math.min(Number(Deno.env.get("GEMINI_TIMEOUT_SECONDS")) || DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS);
+
+const deadlineMessage = () =>
+  `Gemini did not finish within ${timeoutSeconds()} seconds, so this part was stopped before ` +
+  "Supabase's time limit. Try a shorter PDF (one chapter at a time) or fewer questions.";
+
+/** The JSON chunks of a streamed answer (server-sent events); a plain JSON body counts as one. */
+async function* geminiChunks(res: Response): AsyncGenerator<Record<string, any>> {
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let plain = "";
+  let streamed = false;
+  const take = function* (line: string) {
+    line = line.replace(/\r$/, "");
+    if (line.startsWith("data:")) {
+      streamed = true;
+      yield JSON.parse(line.slice(5));
+    } else if (!streamed) {
+      plain += line + "\n";
+    }
+  };
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
+      yield* take(buffer.slice(0, nl));
+      buffer = buffer.slice(nl + 1);
+    }
+  }
+  yield* take(buffer);
+  if (!streamed && plain.trim()) {
+    const body = JSON.parse(plain);
+    yield* Array.isArray(body) ? body : [body];
+  }
+}
+
 /**
- * Sends the PDF and the prompt to Gemini before the time limit. A model that refuses
- * the reasoning setting is asked again with a lighter one, then with none.
+ * Sends the PDF and the prompt to Gemini and reads the answer as it streams in, until
+ * the time limit. A model that refuses the reasoning setting is asked again with a
+ * lighter one, then with none. At the time limit the text so far is kept, so the
+ * questions Gemini finished are not lost.
  */
-async function askGemini(model: string, apiKey: string, contents: unknown, startedAt: number) {
+async function askGemini(model: string, apiKey: string, contents: unknown, startedAt: number): Promise<GeminiAnswer> {
   const first = thinkingConfigFor(model, Deno.env.get("GEMINI_THINKING"));
   const attempts: (Record<string, unknown> | null)[] = [first];
   if (first?.thinkingLevel === "minimal") attempts.push({ thinkingLevel: "low" });
   if (first) attempts.push(null);
-  const timeoutSeconds = Math.min(Number(Deno.env.get("GEMINI_TIMEOUT_SECONDS")) || DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), Math.max(startedAt + timeoutSeconds * 1000 - Date.now(), 0));
+  const timer = setTimeout(() => controller.abort(), Math.max(startedAt + timeoutSeconds() * 1000 - Date.now(), 0));
+  const answer: GeminiAnswer = { ok: false, status: 0, error: "", text: "", timedOut: false };
+  let firstTextAt = 0;
+  let usage: Record<string, number> | undefined;
   try {
-    let res!: Response;
-    let raw = "";
     for (const thinkingConfig of attempts) {
-      res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      answer.status = 0;
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
@@ -235,23 +325,45 @@ async function askGemini(model: string, apiKey: string, contents: unknown, start
           }),
         },
       );
-      raw = await res.text();
-      if (!(res.status === 400 && thinkingConfig && /thinking/i.test(raw))) break;
-      console.warn(`Gemini ${model} refused ${JSON.stringify(thinkingConfig)}; asking again with less.`);
+      answer.status = res.status;
+      answer.ok = res.ok;
+      if (!res.ok) {
+        answer.error = await res.text();
+        if (!(res.status === 400 && thinkingConfig && /thinking/i.test(answer.error))) break;
+        console.warn(`Gemini ${model} refused ${JSON.stringify(thinkingConfig)}; asking again with less.`);
+        continue;
+      }
+      for await (const chunk of geminiChunks(res)) {
+        answer.blockReason ??= chunk.promptFeedback?.blockReason;
+        const candidate = chunk.candidates?.[0];
+        for (const part of candidate?.content?.parts ?? []) {
+          if (part.thought || !part.text) continue;
+          answer.text += part.text;
+          firstTextAt ||= Date.now();
+        }
+        if (candidate?.finishReason) answer.finishReason = candidate.finishReason;
+        if (chunk.usageMetadata) usage = chunk.usageMetadata;
+      }
+      break;
     }
-    console.log(`Gemini ${model} answered ${res.status} after ${((Date.now() - startedAt) / 1000).toFixed(1)} s.`);
-    return { res, raw };
   } catch (err) {
-    if (controller.signal.aborted) {
-      throw new Error(
-        `Gemini did not finish within ${timeoutSeconds} seconds, so this part was stopped before ` +
-          "Supabase's time limit. Try a shorter PDF (one chapter at a time) or fewer questions.",
-      );
-    }
-    throw err;
+    if (!controller.signal.aborted) throw err;
+    answer.timedOut = true;
   } finally {
     clearTimeout(timer);
   }
+  const secs = (t: number) => ((t - startedAt) / 1000).toFixed(1);
+  console.log(
+    `Gemini ${model} answered ${answer.status || "nothing"}` +
+      (firstTextAt ? `, first text after ${secs(firstTextAt)} s` : "") +
+      `, ${answer.timedOut ? "stopped at the time limit" : "finished"} after ${secs(Date.now())} s` +
+      (usage
+        ? ` (tokens: PDF and prompt ${usage.promptTokenCount}, reasoning ${usage.thoughtsTokenCount ?? 0}, ` +
+          `answer ${usage.candidatesTokenCount})`
+        : "") +
+      ".",
+  );
+  return answer;
 }
 
 /** Starts the next step of a job in a fresh invocation (its own time limit). */
@@ -409,23 +521,19 @@ async function generate(
       ],
     }];
     console.log(`Upload ${uploadId}, step ${job.step}: asking for ${count} of ${requested} questions.`);
-    const { res, raw } = await askGemini(model, apiKey, contents, startedAt);
-    if (!res.ok) throw new Error(geminiError(res.status, raw));
-
-    const data = JSON.parse(raw);
-    const blocked = data?.promptFeedback?.blockReason;
-    if (blocked) throw new Error(`Gemini declined to read this document (${blocked}).`);
-    const candidate = data?.candidates?.[0];
-    const text: string = (candidate?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("");
-    if (!text.trim()) {
-      throw new Error(`Gemini returned no questions (finish reason: ${candidate?.finishReason ?? "unknown"}).`);
+    const answer = await askGemini(model, apiKey, contents, startedAt);
+    if (!answer.timedOut && !answer.ok) throw new Error(geminiError(answer.status, answer.error, model));
+    if (answer.blockReason) throw new Error(`Gemini declined to read this document (${answer.blockReason}).`);
+    const found = questionsIn(answer.text);
+    if (answer.timedOut && found.length === 0) throw new Error(deadlineMessage());
+    if (!answer.text.trim()) {
+      throw new Error(`Gemini returned no questions (finish reason: ${answer.finishReason ?? "unknown"}).`);
     }
-    const parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")) as { questions?: GeneratedQuestion[] };
 
     // 5. Insert the good questions, inactive, one at a time so one bad or
     //    repeated item never loses the whole batch.
     const seen = new Set(earlier.map(normalized));
-    for (const q of (parsed.questions ?? []).slice(0, count)) {
+    for (const q of found.slice(0, count)) {
       if (!validQuestion(q) || seen.has(normalized(q.question_text!))) {
         skipped++;
         continue;
@@ -471,8 +579,9 @@ async function generate(
     }
 
     // 6. Progress for the app, then the next step or the end. The number of steps is
-    //    planned from the request; a step that falls short leaves more for the next
-    //    one, and a shortfall at the end is reported, not retried.
+    //    planned from the request; a step that falls short (incomplete questions, or
+    //    Gemini stopped at the time limit) leaves more for the next one, and a
+    //    shortfall at the end is reported, not retried.
     const total = doneBefore + saved;
     const maxSteps = Math.ceil(requested / perStep);
     if (total < requested && job.step < maxSteps) {
@@ -480,7 +589,7 @@ async function generate(
       if (await continueJob(uploadId, callerId, { step: job.step + 1, skipped })) return;
       return await end("the next part could not be started.");
     }
-    await end(null);
+    await end(answer.timedOut && total < requested ? deadlineMessage() : null);
   } catch (err) {
     console.error("generate-questions-from-document failed:", err);
     await end(err instanceof Error ? err.message : String(err)).then(undefined, () => {});
