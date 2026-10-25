@@ -1914,6 +1914,42 @@ You deployed version 9 and uploaded twice more (10 questions, then 5). Both fail
 1. In *Edge Functions → Secrets*, check for a `GEMINI_MODEL` secret. If there is one, delete it or set it to `gemini-3.5-flash-lite`.
 2. Upload the PDF again: Law Enforcement Administration, LEA-3, 5 or 10 questions.
 
+**Result (live logs, 2026-10-25 12:30–12:41 UTC)**
+- The uploads now work.
+- 10 questions: 2 steps.
+- 20 questions: 4 steps, **20 of 20 saved** in about 3 minutes, each next step started by the function's call to itself.
+- Each step took 35–65 seconds. Gemini read about 134,000 tokens of PDF and prompt, used no reasoning tokens, and wrote about 1,850 tokens.
+- The 20-question upload was saved under **Criminal Law** (`criminal_jurisprudence`) with no TOS target, although the PDF is an LEA reviewer. Its 20 questions are inactive drafts under the wrong subject.
+
+---
+
+## 2026-10-25 — Session 74: version 1.0.2 built (same branch)
+
+**Version** `1.0.2+3` in `pubspec.yaml` (was `1.0.1+2`, the version already released on 2026-10-12).
+
+**Build problem fixed in `android/build.gradle.kts`**
+- The first build failed because the network dropped: "No such host is known (dl.google.com)".
+- The second build failed after 37 minutes: `GeneratedPluginRegistrant.java:29: error: cannot find symbol … FilePickerPlugin`.
+- **Cause:** the app builds with Android Gradle Plugin 9.0.1, and `android/gradle.properties` has `android.builtInKotlin=false`, added by the Flutter migrator.
+  - `file_picker` 11 does not apply the Kotlin plugin on AGP 9; it relies on AGP's built-in Kotlin.
+  - With built-in Kotlin off, its Kotlin code was never compiled.
+  - This is the first APK built since `file_picker` was added (Session 66).
+- **Fix:** the root build file applies the Kotlin plugin to the `file_picker` project only, targeting Java 17 like the rest of that package.
+  - Turning built-in Kotlin on instead would break the other plugins, which apply the Kotlin plugin themselves.
+  - Moving to `file_picker` 10.3.10 would bring Apache Tika into the app.
+  - `file_picker` 13 would mean two major versions of API changes.
+- The third build passed in 6.4 minutes.
+
+**The APK** (`build/app/outputs/flutter-apk/app-release.apk`)
+- 61,849,151 bytes. SHA-256 `ea8b0553370dc55a8a3f15074864011a0b2b68c8d12d1eadad32437684e440e4`.
+- `aapt`: package `com.crimireview.crimireview`, versionCode 3, versionName 1.0.2, min SDK 24, target SDK 35.
+- `apksigner`: verifies with signature scheme v2.
+  - The certificate is still the debug one ("Android Debug"; there is no `android/key.properties`).
+  - Its SHA-256 `989fc76a…1098f` is the same as the v1.0.1 APK downloaded from the live release, so 1.0.2 installs as an update over 1.0.1.
+- The file picker's code is in the APK: its channel name `miguelruivo.flutter.plugins.filepicker` is in `classes.dex`.
+- Built from the working tree, which includes your uncommitted `pubspec.lock` (with `file_picker` 11.0.3). That lock file is not in the commit.
+- **Not checked:** running the APK on a phone. No device is connected and the Android emulator is not installed. Tests were last run in Session 72 (105 passed, 1 skipped); no Dart code changed since.
+
 ---
 
 ## Known gaps — not fixed yet, worth knowing about
